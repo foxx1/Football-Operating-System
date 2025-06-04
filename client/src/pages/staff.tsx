@@ -132,7 +132,7 @@ export default function StaffPage() {
               Add Staff Member
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 {editingStaff ? "Edit Staff Member" : "Add New Staff Member"}
