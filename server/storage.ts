@@ -11,6 +11,8 @@ import {
   type MatchSquad, type InsertMatchSquad, type AnalyticsReport, type InsertAnalyticsReport,
   type SystemSettings, type InsertSystemSettings
 } from "@shared/schema";
+import { db } from "./db";
+import { eq, and } from "drizzle-orm";
 
 export interface IStorage {
   // Users
@@ -622,4 +624,367 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// Database storage implementation
+export class DatabaseStorage implements IStorage {
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(insertUser)
+      .returning();
+    return user;
+  }
+
+  async updateUser(id: number, updateData: Partial<InsertUser>): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set(updateData)
+      .where(eq(users.id, id))
+      .returning();
+    return user || undefined;
+  }
+
+  async getPlayers(): Promise<Player[]> {
+    return await db.select().from(players);
+  }
+
+  async getPlayer(id: number): Promise<Player | undefined> {
+    const [player] = await db.select().from(players).where(eq(players.id, id));
+    return player || undefined;
+  }
+
+  async createPlayer(insertPlayer: InsertPlayer): Promise<Player> {
+    const [player] = await db
+      .insert(players)
+      .values(insertPlayer)
+      .returning();
+    return player;
+  }
+
+  async updatePlayer(id: number, updateData: Partial<InsertPlayer>): Promise<Player | undefined> {
+    const [player] = await db
+      .update(players)
+      .set(updateData)
+      .where(eq(players.id, id))
+      .returning();
+    return player || undefined;
+  }
+
+  async deletePlayer(id: number): Promise<boolean> {
+    const result = await db.delete(players).where(eq(players.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async getTeams(): Promise<Team[]> {
+    return await db.select().from(teams);
+  }
+
+  async getTeam(id: number): Promise<Team | undefined> {
+    const [team] = await db.select().from(teams).where(eq(teams.id, id));
+    return team || undefined;
+  }
+
+  async createTeam(insertTeam: InsertTeam): Promise<Team> {
+    const [team] = await db
+      .insert(teams)
+      .values(insertTeam)
+      .returning();
+    return team;
+  }
+
+  async updateTeam(id: number, updateData: Partial<InsertTeam>): Promise<Team | undefined> {
+    const [team] = await db
+      .update(teams)
+      .set(updateData)
+      .where(eq(teams.id, id))
+      .returning();
+    return team || undefined;
+  }
+
+  async deleteTeam(id: number): Promise<boolean> {
+    const result = await db.delete(teams).where(eq(teams.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async getTeamPlayers(teamId: number): Promise<(TeamPlayer & { player: Player })[]> {
+    const results = await db
+      .select()
+      .from(teamPlayers)
+      .innerJoin(players, eq(teamPlayers.playerId, players.id))
+      .where(eq(teamPlayers.teamId, teamId));
+    return results.map(row => ({ ...row.team_players, player: row.players }));
+  }
+
+  async addPlayerToTeam(insertTeamPlayer: InsertTeamPlayer): Promise<TeamPlayer> {
+    const [teamPlayer] = await db
+      .insert(teamPlayers)
+      .values(insertTeamPlayer)
+      .returning();
+    return teamPlayer;
+  }
+
+  async removePlayerFromTeam(teamId: number, playerId: number): Promise<boolean> {
+    const result = await db
+      .delete(teamPlayers)
+      .where(eq(teamPlayers.teamId, teamId) && eq(teamPlayers.playerId, playerId));
+    return result.rowCount > 0;
+  }
+
+  async getTrainingSessions(): Promise<TrainingSession[]> {
+    return await db.select().from(trainingSessions);
+  }
+
+  async getTrainingSession(id: number): Promise<TrainingSession | undefined> {
+    const [session] = await db.select().from(trainingSessions).where(eq(trainingSessions.id, id));
+    return session || undefined;
+  }
+
+  async createTrainingSession(insertSession: InsertTrainingSession): Promise<TrainingSession> {
+    const [session] = await db
+      .insert(trainingSessions)
+      .values(insertSession)
+      .returning();
+    return session;
+  }
+
+  async updateTrainingSession(id: number, updateData: Partial<InsertTrainingSession>): Promise<TrainingSession | undefined> {
+    const [session] = await db
+      .update(trainingSessions)
+      .set(updateData)
+      .where(eq(trainingSessions.id, id))
+      .returning();
+    return session || undefined;
+  }
+
+  async deleteTrainingSession(id: number): Promise<boolean> {
+    const result = await db.delete(trainingSessions).where(eq(trainingSessions.id, id));
+    return result.rowCount > 0;
+  }
+
+  async getSessionAttendance(sessionId: number): Promise<(SessionAttendance & { player: Player })[]> {
+    return await db
+      .select()
+      .from(sessionAttendance)
+      .innerJoin(players, eq(sessionAttendance.playerId, players.id))
+      .where(eq(sessionAttendance.sessionId, sessionId));
+  }
+
+  async markAttendance(insertAttendance: InsertSessionAttendance): Promise<SessionAttendance> {
+    const [attendance] = await db
+      .insert(sessionAttendance)
+      .values(insertAttendance)
+      .returning();
+    return attendance;
+  }
+
+  async updateAttendance(id: number, updateData: Partial<InsertSessionAttendance>): Promise<SessionAttendance | undefined> {
+    const [attendance] = await db
+      .update(sessionAttendance)
+      .set(updateData)
+      .where(eq(sessionAttendance.id, id))
+      .returning();
+    return attendance || undefined;
+  }
+
+  async getFormations(teamId: number): Promise<TacticalFormation[]> {
+    return await db.select().from(tacticalFormations).where(eq(tacticalFormations.teamId, teamId));
+  }
+
+  async createFormation(insertFormation: InsertTacticalFormation): Promise<TacticalFormation> {
+    const [formation] = await db
+      .insert(tacticalFormations)
+      .values(insertFormation)
+      .returning();
+    return formation;
+  }
+
+  async updateFormation(id: number, updateData: Partial<InsertTacticalFormation>): Promise<TacticalFormation | undefined> {
+    const [formation] = await db
+      .update(tacticalFormations)
+      .set(updateData)
+      .where(eq(tacticalFormations.id, id))
+      .returning();
+    return formation || undefined;
+  }
+
+  async deleteFormation(id: number): Promise<boolean> {
+    const result = await db.delete(tacticalFormations).where(eq(tacticalFormations.id, id));
+    return result.rowCount > 0;
+  }
+
+  async getPlayerStats(playerId: number): Promise<PlayerStats[]> {
+    return await db.select().from(playerStats).where(eq(playerStats.playerId, playerId));
+  }
+
+  async createPlayerStats(insertStats: InsertPlayerStats): Promise<PlayerStats> {
+    const [stats] = await db
+      .insert(playerStats)
+      .values(insertStats)
+      .returning();
+    return stats;
+  }
+
+  async updatePlayerStats(id: number, updateData: Partial<InsertPlayerStats>): Promise<PlayerStats | undefined> {
+    const [stats] = await db
+      .update(playerStats)
+      .set(updateData)
+      .where(eq(playerStats.id, id))
+      .returning();
+    return stats || undefined;
+  }
+
+  async getStaff(): Promise<Staff[]> {
+    return await db.select().from(staff);
+  }
+
+  async getStaffMember(id: number): Promise<Staff | undefined> {
+    const [staffMember] = await db.select().from(staff).where(eq(staff.id, id));
+    return staffMember || undefined;
+  }
+
+  async createStaff(insertStaff: InsertStaff): Promise<Staff> {
+    const [staffMember] = await db
+      .insert(staff)
+      .values(insertStaff)
+      .returning();
+    return staffMember;
+  }
+
+  async updateStaff(id: number, updateData: Partial<InsertStaff>): Promise<Staff | undefined> {
+    const [staffMember] = await db
+      .update(staff)
+      .set(updateData)
+      .where(eq(staff.id, id))
+      .returning();
+    return staffMember || undefined;
+  }
+
+  async deleteStaff(id: number): Promise<boolean> {
+    const result = await db.delete(staff).where(eq(staff.id, id));
+    return result.rowCount > 0;
+  }
+
+  async getMatches(): Promise<Match[]> {
+    return await db.select().from(matches);
+  }
+
+  async getMatch(id: number): Promise<Match | undefined> {
+    const [match] = await db.select().from(matches).where(eq(matches.id, id));
+    return match || undefined;
+  }
+
+  async createMatch(insertMatch: InsertMatch): Promise<Match> {
+    const [match] = await db
+      .insert(matches)
+      .values(insertMatch)
+      .returning();
+    return match;
+  }
+
+  async updateMatch(id: number, updateData: Partial<InsertMatch>): Promise<Match | undefined> {
+    const [match] = await db
+      .update(matches)
+      .set(updateData)
+      .where(eq(matches.id, id))
+      .returning();
+    return match || undefined;
+  }
+
+  async deleteMatch(id: number): Promise<boolean> {
+    const result = await db.delete(matches).where(eq(matches.id, id));
+    return result.rowCount > 0;
+  }
+
+  async getMatchSquad(matchId: number): Promise<(MatchSquad & { player: Player })[]> {
+    return await db
+      .select()
+      .from(matchSquads)
+      .innerJoin(players, eq(matchSquads.playerId, players.id))
+      .where(eq(matchSquads.matchId, matchId));
+  }
+
+  async addPlayerToMatchSquad(insertMatchSquad: InsertMatchSquad): Promise<MatchSquad> {
+    const [matchSquad] = await db
+      .insert(matchSquads)
+      .values(insertMatchSquad)
+      .returning();
+    return matchSquad;
+  }
+
+  async updateMatchSquad(id: number, updateData: Partial<InsertMatchSquad>): Promise<MatchSquad | undefined> {
+    const [matchSquad] = await db
+      .update(matchSquads)
+      .set(updateData)
+      .where(eq(matchSquads.id, id))
+      .returning();
+    return matchSquad || undefined;
+  }
+
+  async getAnalyticsReports(): Promise<AnalyticsReport[]> {
+    return await db.select().from(analyticsReports);
+  }
+
+  async getAnalyticsReport(id: number): Promise<AnalyticsReport | undefined> {
+    const [report] = await db.select().from(analyticsReports).where(eq(analyticsReports.id, id));
+    return report || undefined;
+  }
+
+  async createAnalyticsReport(insertReport: InsertAnalyticsReport): Promise<AnalyticsReport> {
+    const [report] = await db
+      .insert(analyticsReports)
+      .values(insertReport)
+      .returning();
+    return report;
+  }
+
+  async updateAnalyticsReport(id: number, updateData: Partial<InsertAnalyticsReport>): Promise<AnalyticsReport | undefined> {
+    const [report] = await db
+      .update(analyticsReports)
+      .set(updateData)
+      .where(eq(analyticsReports.id, id))
+      .returning();
+    return report || undefined;
+  }
+
+  async deleteAnalyticsReport(id: number): Promise<boolean> {
+    const result = await db.delete(analyticsReports).where(eq(analyticsReports.id, id));
+    return result.rowCount > 0;
+  }
+
+  async getSystemSettings(): Promise<SystemSettings[]> {
+    return await db.select().from(systemSettings);
+  }
+
+  async getSystemSetting(id: number): Promise<SystemSettings | undefined> {
+    const [setting] = await db.select().from(systemSettings).where(eq(systemSettings.id, id));
+    return setting || undefined;
+  }
+
+  async createSystemSetting(insertSetting: InsertSystemSettings): Promise<SystemSettings> {
+    const [setting] = await db
+      .insert(systemSettings)
+      .values(insertSetting)
+      .returning();
+    return setting;
+  }
+
+  async updateSystemSetting(id: number, updateData: Partial<InsertSystemSettings>): Promise<SystemSettings | undefined> {
+    const [setting] = await db
+      .update(systemSettings)
+      .set(updateData)
+      .where(eq(systemSettings.id, id))
+      .returning();
+    return setting || undefined;
+  }
+}
+
+export const storage = new DatabaseStorage();
