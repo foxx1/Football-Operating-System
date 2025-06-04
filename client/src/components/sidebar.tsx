@@ -8,7 +8,10 @@ import {
   TrendingUp, 
   FileText,
   Settings,
-  Zap
+  Zap,
+  UserCheck,
+  Trophy,
+  BarChart3
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -17,11 +20,15 @@ import { Button } from "@/components/ui/button";
 
 const navigationItems = [
   { href: "/", icon: Gauge, label: "Dashboard", badge: null },
-  { href: "/players", icon: Users, label: "Players", badge: "24" },
+  { href: "/players", icon: Users, label: "Players", badge: "5" },
   { href: "/teams", icon: Shield, label: "Teams & Squads", badge: null },
+  { href: "/staff", icon: UserCheck, label: "Staff Management", badge: null },
   { href: "/training", icon: Calendar, label: "Training Schedule", badge: null },
+  { href: "/matches", icon: Trophy, label: "Matches", badge: null },
   { href: "/tactics", icon: Swords, label: "Tactics Board", badge: null },
+  { href: "/analytics", icon: BarChart3, label: "Analytics", badge: null },
   { href: "/reports", icon: FileText, label: "Reports", badge: null },
+  { href: "/settings", icon: Settings, label: "Settings", badge: null },
 ];
 
 export default function Sidebar() {
@@ -50,9 +57,9 @@ export default function Sidebar() {
           
           return (
             <Link key={item.href} href={item.href}>
-              <a
+              <div
                 className={cn(
-                  "flex items-center px-4 py-3 rounded-lg transition-colors group sidebar-nav-item",
+                  "flex items-center px-4 py-3 rounded-lg transition-colors group sidebar-nav-item cursor-pointer",
                   isActive
                     ? "bg-sidebar-primary text-sidebar-primary-foreground active"
                     : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
@@ -68,7 +75,7 @@ export default function Sidebar() {
                     {item.badge}
                   </Badge>
                 )}
-              </a>
+              </div>
             </Link>
           );
         })}

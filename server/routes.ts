@@ -3,7 +3,9 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { 
   insertPlayerSchema, insertTeamSchema, insertTrainingSessionSchema,
-  insertSessionAttendanceSchema, insertTacticalFormationSchema, insertPlayerStatsSchema
+  insertSessionAttendanceSchema, insertTacticalFormationSchema, insertPlayerStatsSchema,
+  insertStaffSchema, insertMatchSchema, insertMatchSquadSchema,
+  insertAnalyticsReportSchema, insertSystemSettingsSchema
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -285,32 +287,219 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Staff Management
+  app.get("/api/staff", async (req, res) => {
+    try {
+      const staff = await storage.getStaff();
+      res.json(staff);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch staff" });
+    }
+  });
+
+  app.get("/api/staff/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const staff = await storage.getStaffMember(id);
+      if (!staff) {
+        return res.status(404).json({ message: "Staff member not found" });
+      }
+      res.json(staff);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch staff member" });
+    }
+  });
+
+  app.post("/api/staff", async (req, res) => {
+    try {
+      const validatedData = insertStaffSchema.parse(req.body);
+      const staff = await storage.createStaff(validatedData);
+      res.status(201).json(staff);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid staff data" });
+    }
+  });
+
+  app.patch("/api/staff/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validatedData = insertStaffSchema.partial().parse(req.body);
+      const staff = await storage.updateStaff(id, validatedData);
+      if (!staff) {
+        return res.status(404).json({ message: "Staff member not found" });
+      }
+      res.json(staff);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid staff data" });
+    }
+  });
+
+  app.delete("/api/staff/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteStaff(id);
+      if (!success) {
+        return res.status(404).json({ message: "Staff member not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete staff member" });
+    }
+  });
+
+  // Matches
+  app.get("/api/matches", async (req, res) => {
+    try {
+      const matches = await storage.getMatches();
+      res.json(matches);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch matches" });
+    }
+  });
+
+  app.get("/api/matches/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const match = await storage.getMatch(id);
+      if (!match) {
+        return res.status(404).json({ message: "Match not found" });
+      }
+      res.json(match);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch match" });
+    }
+  });
+
+  app.post("/api/matches", async (req, res) => {
+    try {
+      const validatedData = insertMatchSchema.parse(req.body);
+      const match = await storage.createMatch(validatedData);
+      res.status(201).json(match);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid match data" });
+    }
+  });
+
+  app.patch("/api/matches/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validatedData = insertMatchSchema.partial().parse(req.body);
+      const match = await storage.updateMatch(id, validatedData);
+      if (!match) {
+        return res.status(404).json({ message: "Match not found" });
+      }
+      res.json(match);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid match data" });
+    }
+  });
+
+  app.delete("/api/matches/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteMatch(id);
+      if (!success) {
+        return res.status(404).json({ message: "Match not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete match" });
+    }
+  });
+
+  // Analytics Reports
+  app.get("/api/analytics", async (req, res) => {
+    try {
+      const reports = await storage.getAnalyticsReports();
+      res.json(reports);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch analytics reports" });
+    }
+  });
+
+  app.post("/api/analytics", async (req, res) => {
+    try {
+      const validatedData = insertAnalyticsReportSchema.parse(req.body);
+      const report = await storage.createAnalyticsReport(validatedData);
+      res.status(201).json(report);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid analytics report data" });
+    }
+  });
+
+  app.delete("/api/analytics/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteAnalyticsReport(id);
+      if (!success) {
+        return res.status(404).json({ message: "Analytics report not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete analytics report" });
+    }
+  });
+
+  // System Settings
+  app.get("/api/settings", async (req, res) => {
+    try {
+      const settings = await storage.getSystemSettings();
+      res.json(settings);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch settings" });
+    }
+  });
+
+  app.post("/api/settings", async (req, res) => {
+    try {
+      const validatedData = insertSystemSettingsSchema.parse(req.body);
+      const setting = await storage.createSystemSetting(validatedData);
+      res.status(201).json(setting);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid setting data" });
+    }
+  });
+
+  app.patch("/api/settings/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validatedData = insertSystemSettingsSchema.partial().parse(req.body);
+      const setting = await storage.updateSystemSetting(id, validatedData);
+      if (!setting) {
+        return res.status(404).json({ message: "Setting not found" });
+      }
+      res.json(setting);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid setting data" });
+    }
+  });
+
   // Dashboard Stats
   app.get("/api/dashboard/stats", async (req, res) => {
     try {
       const players = await storage.getPlayers();
       const teams = await storage.getTeams();
       const sessions = await storage.getTrainingSessions();
+      const staff = await storage.getStaff();
+      const matches = await storage.getMatches();
       
       const today = new Date().toISOString().split('T')[0];
-      const todaySessions = sessions.filter(s => s.date === today);
       const upcomingSessions = sessions.filter(s => s.date >= today).slice(0, 3);
+      const upcomingMatches = matches.filter(m => m.date >= today && m.status === 'scheduled').slice(0, 3);
       
       const stats = {
-        totalPlayers: players.length,
-        activeTeams: teams.length,
+        totalPlayers: players.filter(p => p.isActive).length,
+        activeTeams: teams.filter(t => t.isActive).length,
+        totalStaff: staff.filter(s => s.isActive).length,
+        upcomingMatches: upcomingMatches.length,
         weeklySessions: sessions.filter(s => {
           const sessionDate = new Date(s.date);
           const weekAgo = new Date();
           weekAgo.setDate(weekAgo.getDate() - 7);
           return sessionDate >= weekAgo;
         }).length,
-        attendanceRate: 92, // This would be calculated from actual attendance data
-        upcomingSessions: upcomingSessions.map(session => ({
-          ...session,
-          confirmedPlayers: Math.floor(Math.random() * 20) + 15, // Mock data for demo
-          totalPlayers: 22
-        }))
+        upcomingSessions: upcomingSessions,
+        upcomingFixtures: upcomingMatches
       };
       
       res.json(stats);
