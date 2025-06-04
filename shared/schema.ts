@@ -100,6 +100,82 @@ export const playerStats = pgTable("player_stats", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const staff = pgTable("staff", {
+  id: serial("id").primaryKey(),
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
+  email: text("email").notNull().unique(),
+  phoneNumber: text("phone_number"),
+  role: text("role").notNull(), // head_coach, assistant_coach, fitness_coach, goalkeeping_coach, physiotherapist, analyst, kit_manager
+  department: text("department").notNull(), // coaching, medical, analysis, operations
+  employmentType: text("employment_type").notNull(), // full_time, part_time, contract, volunteer
+  startDate: text("start_date").notNull(),
+  salary: integer("salary"), // monthly salary
+  qualifications: text("qualifications"),
+  emergencyContact: text("emergency_contact"),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const matches = pgTable("matches", {
+  id: serial("id").primaryKey(),
+  homeTeamId: integer("home_team_id").notNull(),
+  awayTeam: text("away_team").notNull(), // opponent team name
+  competition: text("competition").notNull(), // league, cup, friendly
+  matchType: text("match_type").notNull(), // home, away, neutral
+  date: text("date").notNull(),
+  kickoffTime: text("kickoff_time").notNull(),
+  venue: text("venue").notNull(),
+  status: text("status").default("scheduled").notNull(), // scheduled, ongoing, completed, cancelled, postponed
+  homeScore: integer("home_score"),
+  awayScore: integer("away_score"),
+  notes: text("notes"),
+  weatherConditions: text("weather_conditions"),
+  attendance: integer("attendance"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const matchSquads = pgTable("match_squads", {
+  id: serial("id").primaryKey(),
+  matchId: integer("match_id").notNull(),
+  playerId: integer("player_id").notNull(),
+  status: text("status").notNull(), // starting_xi, substitute, not_selected, injured
+  position: text("position"),
+  shirtNumber: integer("shirt_number"),
+  minutesPlayed: integer("minutes_played").default(0),
+  goals: integer("goals").default(0),
+  assists: integer("assists").default(0),
+  yellowCards: integer("yellow_cards").default(0),
+  redCards: integer("red_cards").default(0),
+  rating: integer("rating"), // 1-10
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const analyticsReports = pgTable("analytics_reports", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  type: text("type").notNull(), // performance, tactical, fitness, injury, attendance
+  period: text("period").notNull(), // weekly, monthly, season
+  dataPoints: jsonb("data_points").notNull(), // JSON data for charts/metrics
+  insights: text("insights"),
+  recommendations: text("recommendations"),
+  generatedBy: integer("generated_by").notNull(), // staff id
+  teamId: integer("team_id"),
+  playerId: integer("player_id"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const systemSettings = pgTable("system_settings", {
+  id: serial("id").primaryKey(),
+  category: text("category").notNull(), // general, notifications, integrations, security
+  settingKey: text("setting_key").notNull(),
+  settingValue: text("setting_value"),
+  description: text("description"),
+  isActive: boolean("is_active").default(true),
+  updatedBy: integer("updated_by").notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -141,6 +217,31 @@ export const insertPlayerStatsSchema = createInsertSchema(playerStats).omit({
   createdAt: true,
 });
 
+export const insertStaffSchema = createInsertSchema(staff).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertMatchSchema = createInsertSchema(matches).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertMatchSquadSchema = createInsertSchema(matchSquads).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertAnalyticsReportSchema = createInsertSchema(analyticsReports).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertSystemSettingsSchema = createInsertSchema(systemSettings).omit({
+  id: true,
+  updatedAt: true,
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -165,3 +266,18 @@ export type TacticalFormation = typeof tacticalFormations.$inferSelect;
 
 export type InsertPlayerStats = z.infer<typeof insertPlayerStatsSchema>;
 export type PlayerStats = typeof playerStats.$inferSelect;
+
+export type InsertStaff = z.infer<typeof insertStaffSchema>;
+export type Staff = typeof staff.$inferSelect;
+
+export type InsertMatch = z.infer<typeof insertMatchSchema>;
+export type Match = typeof matches.$inferSelect;
+
+export type InsertMatchSquad = z.infer<typeof insertMatchSquadSchema>;
+export type MatchSquad = typeof matchSquads.$inferSelect;
+
+export type InsertAnalyticsReport = z.infer<typeof insertAnalyticsReportSchema>;
+export type AnalyticsReport = typeof analyticsReports.$inferSelect;
+
+export type InsertSystemSettings = z.infer<typeof insertSystemSettingsSchema>;
+export type SystemSettings = typeof systemSettings.$inferSelect;

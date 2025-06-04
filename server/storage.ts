@@ -1,12 +1,15 @@
 import {
   users, players, teams, teamPlayers, trainingSessions, sessionAttendance, 
-  tacticalFormations, playerStats,
+  tacticalFormations, playerStats, staff, matches, matchSquads, analyticsReports, systemSettings,
   type User, type InsertUser, type Player, type InsertPlayer,
   type Team, type InsertTeam, type TeamPlayer, type InsertTeamPlayer,
   type TrainingSession, type InsertTrainingSession,
   type SessionAttendance, type InsertSessionAttendance,
   type TacticalFormation, type InsertTacticalFormation,
-  type PlayerStats, type InsertPlayerStats
+  type PlayerStats, type InsertPlayerStats,
+  type Staff, type InsertStaff, type Match, type InsertMatch,
+  type MatchSquad, type InsertMatchSquad, type AnalyticsReport, type InsertAnalyticsReport,
+  type SystemSettings, type InsertSystemSettings
 } from "@shared/schema";
 
 export interface IStorage {
@@ -57,6 +60,38 @@ export interface IStorage {
   getPlayerStats(playerId: number): Promise<PlayerStats[]>;
   createPlayerStats(stats: InsertPlayerStats): Promise<PlayerStats>;
   updatePlayerStats(id: number, stats: Partial<InsertPlayerStats>): Promise<PlayerStats | undefined>;
+
+  // Staff
+  getStaff(): Promise<Staff[]>;
+  getStaffMember(id: number): Promise<Staff | undefined>;
+  createStaff(staff: InsertStaff): Promise<Staff>;
+  updateStaff(id: number, staff: Partial<InsertStaff>): Promise<Staff | undefined>;
+  deleteStaff(id: number): Promise<boolean>;
+
+  // Matches
+  getMatches(): Promise<Match[]>;
+  getMatch(id: number): Promise<Match | undefined>;
+  createMatch(match: InsertMatch): Promise<Match>;
+  updateMatch(id: number, match: Partial<InsertMatch>): Promise<Match | undefined>;
+  deleteMatch(id: number): Promise<boolean>;
+
+  // Match Squads
+  getMatchSquad(matchId: number): Promise<(MatchSquad & { player: Player })[]>;
+  addPlayerToMatchSquad(matchSquad: InsertMatchSquad): Promise<MatchSquad>;
+  updateMatchSquad(id: number, matchSquad: Partial<InsertMatchSquad>): Promise<MatchSquad | undefined>;
+
+  // Analytics Reports
+  getAnalyticsReports(): Promise<AnalyticsReport[]>;
+  getAnalyticsReport(id: number): Promise<AnalyticsReport | undefined>;
+  createAnalyticsReport(report: InsertAnalyticsReport): Promise<AnalyticsReport>;
+  updateAnalyticsReport(id: number, report: Partial<InsertAnalyticsReport>): Promise<AnalyticsReport | undefined>;
+  deleteAnalyticsReport(id: number): Promise<boolean>;
+
+  // System Settings
+  getSystemSettings(): Promise<SystemSettings[]>;
+  getSystemSetting(id: number): Promise<SystemSettings | undefined>;
+  createSystemSetting(setting: InsertSystemSettings): Promise<SystemSettings>;
+  updateSystemSetting(id: number, setting: Partial<InsertSystemSettings>): Promise<SystemSettings | undefined>;
 }
 
 export class MemStorage implements IStorage {
@@ -68,6 +103,11 @@ export class MemStorage implements IStorage {
   private sessionAttendance: Map<number, SessionAttendance>;
   private tacticalFormations: Map<number, TacticalFormation>;
   private playerStats: Map<number, PlayerStats>;
+  private staff: Map<number, Staff>;
+  private matches: Map<number, Match>;
+  private matchSquads: Map<number, MatchSquad>;
+  private analyticsReports: Map<number, AnalyticsReport>;
+  private systemSettings: Map<number, SystemSettings>;
   private currentIds: Record<string, number>;
 
   constructor() {
@@ -79,6 +119,11 @@ export class MemStorage implements IStorage {
     this.sessionAttendance = new Map();
     this.tacticalFormations = new Map();
     this.playerStats = new Map();
+    this.staff = new Map();
+    this.matches = new Map();
+    this.matchSquads = new Map();
+    this.analyticsReports = new Map();
+    this.systemSettings = new Map();
     this.currentIds = {
       users: 1,
       players: 1,
@@ -88,6 +133,11 @@ export class MemStorage implements IStorage {
       sessionAttendance: 1,
       tacticalFormations: 1,
       playerStats: 1,
+      staff: 1,
+      matches: 1,
+      matchSquads: 1,
+      analyticsReports: 1,
+      systemSettings: 1,
     };
 
     this.seedData();
@@ -411,6 +461,164 @@ export class MemStorage implements IStorage {
     const updatedStats = { ...stats, ...updateData };
     this.playerStats.set(id, updatedStats);
     return updatedStats;
+  }
+
+  // Staff
+  async getStaff(): Promise<Staff[]> {
+    return Array.from(this.staff.values());
+  }
+
+  async getStaffMember(id: number): Promise<Staff | undefined> {
+    return this.staff.get(id);
+  }
+
+  async createStaff(insertStaff: InsertStaff): Promise<Staff> {
+    const id = this.currentIds.staff++;
+    const staff: Staff = { 
+      ...insertStaff, 
+      id, 
+      createdAt: new Date() 
+    };
+    this.staff.set(id, staff);
+    return staff;
+  }
+
+  async updateStaff(id: number, updateData: Partial<InsertStaff>): Promise<Staff | undefined> {
+    const staff = this.staff.get(id);
+    if (!staff) return undefined;
+    
+    const updatedStaff = { ...staff, ...updateData };
+    this.staff.set(id, updatedStaff);
+    return updatedStaff;
+  }
+
+  async deleteStaff(id: number): Promise<boolean> {
+    return this.staff.delete(id);
+  }
+
+  // Matches
+  async getMatches(): Promise<Match[]> {
+    return Array.from(this.matches.values());
+  }
+
+  async getMatch(id: number): Promise<Match | undefined> {
+    return this.matches.get(id);
+  }
+
+  async createMatch(insertMatch: InsertMatch): Promise<Match> {
+    const id = this.currentIds.matches++;
+    const match: Match = { 
+      ...insertMatch, 
+      id, 
+      createdAt: new Date() 
+    };
+    this.matches.set(id, match);
+    return match;
+  }
+
+  async updateMatch(id: number, updateData: Partial<InsertMatch>): Promise<Match | undefined> {
+    const match = this.matches.get(id);
+    if (!match) return undefined;
+    
+    const updatedMatch = { ...match, ...updateData };
+    this.matches.set(id, updatedMatch);
+    return updatedMatch;
+  }
+
+  async deleteMatch(id: number): Promise<boolean> {
+    return this.matches.delete(id);
+  }
+
+  // Match Squads
+  async getMatchSquad(matchId: number): Promise<(MatchSquad & { player: Player })[]> {
+    return Array.from(this.matchSquads.values())
+      .filter(ms => ms.matchId === matchId)
+      .map(ms => {
+        const player = this.players.get(ms.playerId);
+        return { ...ms, player: player! };
+      });
+  }
+
+  async addPlayerToMatchSquad(insertMatchSquad: InsertMatchSquad): Promise<MatchSquad> {
+    const id = this.currentIds.matchSquads++;
+    const matchSquad: MatchSquad = { 
+      ...insertMatchSquad, 
+      id, 
+      createdAt: new Date() 
+    };
+    this.matchSquads.set(id, matchSquad);
+    return matchSquad;
+  }
+
+  async updateMatchSquad(id: number, updateData: Partial<InsertMatchSquad>): Promise<MatchSquad | undefined> {
+    const matchSquad = this.matchSquads.get(id);
+    if (!matchSquad) return undefined;
+    
+    const updatedMatchSquad = { ...matchSquad, ...updateData };
+    this.matchSquads.set(id, updatedMatchSquad);
+    return updatedMatchSquad;
+  }
+
+  // Analytics Reports
+  async getAnalyticsReports(): Promise<AnalyticsReport[]> {
+    return Array.from(this.analyticsReports.values());
+  }
+
+  async getAnalyticsReport(id: number): Promise<AnalyticsReport | undefined> {
+    return this.analyticsReports.get(id);
+  }
+
+  async createAnalyticsReport(insertReport: InsertAnalyticsReport): Promise<AnalyticsReport> {
+    const id = this.currentIds.analyticsReports++;
+    const report: AnalyticsReport = { 
+      ...insertReport, 
+      id, 
+      createdAt: new Date() 
+    };
+    this.analyticsReports.set(id, report);
+    return report;
+  }
+
+  async updateAnalyticsReport(id: number, updateData: Partial<InsertAnalyticsReport>): Promise<AnalyticsReport | undefined> {
+    const report = this.analyticsReports.get(id);
+    if (!report) return undefined;
+    
+    const updatedReport = { ...report, ...updateData };
+    this.analyticsReports.set(id, updatedReport);
+    return updatedReport;
+  }
+
+  async deleteAnalyticsReport(id: number): Promise<boolean> {
+    return this.analyticsReports.delete(id);
+  }
+
+  // System Settings
+  async getSystemSettings(): Promise<SystemSettings[]> {
+    return Array.from(this.systemSettings.values());
+  }
+
+  async getSystemSetting(id: number): Promise<SystemSettings | undefined> {
+    return this.systemSettings.get(id);
+  }
+
+  async createSystemSetting(insertSetting: InsertSystemSettings): Promise<SystemSettings> {
+    const id = this.currentIds.systemSettings++;
+    const setting: SystemSettings = { 
+      ...insertSetting, 
+      id, 
+      updatedAt: new Date() 
+    };
+    this.systemSettings.set(id, setting);
+    return setting;
+  }
+
+  async updateSystemSetting(id: number, updateData: Partial<InsertSystemSettings>): Promise<SystemSettings | undefined> {
+    const setting = this.systemSettings.get(id);
+    if (!setting) return undefined;
+    
+    const updatedSetting = { ...setting, ...updateData, updatedAt: new Date() };
+    this.systemSettings.set(id, updatedSetting);
+    return updatedSetting;
   }
 }
 
