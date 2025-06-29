@@ -36,9 +36,7 @@ interface AddPlayerDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const formSchema = insertPlayerSchema.extend({
-  dateOfBirth: z.string().optional(),
-});
+const formSchema = insertPlayerSchema;
 
 type FormData = z.infer<typeof formSchema>;
 
@@ -53,23 +51,30 @@ export default function AddPlayerDialog({ open, onOpenChange }: AddPlayerDialogP
       lastName: "",
       position: "midfielder",
       nationality: "",
-      email: null,
-      phoneNumber: null,
-      shirtNumber: null,
-      dateOfBirth: undefined,
-      height: null,
-      weight: null,
-      emergencyContact: null,
-      medicalNotes: null,
+      dateOfBirth: "",
+      email: "",
+      phoneNumber: "",
+      shirtNumber: undefined,
+      height: undefined,
+      weight: undefined,
+      emergencyContact: "",
+      medicalNotes: "",
       isActive: true,
     },
   });
 
   const mutation = useMutation({
     mutationFn: async (data: FormData) => {
+      // Clean up the data to handle empty strings and null values
       const playerData = {
         ...data,
-        dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : null,
+        email: data.email || null,
+        phoneNumber: data.phoneNumber || null,
+        emergencyContact: data.emergencyContact || null,
+        medicalNotes: data.medicalNotes || null,
+        shirtNumber: data.shirtNumber || null,
+        height: data.height || null,
+        weight: data.weight || null,
       };
       return apiRequest("POST", "/api/players", playerData);
     },
