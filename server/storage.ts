@@ -735,8 +735,8 @@ export class DatabaseStorage implements IStorage {
   async removePlayerFromTeam(teamId: number, playerId: number): Promise<boolean> {
     const result = await db
       .delete(teamPlayers)
-      .where(eq(teamPlayers.teamId, teamId) && eq(teamPlayers.playerId, playerId));
-    return result.rowCount > 0;
+      .where(and(eq(teamPlayers.teamId, teamId), eq(teamPlayers.playerId, playerId)));
+    return (result.rowCount ?? 0) > 0;
   }
 
   async getTrainingSessions(): Promise<TrainingSession[]> {
