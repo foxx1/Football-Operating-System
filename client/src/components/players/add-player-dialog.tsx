@@ -51,15 +51,16 @@ export default function AddPlayerDialog({ open, onOpenChange }: AddPlayerDialogP
     defaultValues: {
       firstName: "",
       lastName: "",
-      email: "",
-      phone: "",
       position: "midfielder",
-      jerseyNumber: undefined,
-      height: undefined,
-      weight: undefined,
-      preferredFoot: "right",
       nationality: "",
-      notes: "",
+      email: null,
+      phoneNumber: null,
+      shirtNumber: null,
+      dateOfBirth: undefined,
+      height: null,
+      weight: null,
+      emergencyContact: null,
+      medicalNotes: null,
       isActive: true,
     },
   });
@@ -150,7 +151,7 @@ export default function AddPlayerDialog({ open, onOpenChange }: AddPlayerDialogP
               />
               <FormField
                 control={form.control}
-                name="phone"
+                name="phoneNumber"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Phone</FormLabel>
@@ -190,7 +191,7 @@ export default function AddPlayerDialog({ open, onOpenChange }: AddPlayerDialogP
               />
               <FormField
                 control={form.control}
-                name="jerseyNumber"
+                name="shirtNumber"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Jersey Number</FormLabel>
@@ -207,28 +208,7 @@ export default function AddPlayerDialog({ open, onOpenChange }: AddPlayerDialogP
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="preferredFoot"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Preferred Foot</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select foot" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="left">Left</SelectItem>
-                        <SelectItem value="right">Right</SelectItem>
-                        <SelectItem value="both">Both</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+
             </div>
 
             {/* Physical Stats */}
@@ -302,7 +282,7 @@ export default function AddPlayerDialog({ open, onOpenChange }: AddPlayerDialogP
 
             <FormField
               control={form.control}
-              name="notes"
+              name="medicalNotes"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Notes</FormLabel>
