@@ -96,7 +96,7 @@ export default function AddPlayerDialog({ open, onOpenChange }: AddPlayerDialogP
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add New Player</DialogTitle>
         </DialogHeader>
@@ -104,7 +104,7 @@ export default function AddPlayerDialog({ open, onOpenChange }: AddPlayerDialogP
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             {/* Basic Information */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="firstName"
@@ -164,7 +164,7 @@ export default function AddPlayerDialog({ open, onOpenChange }: AddPlayerDialogP
             </div>
 
             {/* Player Details */}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <FormField
                 control={form.control}
                 name="position"
