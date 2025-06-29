@@ -16,7 +16,7 @@ export default function Players() {
   const [isAddPlayerOpen, setIsAddPlayerOpen] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
 
-  const { data: players, isLoading } = useQuery({
+  const { data: players = [], isLoading } = useQuery<Player[]>({
     queryKey: ["/api/players"],
   });
 
@@ -28,10 +28,17 @@ export default function Players() {
     },
   });
 
-  const filteredPlayers = players?.filter((player: Player) =>
-    `${player.firstName} ${player.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    player.position.toLowerCase().includes(searchQuery.toLowerCase())
-  ) || [];
+  const filteredPlayers = players.filter((player: Player) => {
+    // Add null check to prevent undefined errors
+    if (!player || !player.id) {
+      console.warn('Invalid player object:', player);
+      return false;
+    }
+    return (
+      `${player.firstName} ${player.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      player.position.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  });
 
   const getPositionColor = (position: string) => {
     switch (position.toLowerCase()) {
@@ -121,7 +128,7 @@ export default function Players() {
                 <User className="w-4 h-4 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{players?.length || 0}</p>
+                <p className="text-2xl font-bold">{players.length}</p>
                 <p className="text-sm text-muted-foreground">Total Players</p>
               </div>
             </div>
@@ -135,7 +142,7 @@ export default function Players() {
               </div>
               <div>
                 <p className="text-2xl font-bold">
-                  {players?.filter((p: Player) => p.position === 'goalkeeper')?.length || 0}
+                  {players.filter((p: Player) => p.position === 'goalkeeper').length}
                 </p>
                 <p className="text-sm text-muted-foreground">Goalkeepers</p>
               </div>
@@ -150,7 +157,7 @@ export default function Players() {
               </div>
               <div>
                 <p className="text-2xl font-bold">
-                  {players?.filter((p: Player) => p.position === 'defender')?.length || 0}
+                  {players.filter((p: Player) => p.position === 'defender').length}
                 </p>
                 <p className="text-sm text-muted-foreground">Defenders</p>
               </div>
@@ -165,7 +172,7 @@ export default function Players() {
               </div>
               <div>
                 <p className="text-2xl font-bold">
-                  {players?.filter((p: Player) => ['midfielder', 'forward'].includes(p.position))?.length || 0}
+                  {players.filter((p: Player) => ['midfielder', 'forward'].includes(p.position)).length}
                 </p>
                 <p className="text-sm text-muted-foreground">Mid/Forward</p>
               </div>
@@ -176,7 +183,14 @@ export default function Players() {
 
       {/* Players Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {filteredPlayers.map((player: Player) => (
+        {filteredPlayers.map((player: Player) => {
+          // Ensure player and player.id exist before rendering
+          if (!player || !player.id) {
+            console.error('Invalid player in map:', player);
+            return null;
+          }
+          
+          return (
           <Card key={player.id} className="stats-card hover:shadow-lg transition-shadow">
             <CardContent className="p-6">
               <div className="flex items-start justify-between mb-4">
@@ -240,7 +254,8 @@ export default function Players() {
               </div>
             </CardContent>
           </Card>
-        ))}
+          );
+        })}
       </div>
 
       {/* Empty State */}
