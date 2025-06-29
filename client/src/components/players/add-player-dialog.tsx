@@ -30,6 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { FileUpload } from "@/components/ui/file-upload";
 
 interface AddPlayerDialogProps {
   open: boolean;
@@ -59,6 +60,9 @@ export default function AddPlayerDialog({ open, onOpenChange }: AddPlayerDialogP
       weight: undefined,
       emergencyContact: "",
       medicalNotes: "",
+      profilePicture: "",
+      idDocument: "",
+      contractDocument: "",
       isActive: true,
     },
   });
@@ -72,6 +76,9 @@ export default function AddPlayerDialog({ open, onOpenChange }: AddPlayerDialogP
         phoneNumber: data.phoneNumber || null,
         emergencyContact: data.emergencyContact || null,
         medicalNotes: data.medicalNotes || null,
+        profilePicture: data.profilePicture || null,
+        idDocument: data.idDocument || null,
+        contractDocument: data.contractDocument || null,
         shirtNumber: data.shirtNumber || null,
         height: data.height || null,
         weight: data.weight || null,
@@ -301,6 +308,67 @@ export default function AddPlayerDialog({ open, onOpenChange }: AddPlayerDialogP
                 </FormItem>
               )}
             />
+
+            {/* File Upload Section */}
+            <div className="col-span-2 space-y-6 border-t pt-6">
+              <h3 className="text-lg font-semibold">Documents & Photos</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Profile Picture */}
+                <FormField
+                  control={form.control}
+                  name="profilePicture"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FileUpload
+                        label="Profile Picture"
+                        accept="image/*"
+                        value={field.value || ""}
+                        onChange={field.onChange}
+                        description="Upload player profile photo (JPG, PNG)"
+                      />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* ID Document */}
+                <FormField
+                  control={form.control}
+                  name="idDocument"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FileUpload
+                        label="ID/Passport Copy"
+                        accept="image/*,.pdf"
+                        value={field.value || ""}
+                        onChange={field.onChange}
+                        description="Upload ID or passport copy"
+                      />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Contract Document */}
+                <FormField
+                  control={form.control}
+                  name="contractDocument"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FileUpload
+                        label="Contract"
+                        accept=".pdf,image/*"
+                        value={field.value || ""}
+                        onChange={field.onChange}
+                        description="Upload signed contract"
+                      />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
 
             <div className="flex justify-end space-x-3">
               <Button

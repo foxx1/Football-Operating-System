@@ -27,6 +27,9 @@ export const players = pgTable("players", {
   email: text("email"),
   emergencyContact: text("emergency_contact"),
   medicalNotes: text("medical_notes"),
+  profilePicture: text("profile_picture"), // file path for profile photo
+  idDocument: text("id_document"), // file path for ID/Passport copy
+  contractDocument: text("contract_document"), // file path for contract
   isActive: boolean("is_active").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

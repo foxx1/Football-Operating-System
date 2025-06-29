@@ -8,7 +8,7 @@ import {
   insertAnalyticsReportSchema, insertSystemSettingsSchema
 } from "@shared/schema";
 
-export async function registerRoutes(app: Express): Promise<Server> {
+export async function registerRoutes(app: Express, upload?: any): Promise<Server> {
   // Players
   app.get("/api/players", async (req, res) => {
     try {
@@ -72,6 +72,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to delete player" });
     }
   });
+
+  // File upload endpoint for player documents
+  if (upload) {
+    app.post("/api/upload/player-files", upload.fields([
+      { name: 'profilePicture', maxCount: 1 },
+      { name: 'idDocument', maxCount: 1 },
+      { name: 'contractDocument', maxCount: 1 }
+    ]), (req, res) => {
+      try {
+        const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+        const result: { [key: string]: string } = {};
+        
+        if (files.profilePicture) {
+          result.profilePicture = `/uploads/${files.profilePicture[0].filename}`;
+        }
+        if (files.idDocument) {
+          result.idDocument = `/uploads/${files.idDocument[0].filename}`;
+        }
+        if (files.contractDocument) {
+          result.contractDocument = `/uploads/${files.contractDocument[0].filename}`;
+        }
+        
+        res.json(result);
+      } catch (error) {
+        console.error("File upload error:", error);
+        res.status(400).json({ message: "File upload failed" });
+      }
+    });
+
+    // Single file upload endpoint
+    app.post("/api/upload/single", upload.single('file'), (req, res) => {
+      try {
+        if (!req.file) {
+          return res.status(400).json({ message: "No file uploaded" });
+        }
+        
+        const filePath = `/uploads/${req.file.filename}`;
+        res.json({ filePath });
+      } catch (error) {
+        console.error("Single file upload error:", error);
+        res.status(400).json({ message: "File upload failed" });
+      }
+    });
+  }
 
   // Teams
   app.get("/api/teams", async (req, res) => {
