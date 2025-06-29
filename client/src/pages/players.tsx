@@ -5,10 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Plus, Search, Filter, MoreHorizontal, Edit, Trash2, User } from "lucide-react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import PlayerForm from "@/components/player-form";
+import AddPlayerDialog from "@/components/players/add-player-dialog";
 import type { Player } from "@shared/schema";
 
 export default function Players() {
@@ -85,20 +85,18 @@ export default function Players() {
           <h1 className="text-3xl font-bold text-foreground">Players</h1>
           <p className="text-muted-foreground">Manage your team roster and player information</p>
         </div>
-        <Dialog open={isAddPlayerOpen} onOpenChange={setIsAddPlayerOpen}>
-          <DialogTrigger asChild>
-            <Button className="action-button bg-primary text-primary-foreground hover:bg-primary/90">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Player
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Add New Player</DialogTitle>
-            </DialogHeader>
-            <PlayerForm onSuccess={() => setIsAddPlayerOpen(false)} />
-          </DialogContent>
-        </Dialog>
+        <Button 
+          className="action-button bg-primary text-primary-foreground hover:bg-primary/90"
+          onClick={() => setIsAddPlayerOpen(true)}
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          Add Player
+        </Button>
+        
+        <AddPlayerDialog 
+          open={isAddPlayerOpen} 
+          onOpenChange={setIsAddPlayerOpen}
+        />
       </div>
 
       {/* Search and Filters */}
@@ -277,18 +275,22 @@ export default function Players() {
         </Card>
       )}
 
-      {/* Edit Player Dialog */}
+      {/* Edit Player Dialog - TODO: Implement edit functionality */}
       <Dialog open={!!editingPlayer} onOpenChange={() => setEditingPlayer(null)}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Edit Player</DialogTitle>
           </DialogHeader>
-          {editingPlayer && (
-            <PlayerForm 
-              player={editingPlayer}
-              onSuccess={() => setEditingPlayer(null)} 
-            />
-          )}
+          <div className="p-4 text-center text-muted-foreground">
+            <p>Edit functionality coming soon...</p>
+            <Button 
+              variant="outline" 
+              onClick={() => setEditingPlayer(null)}
+              className="mt-4"
+            >
+              Close
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
