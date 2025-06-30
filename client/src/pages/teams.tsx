@@ -210,38 +210,44 @@ export default function Teams() {
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {teamPlayers?.map((teamPlayer: any) => (
-                    <Card key={teamPlayer.id} className="p-4">
-                      <div className="flex items-center space-x-3">
-                        <Avatar className="w-10 h-10">
-                          <AvatarImage src={`https://images.unsplash.com/photo-150${teamPlayer.player.id}0794778202-cad84cf45f1d?w=120&h=120&fit=crop&crop=face`} />
-                          <AvatarFallback>
-                            {teamPlayer.player.firstName[0]}{teamPlayer.player.lastName[0]}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                          <h4 className="font-medium text-foreground">
-                            {teamPlayer.player.firstName} {teamPlayer.player.lastName}
-                          </h4>
-                          <div className="flex items-center space-x-2">
-                            <Badge variant="outline" className="text-xs">
-                              {teamPlayer.player.position}
-                            </Badge>
-                            {teamPlayer.player.shirtNumber && (
-                              <span className="text-xs text-muted-foreground">
-                                #{teamPlayer.player.shirtNumber}
-                              </span>
-                            )}
-                            {teamPlayer.isStarter && (
-                              <Badge className="text-xs bg-primary/10 text-primary">
-                                Starter
+                  {teamPlayers?.map((teamPlayer: any) => {
+                    if (!teamPlayer?.player) {
+                      return null;
+                    }
+                    
+                    return (
+                      <Card key={teamPlayer.id} className="p-4">
+                        <div className="flex items-center space-x-3">
+                          <Avatar className="w-10 h-10">
+                            <AvatarImage src={`https://images.unsplash.com/photo-150${teamPlayer.player.id || 1}0794778202-cad84cf45f1d?w=120&h=120&fit=crop&crop=face`} />
+                            <AvatarFallback>
+                              {teamPlayer.player.firstName?.[0] || 'P'}{teamPlayer.player.lastName?.[0] || 'L'}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1">
+                            <h4 className="font-medium text-foreground">
+                              {teamPlayer.player.firstName} {teamPlayer.player.lastName}
+                            </h4>
+                            <div className="flex items-center space-x-2">
+                              <Badge variant="outline" className="text-xs">
+                                {teamPlayer.player.position}
                               </Badge>
-                            )}
+                              {teamPlayer.player.shirtNumber && (
+                                <span className="text-xs text-muted-foreground">
+                                  #{teamPlayer.player.shirtNumber}
+                                </span>
+                              )}
+                              {teamPlayer.isStarter && (
+                                <Badge className="text-xs bg-primary/10 text-primary">
+                                  Starter
+                                </Badge>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </Card>
-                  ))}
+                      </Card>
+                    );
+                  })}
                 </div>
               </div>
             )}
