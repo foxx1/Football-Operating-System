@@ -16,6 +16,7 @@ import {
   PanelLeftOpen
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useSettings } from "@/contexts/SettingsContext";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,7 @@ const navigationItems = [
 export default function Sidebar() {
   const [location] = useLocation();
   const [isExpanded, setIsExpanded] = useState(false);
+  const { organizationName, logoUrl } = useSettings();
 
   // Load sidebar preference from localStorage
   useEffect(() => {
@@ -63,13 +65,21 @@ export default function Sidebar() {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
-              <Zap className="text-primary-foreground text-lg" />
+              {logoUrl ? (
+                <img
+                  src={logoUrl}
+                  alt={`${organizationName} Logo`}
+                  className="w-8 h-8 object-contain rounded"
+                />
+              ) : (
+                <Zap className="text-primary-foreground text-lg" />
+              )}
             </div>
             <div className={cn(
               "overflow-hidden whitespace-nowrap transition-opacity duration-300",
               isExpanded ? "opacity-100" : "opacity-0 group-hover:opacity-100"
             )}>
-              <h1 className="text-xl font-bold text-sidebar-foreground">ProCoach</h1>
+              <h1 className="text-xl font-bold text-sidebar-foreground">{organizationName}</h1>
               <p className="text-sm text-sidebar-foreground/60">Team Management</p>
             </div>
           </div>
