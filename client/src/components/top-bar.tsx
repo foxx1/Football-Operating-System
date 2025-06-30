@@ -36,11 +36,6 @@ export default function TopBar() {
             />
           </div>
 
-          {/* Action Buttons */}
-          <Button variant="outline" size="sm" className="text-sm">
-            Supabase
-          </Button>
-
           {/* Notifications */}
           <Button
             variant="ghost"
