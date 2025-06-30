@@ -121,6 +121,15 @@ The system uses PostgreSQL with the following core entities:
 
 ## Recent Changes
 
+### June 30, 2025 - Regional Settings and Currency Support
+✓ Added comprehensive AST (Arabian Standard Time) timezone support for Middle East regions
+✓ Implemented multi-currency preferences: USD, EUR, SAR, QAR, AED, OMR, KWD, BHD, GBP, JPY
+✓ Enhanced Settings page with dedicated "Regional & Currency Settings" section
+✓ Fixed all API request format issues in Staff and Settings components
+✓ Added date format preferences (DD/MM/YYYY, MM/DD/YYYY, YYYY-MM-DD, DD-MM-YYYY)
+✓ Staff management now fully functional with proper CRUD operations
+✓ Settings persist correctly with database integration
+
 ### June 29, 2025 - Runtime Error Resolution and TypeScript Fixes
 ✓ Fixed critical "Cannot read properties of undefined (reading 'id')" runtime error
 ✓ Resolved all TypeScript type issues in Players component with proper null checking

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Settings as SettingsIcon, Save, Bell, Shield, Users, Globe, Database, Mail } from "lucide-react";
+import { Settings as SettingsIcon, Save, Bell, Shield, Users, Globe, Database, Mail, DollarSign, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,10 +24,7 @@ export default function SettingsPage() {
 
   const updateSettingMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: any }) => 
-      apiRequest(`/api/settings/${id}`, {
-        method: "PATCH",
-        body: JSON.stringify(data),
-      }),
+      apiRequest("PATCH", `/api/settings/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
       toast({
@@ -46,10 +43,7 @@ export default function SettingsPage() {
 
   const createSettingMutation = useMutation({
     mutationFn: (data: any) => 
-      apiRequest("/api/settings", {
-        method: "POST",
-        body: JSON.stringify(data),
-      }),
+      apiRequest("POST", "/api/settings", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
       toast({
@@ -162,23 +156,82 @@ export default function SettingsPage() {
                   />
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="w-5 h-5" />
+                Regional & Currency Settings
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="timezone">Timezone</Label>
+                  <Select
+                    value={getSettingValue("general", "timezone", "Asia/Kuwait")}
+                    onValueChange={(value) => updateSetting("general", "timezone", value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select timezone" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Asia/Kuwait">AST - Kuwait Time</SelectItem>
+                      <SelectItem value="Asia/Qatar">AST - Qatar Time</SelectItem>
+                      <SelectItem value="Asia/Dubai">AST - UAE Time</SelectItem>
+                      <SelectItem value="Asia/Muscat">AST - Oman Time</SelectItem>
+                      <SelectItem value="Asia/Riyadh">AST - Saudi Arabia Time</SelectItem>
+                      <SelectItem value="Asia/Bahrain">AST - Bahrain Time</SelectItem>
+                      <SelectItem value="UTC">UTC</SelectItem>
+                      <SelectItem value="America/New_York">Eastern Time</SelectItem>
+                      <SelectItem value="America/Chicago">Central Time</SelectItem>
+                      <SelectItem value="America/Denver">Mountain Time</SelectItem>
+                      <SelectItem value="America/Los_Angeles">Pacific Time</SelectItem>
+                      <SelectItem value="Europe/London">London</SelectItem>
+                      <SelectItem value="Europe/Paris">Paris</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="currency">Currency</Label>
+                  <Select
+                    value={getSettingValue("general", "currency", "USD")}
+                    onValueChange={(value) => updateSetting("general", "currency", value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select currency" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="USD">USD - US Dollar</SelectItem>
+                      <SelectItem value="EUR">EUR - Euro</SelectItem>
+                      <SelectItem value="SAR">SAR - Saudi Riyal</SelectItem>
+                      <SelectItem value="QAR">QAR - Qatari Riyal</SelectItem>
+                      <SelectItem value="AED">AED - UAE Dirham</SelectItem>
+                      <SelectItem value="OMR">OMR - Omani Rial</SelectItem>
+                      <SelectItem value="KWD">KWD - Kuwaiti Dinar</SelectItem>
+                      <SelectItem value="BHD">BHD - Bahraini Dinar</SelectItem>
+                      <SelectItem value="GBP">GBP - British Pound</SelectItem>
+                      <SelectItem value="JPY">JPY - Japanese Yen</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
               <div className="space-y-2">
-                <Label htmlFor="timezone">Timezone</Label>
+                <Label>Date Format</Label>
                 <Select
-                  value={getSettingValue("general", "timezone", "UTC")}
-                  onValueChange={(value) => updateSetting("general", "timezone", value)}
+                  value={getSettingValue("general", "date_format", "DD/MM/YYYY")}
+                  onValueChange={(value) => updateSetting("general", "date_format", value)}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select timezone" />
+                    <SelectValue placeholder="Select date format" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="UTC">UTC</SelectItem>
-                    <SelectItem value="America/New_York">Eastern Time</SelectItem>
-                    <SelectItem value="America/Chicago">Central Time</SelectItem>
-                    <SelectItem value="America/Denver">Mountain Time</SelectItem>
-                    <SelectItem value="America/Los_Angeles">Pacific Time</SelectItem>
-                    <SelectItem value="Europe/London">London</SelectItem>
-                    <SelectItem value="Europe/Paris">Paris</SelectItem>
+                    <SelectItem value="DD/MM/YYYY">DD/MM/YYYY (International)</SelectItem>
+                    <SelectItem value="MM/DD/YYYY">MM/DD/YYYY (US Format)</SelectItem>
+                    <SelectItem value="YYYY-MM-DD">YYYY-MM-DD (ISO Format)</SelectItem>
+                    <SelectItem value="DD-MM-YYYY">DD-MM-YYYY</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
