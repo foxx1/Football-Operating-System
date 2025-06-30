@@ -66,6 +66,13 @@ export default function SettingsPage() {
   });
 
   const getSettingValue = (category: string, key: string, defaultValue: string = "") => {
+    // Check temporary settings first
+    const settingId = `${category}_${key}`;
+    if (tempSettings[settingId]) {
+      return tempSettings[settingId].value;
+    }
+    
+    // Fall back to stored settings
     const setting = settings.find((s: SystemSettings) => 
       s.category === category && s.settingKey === key
     );
