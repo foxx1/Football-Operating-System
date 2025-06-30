@@ -35,14 +35,14 @@ export default function Sidebar() {
   const [location] = useLocation();
 
   return (
-    <aside className="bg-sidebar w-72 shadow-lg border-r border-sidebar-border flex flex-col">
+    <aside className="bg-sidebar w-16 hover:w-60 transition-all duration-300 shadow-lg border-r border-sidebar-border flex flex-col group">
       {/* Logo Header */}
-      <div className="px-6 py-5 border-b border-sidebar-border">
+      <div className="px-3 py-4 border-b border-sidebar-border">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+          <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
             <Zap className="text-primary-foreground text-lg" />
           </div>
-          <div>
+          <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 overflow-hidden whitespace-nowrap">
             <h1 className="text-xl font-bold text-sidebar-foreground">ProCoach</h1>
             <p className="text-sm text-sidebar-foreground/60">Team Management</p>
           </div>
@@ -50,7 +50,7 @@ export default function Sidebar() {
       </div>
 
       {/* Navigation Menu */}
-      <nav className="flex-1 px-4 py-6 space-y-2">
+      <nav className="flex-1 px-2 py-4 space-y-1">
         {navigationItems.map((item) => {
           const isActive = location === item.href;
           const Icon = item.icon;
@@ -59,48 +59,37 @@ export default function Sidebar() {
             <Link key={item.href} href={item.href}>
               <div
                 className={cn(
-                  "flex items-center px-4 py-3 rounded-lg transition-colors group sidebar-nav-item cursor-pointer",
+                  "flex items-center px-3 py-3 rounded-lg transition-all duration-300 group/item cursor-pointer relative",
                   isActive
                     ? "bg-sidebar-primary text-sidebar-primary-foreground active"
                     : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                 )}
               >
-                <Icon className="w-5 h-5 mr-3" />
-                <span className="font-medium">{item.label}</span>
+                <Icon className="w-5 h-5 flex-shrink-0" />
+                <span className="font-medium ml-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 overflow-hidden whitespace-nowrap">
+                  {item.label}
+                </span>
                 {item.badge && (
                   <Badge 
                     variant="secondary" 
-                    className="ml-auto bg-primary/10 text-primary hover:bg-primary/20"
+                    className="ml-auto bg-primary/10 text-primary hover:bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
                   >
                     {item.badge}
                   </Badge>
                 )}
+                
+                {/* Tooltip for collapsed state */}
+                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover/item:opacity-100 group-hover:opacity-0 pointer-events-none whitespace-nowrap z-50 transition-opacity duration-200">
+                  {item.label}
+                  {item.badge && <span className="ml-1 text-gray-300">({item.badge})</span>}
+                </div>
               </div>
             </Link>
           );
         })}
       </nav>
 
-      {/* User Profile Section */}
-      <div className="px-4 py-4 border-t border-sidebar-border">
-        <div className="flex items-center space-x-3 p-3 rounded-lg hover:bg-sidebar-accent cursor-pointer transition-colors">
-          <Avatar className="w-10 h-10">
-            <AvatarImage src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face" />
-            <AvatarFallback>MT</AvatarFallback>
-          </Avatar>
-          <div className="flex-1">
-            <p className="text-sm font-medium text-sidebar-foreground">Marcus Thompson</p>
-            <p className="text-xs text-sidebar-foreground/60">Head Coach</p>
-          </div>
-          <Button 
-            variant="ghost" 
-            size="sm"
-            className="text-sidebar-foreground/40 hover:text-sidebar-foreground hover:bg-sidebar-accent"
-          >
-            <Settings className="w-4 h-4" />
-          </Button>
-        </div>
-      </div>
+
     </aside>
   );
 }
