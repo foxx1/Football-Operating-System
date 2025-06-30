@@ -6,13 +6,16 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import { FileText, Download, Filter, Calendar, TrendingUp, Users, Target, Activity, BarChart3 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { FileText, Download, Filter, Calendar, TrendingUp, Users, Target, Activity, BarChart3, FilePlus } from "lucide-react";
 import type { TrainingSession, Player, Team } from "@shared/schema";
 import { format } from "date-fns";
+import PDFReportGeneratorComponent from "@/components/pdf-report-generator";
 
 export default function Reports() {
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [dateRange, setDateRange] = useState<string>("month");
+  const [pdfGeneratorOpen, setPdfGeneratorOpen] = useState(false);
 
   const { data: sessions } = useQuery({
     queryKey: ["/api/training-sessions"],
@@ -88,6 +91,20 @@ export default function Reports() {
           <p className="text-muted-foreground">Training session reports and team performance insights</p>
         </div>
         <div className="flex items-center space-x-4">
+          <Dialog open={pdfGeneratorOpen} onOpenChange={setPdfGeneratorOpen}>
+            <DialogTrigger asChild>
+              <Button className="flex items-center gap-2">
+                <FilePlus className="w-4 h-4" />
+                Generate PDF Report
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-6xl w-[95vw] max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>PDF Report Generator</DialogTitle>
+              </DialogHeader>
+              <PDFReportGeneratorComponent onClose={() => setPdfGeneratorOpen(false)} />
+            </DialogContent>
+          </Dialog>
           <Button variant="outline" onClick={() => exportReport('comprehensive')}>
             <Download className="w-4 h-4 mr-2" />
             Export Report
