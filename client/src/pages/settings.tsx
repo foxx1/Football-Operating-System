@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Settings as SettingsIcon, Save, Bell, Shield, Users, Globe, Database, Mail, DollarSign, Clock } from "lucide-react";
+import { Settings as SettingsIcon, Save, Bell, Shield, Users, Globe, Database, Mail, DollarSign, Clock, Upload, Image as ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +17,11 @@ import type { SystemSettings } from "@shared/schema";
 export default function SettingsPage() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("general");
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string>("");
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [tempSettings, setTempSettings] = useState<Record<string, any>>({});
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: settings = [], isLoading } = useQuery({
     queryKey: ["/api/settings"],
@@ -68,23 +73,125 @@ export default function SettingsPage() {
   };
 
   const updateSetting = (category: string, key: string, value: string, description?: string) => {
-    const existing = settings.find((s: SystemSettings) => 
-      s.category === category && s.settingKey === key
-    );
+    // Store changes temporarily instead of immediately saving
+    const settingId = `${category}_${key}`;
+    setTempSettings(prev => ({
+      ...prev,
+      [settingId]: { category, key, value, description }
+    }));
+    setHasUnsavedChanges(true);
+  };
 
-    const data = {
-      category,
-      settingKey: key,
-      settingValue: value,
-      description: description || `${category} ${key} setting`,
-      updatedBy: 1, // This would be the current user ID
-      isActive: true,
-    };
+  const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Validate file type and size
+      if (!file.type.startsWith('image/')) {
+        toast({
+          title: "Error",
+          description: "Please select a valid image file",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      if (file.size > 2 * 1024 * 1024) { // 2MB limit
+        toast({
+          title: "Error", 
+          description: "Image file size should be less than 2MB",
+          variant: "destructive",
+        });
+        return;
+      }
 
-    if (existing) {
-      updateSettingMutation.mutate({ id: existing.id, data });
-    } else {
-      createSettingMutation.mutate(data);
+      setLogoFile(file);
+      setHasUnsavedChanges(true);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setLogoPreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const saveAllSettings = async () => {
+    try {
+      // Upload logo first if there's a new logo
+      if (logoFile) {
+        const formData = new FormData();
+        formData.append('logo', logoFile);
+        
+        const res = await fetch("/api/upload/logo", {
+          method: "POST",
+          body: formData,
+          credentials: "include",
+        });
+        
+        if (!res.ok) {
+          throw new Error(`Failed to upload logo: ${res.statusText}`);
+        }
+        
+        const logoResult = await res.json();
+        // Update the logo URL setting
+        setTempSettings(prev => ({
+          ...prev,
+          general_logo_url: { 
+            category: "general", 
+            key: "logo_url", 
+            value: logoResult.logoUrl,
+            description: "Organization logo URL"
+          }
+        }));
+      }
+
+      // Save all temporary settings
+      for (const [settingId, setting] of Object.entries(tempSettings)) {
+        const existing = settings.find((s: SystemSettings) => 
+          s.category === setting.category && s.settingKey === setting.key
+        );
+
+        const data = {
+          category: setting.category,
+          settingKey: setting.key,
+          settingValue: setting.value,
+          description: setting.description || `${setting.category} ${setting.key} setting`,
+          updatedBy: 1, // This would be the current user ID
+          isActive: true,
+        };
+
+        if (existing) {
+          await apiRequest("PATCH", `/api/settings/${existing.id}`, data);
+        } else {
+          await apiRequest("POST", "/api/settings", data);
+        }
+      }
+
+      // Clear temporary state
+      setTempSettings({});
+      setHasUnsavedChanges(false);
+      setLogoFile(null);
+
+      // Refresh settings and force re-render of all components
+      queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
+      
+      // Force a page reload to ensure all components pick up the new settings
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+
+      toast({
+        title: "Success",
+        description: "All settings saved successfully! Page will refresh to apply changes.",
+      });
+
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save settings",
+        variant: "destructive",
+      });
     }
   };
 
@@ -104,9 +211,27 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
-        <p className="text-gray-600 mt-1">Manage system preferences and configurations</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
+          <p className="text-gray-600 mt-1">Manage system preferences and configurations</p>
+        </div>
+        <div className="flex items-center gap-3">
+          {hasUnsavedChanges && (
+            <span className="text-sm text-amber-600 font-medium">
+              Unsaved changes
+            </span>
+          )}
+          <Button
+            onClick={saveAllSettings}
+            disabled={!hasUnsavedChanges}
+            className="flex items-center gap-2 px-6"
+            size="lg"
+          >
+            <Save className="w-4 h-4" />
+            Save All Changes
+          </Button>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
@@ -137,14 +262,64 @@ export default function SettingsPage() {
                 Organization Settings
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-6">
+              {/* Logo Upload Section */}
+              <div className="space-y-4">
+                <Label className="text-base font-medium">Organization Logo</Label>
+                <div className="flex items-center gap-6">
+                  <div className="flex-shrink-0">
+                    <div className="w-24 h-24 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50">
+                      {logoPreview || getSettingValue("general", "logo_url") ? (
+                        <img
+                          src={logoPreview || getSettingValue("general", "logo_url")}
+                          alt="Organization Logo"
+                          className="w-full h-full object-contain rounded-lg"
+                        />
+                      ) : (
+                        <ImageIcon className="w-8 h-8 text-gray-400" />
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="flex items-center gap-2"
+                      >
+                        <Upload className="w-4 h-4" />
+                        Upload Logo
+                      </Button>
+                      <span className="text-sm text-gray-500">
+                        PNG, JPG up to 2MB
+                      </span>
+                    </div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleLogoUpload}
+                      className="hidden"
+                    />
+                    <p className="text-xs text-gray-500">
+                      Recommended size: 200x200px. Will be used across all pages and reports.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              <Separator />
+              
+              {/* Organization Details */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="org-name">Organization Name</Label>
                   <Input
                     id="org-name"
                     defaultValue={getSettingValue("general", "org_name", "ProCoach Team")}
-                    onBlur={(e) => updateSetting("general", "org_name", e.target.value)}
+                    onChange={(e) => updateSetting("general", "org_name", e.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
@@ -152,7 +327,7 @@ export default function SettingsPage() {
                   <Input
                     id="season"
                     defaultValue={getSettingValue("general", "current_season", "2024-25")}
-                    onBlur={(e) => updateSetting("general", "current_season", e.target.value)}
+                    onChange={(e) => updateSetting("general", "current_season", e.target.value)}
                   />
                 </div>
               </div>

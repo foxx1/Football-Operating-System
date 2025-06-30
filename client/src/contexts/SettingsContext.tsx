@@ -1,0 +1,80 @@
+import { createContext, useContext, ReactNode } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import type { SystemSettings } from '@shared/schema';
+
+interface SettingsContextType {
+  getSettingValue: (category: string, key: string, defaultValue?: string) => string;
+  settings: SystemSettings[];
+  isLoading: boolean;
+  organizationName: string;
+  currentSeason: string;
+  logoUrl: string;
+  currency: string;
+  timezone: string;
+  dateFormat: string;
+}
+
+const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
+
+export function SettingsProvider({ children }: { children: ReactNode }) {
+  const { data: settings = [], isLoading } = useQuery({
+    queryKey: ["/api/settings"],
+  });
+
+  const getSettingValue = (category: string, key: string, defaultValue: string = "") => {
+    const setting = settings.find((s: SystemSettings) => 
+      s.category === category && s.settingKey === key
+    );
+    return setting?.settingValue || defaultValue;
+  };
+
+  // Pre-compute commonly used settings for easy access
+  const contextValue: SettingsContextType = {
+    getSettingValue,
+    settings,
+    isLoading,
+    organizationName: getSettingValue("general", "org_name", "ProCoach Team"),
+    currentSeason: getSettingValue("general", "current_season", "2024-25"),
+    logoUrl: getSettingValue("general", "logo_url", ""),
+    currency: getSettingValue("general", "currency", "USD"),
+    timezone: getSettingValue("general", "timezone", "Asia/Kuwait"),
+    dateFormat: getSettingValue("general", "date_format", "DD/MM/YYYY"),
+  };
+
+  return (
+    <SettingsContext.Provider value={contextValue}>
+      {children}
+    </SettingsContext.Provider>
+  );
+}
+
+export function useSettings() {
+  const context = useContext(SettingsContext);
+  if (context === undefined) {
+    throw new Error('useSettings must be used within a SettingsProvider');
+  }
+  return context;
+}
+
+// Currency symbol mapping
+export const getCurrencySymbol = (currency: string): string => {
+  const symbols: Record<string, string> = {
+    USD: "$",
+    EUR: "€",
+    SAR: "ر.س",
+    QAR: "ر.ق",
+    AED: "د.إ",
+    OMR: "ر.ع.",
+    KWD: "د.ك",
+    BHD: "د.ب",
+    GBP: "£",
+    JPY: "¥",
+  };
+  return symbols[currency] || currency;
+};
+
+// Currency formatting function
+export const formatCurrency = (amount: number, currency: string): string => {
+  const symbol = getCurrencySymbol(currency);
+  return `${symbol}${amount.toLocaleString()}`;
+};

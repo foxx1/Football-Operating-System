@@ -556,6 +556,27 @@ export async function registerRoutes(app: Express, upload?: any): Promise<Server
     }
   });
 
+  // Logo upload endpoint
+  app.post("/api/upload/logo", upload.single('logo'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No logo file provided" });
+      }
+
+      // Generate the public URL for the uploaded logo
+      const logoUrl = `/uploads/${req.file.filename}`;
+      
+      res.json({ 
+        message: "Logo uploaded successfully",
+        logoUrl: logoUrl,
+        filename: req.file.filename
+      });
+    } catch (error) {
+      console.error("Error uploading logo:", error);
+      res.status(500).json({ message: "Failed to upload logo" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

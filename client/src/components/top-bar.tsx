@@ -1,5 +1,6 @@
 import { Search, Bell, Moon, Sun, Settings } from "lucide-react";
 import { useTheme } from "next-themes";
+import { useSettings } from "@/contexts/SettingsContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -15,13 +16,26 @@ import {
 
 export default function TopBar() {
   const { theme, setTheme } = useTheme();
+  const { organizationName, logoUrl, currentSeason } = useSettings();
 
   return (
     <header className="bg-card border-b border-border px-6 py-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-6">
-          {/* Current Page Title */}
-          <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+          {/* Organization Logo and Name */}
+          <div className="flex items-center space-x-3">
+            {logoUrl && (
+              <img
+                src={logoUrl}
+                alt={`${organizationName} Logo`}
+                className="w-8 h-8 object-contain"
+              />
+            )}
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">{organizationName}</h1>
+              <span className="text-xs text-muted-foreground">{currentSeason} Season</span>
+            </div>
+          </div>
           <span className="text-sm text-muted-foreground">Welcome back! Here's what's happening with your teams.</span>
         </div>
         

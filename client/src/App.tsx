@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "next-themes";
+import { SettingsProvider } from "@/contexts/SettingsContext";
 import Sidebar from "@/components/sidebar";
 import TopBar from "@/components/top-bar";
 import Dashboard from "@/pages/dashboard";
@@ -53,14 +54,16 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider attribute="class" defaultTheme="light">
-        <TooltipProvider>
-          <Layout>
-            <Router />
-          </Layout>
-          <Toaster />
-        </TooltipProvider>
-      </ThemeProvider>
+      <SettingsProvider>
+        <ThemeProvider attribute="class" defaultTheme="light">
+          <TooltipProvider>
+            <Layout>
+              <Router />
+            </Layout>
+            <Toaster />
+          </TooltipProvider>
+        </ThemeProvider>
+      </SettingsProvider>
     </QueryClientProvider>
   );
 }
