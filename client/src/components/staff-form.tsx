@@ -47,10 +47,7 @@ export default function StaffForm({ staff, onSuccess }: StaffFormProps) {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: StaffFormData) => apiRequest("/api/staff", {
-      method: "POST",
-      body: JSON.stringify(data),
-    }),
+    mutationFn: (data: StaffFormData) => apiRequest("POST", "/api/staff", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
       toast({
@@ -69,10 +66,7 @@ export default function StaffForm({ staff, onSuccess }: StaffFormProps) {
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data: StaffFormData) => apiRequest(`/api/staff/${staff!.id}`, {
-      method: "PATCH",
-      body: JSON.stringify(data),
-    }),
+    mutationFn: (data: StaffFormData) => apiRequest("PATCH", `/api/staff/${staff!.id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
       toast({

@@ -24,9 +24,7 @@ export default function StaffPage() {
   });
 
   const deleteStaffMutation = useMutation({
-    mutationFn: (id: number) => apiRequest(`/api/staff/${id}`, {
-      method: "DELETE",
-    }),
+    mutationFn: (id: number) => apiRequest("DELETE", `/api/staff/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
       toast({
