@@ -181,12 +181,15 @@ export default function SettingsPage() {
       setLogoFile(null);
 
       // Refresh settings and force re-render of all components
-      queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
+      
+      // Clear all query cache to ensure fresh data
+      queryClient.clear();
       
       // Force a page reload to ensure all components pick up the new settings
       setTimeout(() => {
         window.location.reload();
-      }, 1000);
+      }, 500);
 
       toast({
         title: "Success",

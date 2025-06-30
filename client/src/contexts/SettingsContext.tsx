@@ -19,10 +19,12 @@ const SettingsContext = createContext<SettingsContextType | undefined>(undefined
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const { data: settings = [], isLoading } = useQuery({
     queryKey: ["/api/settings"],
+    staleTime: 0, // Always refetch to get latest settings
+    gcTime: 0, // Don't cache settings
   });
 
   const getSettingValue = (category: string, key: string, defaultValue: string = "") => {
-    const setting = settings.find((s: SystemSettings) => 
+    const setting = (settings as SystemSettings[]).find((s: SystemSettings) => 
       s.category === category && s.settingKey === key
     );
     return setting?.settingValue || defaultValue;
@@ -31,7 +33,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   // Pre-compute commonly used settings for easy access
   const contextValue: SettingsContextType = {
     getSettingValue,
-    settings,
+    settings: settings as SystemSettings[],
     isLoading,
     organizationName: getSettingValue("general", "org_name", "ProCoach Team"),
     currentSeason: getSettingValue("general", "current_season", "2024-25"),

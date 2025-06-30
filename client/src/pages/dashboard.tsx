@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useSettings, formatCurrency } from "@/contexts/SettingsContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,11 +17,13 @@ import {
   Clock,
   Target,
   Activity,
-  Star
+  Star,
+  DollarSign
 } from "lucide-react";
 import { format } from "date-fns";
 
 export default function Dashboard() {
+  const { currency, organizationName } = useSettings();
   const { data: stats, isLoading } = useQuery({
     queryKey: ["/api/dashboard/stats"],
   });
@@ -59,12 +62,12 @@ export default function Dashboard() {
       bgColor: "bg-green-100 dark:bg-green-900/20"
     },
     {
-      title: "This Week's Sessions",
-      value: stats?.weeklySessions || 0,
-      change: "Next in 2 hours",
-      icon: Calendar,
-      color: "text-amber-600",
-      bgColor: "bg-amber-100 dark:bg-amber-900/20"
+      title: "Monthly Budget",
+      value: formatCurrency(15000, currency),
+      change: `Equipment & Training costs`,
+      icon: DollarSign,
+      color: "text-blue-600",
+      bgColor: "bg-blue-100 dark:bg-blue-900/20"
     },
     {
       title: "Attendance Rate",

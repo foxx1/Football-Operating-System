@@ -121,6 +121,16 @@ The system uses PostgreSQL with the following core entities:
 
 ## Recent Changes
 
+### June 30, 2025 - Global Settings Context and Currency Integration
+✓ Created global SettingsContext for cross-component settings sharing
+✓ Fixed timezone and currency dropdown refresh issues in Settings page
+✓ Implemented logo upload functionality with preview and global application
+✓ Updated TopBar to display organization logo and name from global settings
+✓ Added file upload API endpoint with proper validation (2MB limit, images only)
+✓ Enhanced Dashboard with currency formatting examples using global settings
+✓ Settings now save and apply globally with page refresh functionality
+✓ Fixed dropdown value persistence for timezone and currency selections
+
 ### June 30, 2025 - Regional Settings and Currency Support
 ✓ Added comprehensive AST (Arabian Standard Time) timezone support for Middle East regions
 ✓ Implemented multi-currency preferences: USD, EUR, SAR, QAR, AED, OMR, KWD, BHD, GBP, JPY
