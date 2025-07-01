@@ -17,6 +17,24 @@ import {
   Activity,
   Target
 } from "lucide-react";
+
+// Custom Catapult Icon Component
+const CatapultIcon = ({ className }: { className?: string }) => (
+  <svg 
+    className={className} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <g fill="currentColor">
+      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" fill="none"/>
+      <path d="M16 10l3-1.5v5L16 12V10z"/>
+      <path d="M19 9l2-1v4l-2-1V9z"/>
+      <path d="M8 12l-3 1.5v-5L8 10v2z"/>
+      <path d="M5 11l-2 1V8l2 1v2z"/>
+    </g>
+  </svg>
+);
 import { cn } from "@/lib/utils";
 import { useSettings } from "@/contexts/SettingsContext";
 import { Badge } from "@/components/ui/badge";
@@ -34,7 +52,7 @@ const navigationItems = [
   { href: "/tactics", icon: Swords, label: "Tactics Board", badge: null },
   { href: "/analytics", icon: BarChart3, label: "Analytics", badge: null },
   { href: "/wearables", icon: Activity, label: "Wearable Devices", badge: null },
-  { href: "/catapult-openfield", icon: Target, label: "Catapult OpenField", badge: "NEW" },
+  { href: "/catapult-openfield", icon: CatapultIcon, label: "Catapult OpenField", badge: "NEW" },
   { href: "/reports", icon: FileText, label: "Reports", badge: null },
   { href: "/settings", icon: Settings, label: "Settings", badge: null },
 ];
