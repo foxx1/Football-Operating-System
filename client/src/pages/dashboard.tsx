@@ -28,6 +28,8 @@ export default function Dashboard() {
     queryKey: ["/api/dashboard/stats"],
   });
 
+
+
   if (isLoading) {
     return (
       <div className="p-6">
