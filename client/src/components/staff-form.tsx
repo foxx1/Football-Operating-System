@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useSettings, getCurrencySymbol } from "@/contexts/SettingsContext";
 import { insertStaffSchema, type Staff } from "@shared/schema";
 import { z } from "zod";
 
@@ -27,6 +28,8 @@ interface StaffFormProps {
 
 export default function StaffForm({ staff, onSuccess }: StaffFormProps) {
   const { toast } = useToast();
+  const { currency } = useSettings();
+  const currencySymbol = getCurrencySymbol(currency);
 
   const form = useForm<StaffFormData>({
     resolver: zodResolver(staffFormSchema),
@@ -218,7 +221,7 @@ export default function StaffForm({ staff, onSuccess }: StaffFormProps) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="salary">Monthly Salary ($)</Label>
+        <Label htmlFor="salary">Monthly Salary ({currencySymbol})</Label>
         <Input
           id="salary"
           type="number"

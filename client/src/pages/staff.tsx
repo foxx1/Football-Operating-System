@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useSettings, formatCurrency } from "@/contexts/SettingsContext";
 import type { Staff } from "@shared/schema";
 import StaffForm from "@/components/staff-form";
 
@@ -18,6 +19,7 @@ export default function StaffPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<Staff | undefined>();
   const { toast } = useToast();
+  const { currency } = useSettings();
 
   const { data: staff = [], isLoading } = useQuery({
     queryKey: ["/api/staff"],
@@ -41,7 +43,7 @@ export default function StaffPage() {
     },
   });
 
-  const filteredStaff = staff.filter((member: Staff) => {
+  const filteredStaff = (staff as Staff[]).filter((member: Staff) => {
     const matchesSearch = 
       member.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       member.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -229,7 +231,7 @@ export default function StaffPage() {
 
               {member.salary && (
                 <div className="text-sm font-medium text-gray-900">
-                  Monthly Salary: ${member.salary.toLocaleString()}
+                  Monthly Salary: {formatCurrency(member.salary, currency)}
                 </div>
               )}
 
