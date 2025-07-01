@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb, decimal, varchar, uuid, json, date } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -179,6 +179,182 @@ export const systemSettings = pgTable("system_settings", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Terra-like Unified Wearable API System
+export const terraDeviceProviders = pgTable("terra_device_providers", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(), // fitbit, garmin, oura, apple_health, etc.
+  displayName: varchar("display_name", { length: 100 }).notNull(),
+  type: varchar("type", { length: 50 }).notNull(), // event_driven, polled
+  isActive: boolean("is_active").default(true),
+  authType: varchar("auth_type", { length: 50 }).notNull(), // oauth2, api_key, device_pairing
+  logoUrl: varchar("logo_url", { length: 255 }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const terraUsers = pgTable("terra_users", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").defaultRandom().notNull().unique(), // Terra-style UUID
+  playerId: integer("player_id").references(() => players.id).notNull(), // Reference ID in Terra terms
+  provider: varchar("provider", { length: 50 }).notNull(),
+  providerUserId: varchar("provider_user_id", { length: 255 }),
+  scopes: varchar("scopes", { length: 500 }).notNull(), // activity:read,sleep:read,body:read,etc
+  isActive: boolean("is_active").default(true),
+  lastWebhookUpdate: timestamp("last_webhook_update"),
+  authExpiry: timestamp("auth_expiry"),
+  accessToken: text("access_token"), // Encrypted
+  refreshToken: text("refresh_token"), // Encrypted
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Terra-like Activity Data Model
+export const terraActivityData = pgTable("terra_activity_data", {
+  id: serial("id").primaryKey(),
+  terraUserId: uuid("terra_user_id").references(() => terraUsers.userId).notNull(),
+  activityId: varchar("activity_id", { length: 255 }), // Provider-specific ID
+  name: varchar("name", { length: 255 }),
+  sport: varchar("sport", { length: 100 }),
+  startTime: timestamp("start_time").notNull(),
+  endTime: timestamp("end_time").notNull(),
+  // Calories data
+  caloriesTotal: decimal("calories_total", { precision: 10, scale: 2 }),
+  caloriesActive: decimal("calories_active", { precision: 10, scale: 2 }),
+  // Distance data
+  distanceMeters: decimal("distance_meters", { precision: 10, scale: 2 }),
+  // Heart rate data
+  avgHeartRate: integer("avg_heart_rate"),
+  maxHeartRate: integer("max_heart_rate"),
+  restingHeartRate: integer("resting_heart_rate"),
+  heartRateZones: json("heart_rate_zones"), // Zone distribution
+  // Movement data
+  steps: integer("steps"),
+  cadenceAvg: decimal("cadence_avg", { precision: 8, scale: 2 }),
+  // Position data (GPS)
+  elevationGain: decimal("elevation_gain", { precision: 10, scale: 2 }),
+  elevationLoss: decimal("elevation_loss", { precision: 10, scale: 2 }),
+  // Device data
+  deviceName: varchar("device_name", { length: 255 }),
+  // Additional metadata
+  metadata: json("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Terra-like Sleep Data Model
+export const terraSleepData = pgTable("terra_sleep_data", {
+  id: serial("id").primaryKey(),
+  terraUserId: uuid("terra_user_id").references(() => terraUsers.userId).notNull(),
+  sleepId: varchar("sleep_id", { length: 255 }),
+  bedtimeStart: timestamp("bedtime_start").notNull(),
+  bedtimeEnd: timestamp("bedtime_end").notNull(),
+  sleepStart: timestamp("sleep_start"),
+  sleepEnd: timestamp("sleep_end"),
+  // Sleep metrics
+  sleepDurationMinutes: integer("sleep_duration_minutes"),
+  sleepEfficiencyPercentage: decimal("sleep_efficiency_percentage", { precision: 5, scale: 2 }),
+  timeInBedMinutes: integer("time_in_bed_minutes"),
+  awakeningsCount: integer("awakenings_count"),
+  // Sleep stages
+  lightSleepMinutes: integer("light_sleep_minutes"),
+  deepSleepMinutes: integer("deep_sleep_minutes"),
+  remSleepMinutes: integer("rem_sleep_minutes"),
+  awakeMinutes: integer("awake_minutes"),
+  // Sleep scores
+  sleepScore: decimal("sleep_score", { precision: 5, scale: 2 }),
+  restfulnessScore: decimal("restfulness_score", { precision: 5, scale: 2 }),
+  // Heart rate during sleep
+  avgHeartRate: decimal("avg_heart_rate", { precision: 5, scale: 2 }),
+  restingHeartRate: decimal("resting_heart_rate", { precision: 5, scale: 2 }),
+  heartRateVariability: decimal("heart_rate_variability", { precision: 8, scale: 2 }),
+  // Recovery metrics
+  recoveryScore: decimal("recovery_score", { precision: 5, scale: 2 }),
+  readinessScore: decimal("readiness_score", { precision: 5, scale: 2 }),
+  // Temperature
+  avgBodyTemperature: decimal("avg_body_temperature", { precision: 4, scale: 2 }),
+  // Respiratory
+  avgRespirationRate: decimal("avg_respiration_rate", { precision: 5, scale: 2 }),
+  metadata: json("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Terra-like Body Data Model
+export const terraBodyData = pgTable("terra_body_data", {
+  id: serial("id").primaryKey(),
+  terraUserId: uuid("terra_user_id").references(() => terraUsers.userId).notNull(),
+  measurementTime: timestamp("measurement_time").notNull(),
+  // Basic measurements
+  weightKg: decimal("weight_kg", { precision: 6, scale: 2 }),
+  heightCm: decimal("height_cm", { precision: 6, scale: 2 }),
+  bmi: decimal("bmi", { precision: 5, scale: 2 }),
+  // Body composition
+  bodyfatPercentage: decimal("bodyfat_percentage", { precision: 5, scale: 2 }),
+  muscleMassKg: decimal("muscle_mass_kg", { precision: 6, scale: 2 }),
+  boneMassKg: decimal("bone_mass_kg", { precision: 6, scale: 2 }),
+  waterPercentage: decimal("water_percentage", { precision: 5, scale: 2 }),
+  leanMassKg: decimal("lean_mass_kg", { precision: 6, scale: 2 }),
+  // Metabolic measurements
+  bmr: integer("bmr"), // Basal Metabolic Rate
+  rmr: integer("rmr"), // Resting Metabolic Rate
+  // Blood measurements
+  bloodGlucoseMmol: decimal("blood_glucose_mmol", { precision: 5, scale: 2 }),
+  bloodOxygenSaturation: decimal("blood_oxygen_saturation", { precision: 5, scale: 2 }),
+  // Blood pressure
+  bloodPressureSystolic: integer("blood_pressure_systolic"),
+  bloodPressureDiastolic: integer("blood_pressure_diastolic"),
+  // Advanced metrics
+  metabolicAge: integer("metabolic_age"),
+  visceralFatLevel: integer("visceral_fat_level"),
+  skinfoldMm: decimal("skinfold_mm", { precision: 5, scale: 2 }),
+  metadata: json("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Terra-like Daily Summary Data
+export const terraDailyData = pgTable("terra_daily_data", {
+  id: serial("id").primaryKey(),
+  terraUserId: uuid("terra_user_id").references(() => terraUsers.userId).notNull(),
+  calendarDate: date("calendar_date").notNull(),
+  // Activity summary
+  steps: integer("steps"),
+  distanceMeters: decimal("distance_meters", { precision: 10, scale: 2 }),
+  floorsClimbed: integer("floors_climbed"),
+  activeMinutes: integer("active_minutes"),
+  sedentaryMinutes: integer("sedentary_minutes"),
+  // Calories
+  caloriesTotal: decimal("calories_total", { precision: 10, scale: 2 }),
+  caloriesActive: decimal("calories_active", { precision: 10, scale: 2 }),
+  caloriesBmr: decimal("calories_bmr", { precision: 10, scale: 2 }),
+  // Heart rate
+  restingHeartRate: integer("resting_heart_rate"),
+  avgHeartRate: integer("avg_heart_rate"),
+  maxHeartRate: integer("max_heart_rate"),
+  heartRateVariability: decimal("heart_rate_variability", { precision: 8, scale: 2 }),
+  // Training load and recovery
+  trainingLoad: decimal("training_load", { precision: 8, scale: 2 }),
+  stressScore: decimal("stress_score", { precision: 5, scale: 2 }),
+  recoveryScore: decimal("recovery_score", { precision: 5, scale: 2 }),
+  readinessScore: decimal("readiness_score", { precision: 5, scale: 2 }),
+  // Energy and mood
+  energyLevel: integer("energy_level"), // 1-5 scale
+  stressLevel: integer("stress_level"), // 1-5 scale
+  moodScore: integer("mood_score"), // 1-10 scale
+  metadata: json("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Event/Webhook logs
+export const terraWebhookLogs = pgTable("terra_webhook_logs", {
+  id: serial("id").primaryKey(),
+  terraUserId: uuid("terra_user_id"),
+  eventType: varchar("event_type", { length: 100 }).notNull(), // activity, sleep, body, daily, auth, etc.
+  provider: varchar("provider", { length: 50 }).notNull(),
+  status: varchar("status", { length: 20 }).notNull(), // success, failed, retry
+  payload: json("payload"),
+  errorMessage: text("error_message"),
+  processingTimeMs: integer("processing_time_ms"),
+  signature: varchar("signature", { length: 255 }), // HMAC verification
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -243,6 +419,44 @@ export const insertAnalyticsReportSchema = createInsertSchema(analyticsReports).
 export const insertSystemSettingsSchema = createInsertSchema(systemSettings).omit({
   id: true,
   updatedAt: true,
+});
+
+// Terra-style insert schemas
+export const insertTerraDeviceProviderSchema = createInsertSchema(terraDeviceProviders).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertTerraUserSchema = createInsertSchema(terraUsers).omit({
+  id: true,
+  userId: true,
+  createdAt: true,
+});
+
+export const insertTerraActivityDataSchema = createInsertSchema(terraActivityData).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertTerraSleepDataSchema = createInsertSchema(terraSleepData).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertTerraBodyDataSchema = createInsertSchema(terraBodyData).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertTerraDailyDataSchema = createInsertSchema(terraDailyData).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTerraWebhookLogSchema = createInsertSchema(terraWebhookLogs).omit({
+  id: true,
+  createdAt: true,
 });
 
 // Types
@@ -346,3 +560,25 @@ export type WearableData = typeof wearableData.$inferSelect;
 
 export type InsertPerformanceMetrics = z.infer<typeof insertPerformanceMetricsSchema>;
 export type PerformanceMetrics = typeof performanceMetrics.$inferSelect;
+
+// Terra-style types
+export type InsertTerraDeviceProvider = z.infer<typeof insertTerraDeviceProviderSchema>;
+export type TerraDeviceProvider = typeof terraDeviceProviders.$inferSelect;
+
+export type InsertTerraUser = z.infer<typeof insertTerraUserSchema>;
+export type TerraUser = typeof terraUsers.$inferSelect;
+
+export type InsertTerraActivityData = z.infer<typeof insertTerraActivityDataSchema>;
+export type TerraActivityData = typeof terraActivityData.$inferSelect;
+
+export type InsertTerraSleepData = z.infer<typeof insertTerraSleepDataSchema>;
+export type TerraSleepData = typeof terraSleepData.$inferSelect;
+
+export type InsertTerraBodyData = z.infer<typeof insertTerraBodyDataSchema>;
+export type TerraBodyData = typeof terraBodyData.$inferSelect;
+
+export type InsertTerraDailyData = z.infer<typeof insertTerraDailyDataSchema>;
+export type TerraDailyData = typeof terraDailyData.$inferSelect;
+
+export type InsertTerraWebhookLog = z.infer<typeof insertTerraWebhookLogSchema>;
+export type TerraWebhookLog = typeof terraWebhookLogs.$inferSelect;

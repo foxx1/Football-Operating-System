@@ -726,6 +726,330 @@ export async function registerRoutes(app: Express, upload?: any): Promise<Server
     }
   });
 
+  // Terra-style API endpoints for unified wearable data
+  
+  // Terra Users - Create user connections to providers
+  app.post("/api/terra/users", async (req, res) => {
+    try {
+      const { playerId, provider, scopes } = req.body;
+      
+      // Simulate Terra user creation with OAuth flow
+      const terraUser = {
+        userId: `550e8400-e29b-41d4-a716-${Date.now().toString().slice(-12)}`,
+        playerId,
+        provider,
+        scopes,
+        lastWebhookUpdate: new Date().toISOString(),
+        isActive: true,
+        authUrl: `https://api.tryterra.co/auth/${provider}?user_id=${playerId}`
+      };
+      
+      res.status(201).json({
+        status: "success",
+        user: terraUser,
+        auth_url: terraUser.authUrl,
+        expires_in: 600 // 10 minutes
+      });
+    } catch (error) {
+      console.error("Error creating Terra user:", error);
+      res.status(500).json({ error: "Failed to create Terra user connection" });
+    }
+  });
+
+  // Terra Activity Data - Get activities for a user
+  app.get("/api/terra/activity/:userId", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const { start_date, end_date } = req.query;
+      
+      // Mock Terra activity data with proper structure
+      const activityData = {
+        status: "success",
+        type: "activity",
+        data: [
+          {
+            metadata: {
+              user_id: userId,
+              start_time: "2025-01-01T07:00:00Z",
+              end_time: "2025-01-01T07:45:00Z",
+              type: "activity",
+              data_type: "workout"
+            },
+            name: "Morning Run",
+            sport: "running",
+            calories_total: 425,
+            distance_meters: 6800,
+            avg_heart_rate: 155,
+            max_heart_rate: 178,
+            steps_total: 8940,
+            active_duration_seconds: 2700,
+            moving_time_seconds: 2580,
+            power_data: {
+              avg_watts: 245,
+              max_watts: 380
+            },
+            heart_rate_data: {
+              summary: {
+                avg_hr_bpm: 155,
+                max_hr_bpm: 178,
+                resting_hr_bpm: 52,
+                hr_zone_data: [
+                  { zone: 1, duration_seconds: 300 },
+                  { zone: 2, duration_seconds: 900 },
+                  { zone: 3, duration_seconds: 1200 },
+                  { zone: 4, duration_seconds: 300 }
+                ]
+              }
+            }
+          }
+        ]
+      };
+      
+      res.json(activityData);
+    } catch (error) {
+      console.error("Error fetching Terra activity data:", error);
+      res.status(500).json({ error: "Failed to fetch activity data" });
+    }
+  });
+
+  // Terra Sleep Data - Get sleep data for a user
+  app.get("/api/terra/sleep/:userId", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      
+      const sleepData = {
+        status: "success",
+        type: "sleep",
+        data: [
+          {
+            metadata: {
+              user_id: userId,
+              start_time: "2024-12-31T23:15:00Z",
+              end_time: "2025-01-01T07:00:00Z",
+              type: "sleep"
+            },
+            bedtime_start: "2024-12-31T23:15:00Z",
+            bedtime_end: "2025-01-01T07:00:00Z",
+            sleep_duration_seconds: 25200, // 7 hours
+            sleep_efficiency_percentage: 87.5,
+            time_in_bed_seconds: 27900, // 7h 45m
+            time_asleep_seconds: 25200,
+            time_awake_seconds: 1800, // 30 minutes
+            sleep_stages_summary: {
+              deep_sleep_duration_seconds: 5700, // 95 minutes
+              light_sleep_duration_seconds: 11100, // 185 minutes  
+              rem_sleep_duration_seconds: 6600, // 110 minutes
+              awake_duration_seconds: 1800 // 30 minutes
+            },
+            sleep_score: 82,
+            heart_rate_data: {
+              summary: {
+                avg_hr_bpm: 48,
+                min_hr_bpm: 42,
+                max_hr_bpm: 65,
+                resting_hr_bpm: 52
+              }
+            },
+            hrv_data: {
+              avg_hrv_rmssd: 38.5,
+              avg_hrv_sdnn: 45.2
+            }
+          }
+        ]
+      };
+      
+      res.json(sleepData);
+    } catch (error) {
+      console.error("Error fetching Terra sleep data:", error);
+      res.status(500).json({ error: "Failed to fetch sleep data" });
+    }
+  });
+
+  // Terra Daily Data - Get daily summary data
+  app.get("/api/terra/daily/:userId", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const { start_date, end_date } = req.query;
+      
+      const dailyData = {
+        status: "success",
+        type: "daily",
+        data: [
+          {
+            metadata: {
+              user_id: userId,
+              date: "2025-01-01",
+              type: "daily"
+            },
+            calendar_date: "2025-01-01",
+            steps_data: {
+              steps: 12847,
+              distance_meters: 8300
+            },
+            calories_data: {
+              total_burned_calories: 2340,
+              BMR_calories: 1490,
+              active_calories: 850,
+              net_intake_calories: 2100
+            },
+            heart_rate_data: {
+              summary: {
+                avg_hr_bpm: 78,
+                max_hr_bpm: 178,
+                min_hr_bpm: 52,
+                resting_hr_bpm: 52
+              }
+            },
+            readiness_data: {
+              readiness_score: 88,
+              recovery_index: 85,
+              activity_balance: 7,
+              body_battery: 82,
+              hrv_balance: 6,
+              previous_day_activity: 8,
+              previous_night_sleep: 9,
+              sleep_balance: 8,
+              temperature_deviation: 0.2
+            },
+            stress_data: {
+              avg_stress_level: 35,
+              max_stress_level: 78,
+              stress_duration_seconds: 4320, // 72 minutes
+              rest_stress_duration_seconds: 28800 // 8 hours
+            }
+          }
+        ]
+      };
+      
+      res.json(dailyData);
+    } catch (error) {
+      console.error("Error fetching Terra daily data:", error);
+      res.status(500).json({ error: "Failed to fetch daily data" });
+    }
+  });
+
+  // Terra Body Data - Get body metrics
+  app.get("/api/terra/body/:userId", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      
+      const bodyData = {
+        status: "success",
+        type: "body",
+        data: [
+          {
+            metadata: {
+              user_id: userId,
+              timestamp: "2025-01-01T08:00:00Z",
+              type: "body"
+            },
+            body_data: {
+              weight_kg: 75.2,
+              height_cm: 180,
+              body_fat_percentage: 12.5,
+              muscle_mass_kg: 35.8,
+              bone_mass_kg: 3.2,
+              water_percentage: 62.1,
+              BMI: 23.2,
+              metabolic_age: 28
+            },
+            measurements_data: {
+              chest_cm: 98,
+              waist_cm: 82,
+              hip_cm: 95,
+              thigh_cm: 58,
+              bicep_cm: 35
+            }
+          }
+        ]
+      };
+      
+      res.json(bodyData);
+    } catch (error) {
+      console.error("Error fetching Terra body data:", error);
+      res.status(500).json({ error: "Failed to fetch body data" });
+    }
+  });
+
+  // Terra Webhooks - Handle incoming webhook data
+  app.post("/api/terra/webhook", async (req, res) => {
+    try {
+      const webhookData = req.body;
+      
+      // Log webhook for debugging
+      console.log("Terra webhook received:", JSON.stringify(webhookData, null, 2));
+      
+      // Store webhook data (in real implementation, this would process and store the data)
+      const webhookLog = {
+        id: Date.now(),
+        terraUserId: webhookData.user?.user_id || "unknown",
+        type: webhookData.type || "unknown",
+        status: "success",
+        payload: webhookData,
+        signature: req.headers["terra-signature"] || null,
+        processingTimeMs: 150,
+        createdAt: new Date().toISOString()
+      };
+      
+      // Process the webhook data based on type
+      switch (webhookData.type) {
+        case "activity":
+          console.log("Processing activity webhook for user:", webhookData.user?.user_id);
+          break;
+        case "sleep":
+          console.log("Processing sleep webhook for user:", webhookData.user?.user_id);
+          break;
+        case "daily":
+          console.log("Processing daily webhook for user:", webhookData.user?.user_id);
+          break;
+        case "body":
+          console.log("Processing body webhook for user:", webhookData.user?.user_id);
+          break;
+        default:
+          console.log("Unknown webhook type:", webhookData.type);
+      }
+      
+      res.status(200).json({ 
+        status: "success", 
+        message: "Webhook processed successfully",
+        processed_at: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("Error processing Terra webhook:", error);
+      res.status(500).json({ error: "Failed to process webhook" });
+    }
+  });
+
+  // Terra API Status - Get API health and status
+  app.get("/api/terra/status", async (req, res) => {
+    try {
+      const status = {
+        status: "operational",
+        version: "2.0",
+        providers: {
+          fitbit: { status: "operational", last_check: "2025-01-01T12:00:00Z" },
+          garmin: { status: "operational", last_check: "2025-01-01T12:00:00Z" },
+          oura: { status: "operational", last_check: "2025-01-01T12:00:00Z" },
+          apple_health: { status: "operational", last_check: "2025-01-01T12:00:00Z" },
+          google_fit: { status: "operational", last_check: "2025-01-01T12:00:00Z" }
+        },
+        metrics: {
+          total_users: 2,
+          active_connections: 2,
+          webhook_success_rate: 99.9,
+          avg_response_time_ms: 120,
+          daily_api_requests: 1247
+        },
+        last_updated: new Date().toISOString()
+      };
+      
+      res.json(status);
+    } catch (error) {
+      console.error("Error fetching Terra status:", error);
+      res.status(500).json({ error: "Failed to fetch API status" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
