@@ -1,6 +1,7 @@
 import {
   users, players, teams, teamPlayers, trainingSessions, sessionAttendance, 
   tacticalFormations, playerStats, staff, matches, matchSquads, analyticsReports, systemSettings,
+  wearableDevices, wearableData, performanceMetrics,
   type User, type InsertUser, type Player, type InsertPlayer,
   type Team, type InsertTeam, type TeamPlayer, type InsertTeamPlayer,
   type TrainingSession, type InsertTrainingSession,
@@ -9,7 +10,10 @@ import {
   type PlayerStats, type InsertPlayerStats,
   type Staff, type InsertStaff, type Match, type InsertMatch,
   type MatchSquad, type InsertMatchSquad, type AnalyticsReport, type InsertAnalyticsReport,
-  type SystemSettings, type InsertSystemSettings
+  type SystemSettings, type InsertSystemSettings,
+  type WearableDevice, type InsertWearableDevice,
+  type WearableData, type InsertWearableData,
+  type PerformanceMetrics, type InsertPerformanceMetrics
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
@@ -94,6 +98,23 @@ export interface IStorage {
   getSystemSetting(id: number): Promise<SystemSettings | undefined>;
   createSystemSetting(setting: InsertSystemSettings): Promise<SystemSettings>;
   updateSystemSetting(id: number, setting: Partial<InsertSystemSettings>): Promise<SystemSettings | undefined>;
+
+  // Wearable Devices
+  getWearableDevices(playerId?: number): Promise<WearableDevice[]>;
+  getWearableDevice(id: number): Promise<WearableDevice | undefined>;
+  createWearableDevice(device: InsertWearableDevice): Promise<WearableDevice>;
+  updateWearableDevice(id: number, device: Partial<InsertWearableDevice>): Promise<WearableDevice | undefined>;
+  deleteWearableDevice(id: number): Promise<boolean>;
+
+  // Wearable Data
+  getWearableData(deviceId?: number, playerId?: number, dataType?: string): Promise<WearableData[]>;
+  createWearableData(data: InsertWearableData): Promise<WearableData>;
+  getLatestWearableData(playerId: number, dataType: string): Promise<WearableData | undefined>;
+
+  // Performance Metrics
+  getPerformanceMetrics(playerId?: number, metricType?: string): Promise<PerformanceMetrics[]>;
+  createPerformanceMetrics(metrics: InsertPerformanceMetrics): Promise<PerformanceMetrics>;
+  getPlayerPerformanceTrends(playerId: number, days: number): Promise<PerformanceMetrics[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -984,6 +1005,103 @@ export class DatabaseStorage implements IStorage {
       .where(eq(systemSettings.id, id))
       .returning();
     return setting || undefined;
+  }
+
+  // Wearable Devices
+  async getWearableDevices(playerId?: number): Promise<WearableDevice[]> {
+    if (playerId) {
+      return await db.select().from(wearableDevices).where(eq(wearableDevices.playerId, playerId));
+    }
+    return await db.select().from(wearableDevices);
+  }
+
+  async getWearableDevice(id: number): Promise<WearableDevice | undefined> {
+    const [device] = await db.select().from(wearableDevices).where(eq(wearableDevices.id, id));
+    return device || undefined;
+  }
+
+  async createWearableDevice(device: InsertWearableDevice): Promise<WearableDevice> {
+    const [created] = await db
+      .insert(wearableDevices)
+      .values(device)
+      .returning();
+    return created;
+  }
+
+  async updateWearableDevice(id: number, device: Partial<InsertWearableDevice>): Promise<WearableDevice | undefined> {
+    const [updated] = await db
+      .update(wearableDevices)
+      .set(device)
+      .where(eq(wearableDevices.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteWearableDevice(id: number): Promise<boolean> {
+    const result = await db.delete(wearableDevices).where(eq(wearableDevices.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  // Wearable Data
+  async getWearableData(deviceId?: number, playerId?: number, dataType?: string): Promise<WearableData[]> {
+    const conditions = [];
+    if (deviceId) conditions.push(eq(wearableData.deviceId, deviceId));
+    if (playerId) conditions.push(eq(wearableData.playerId, playerId));
+    if (dataType) conditions.push(eq(wearableData.dataType, dataType));
+
+    if (conditions.length > 0) {
+      return await db.select().from(wearableData).where(and(...conditions));
+    }
+    return await db.select().from(wearableData);
+  }
+
+  async createWearableData(data: InsertWearableData): Promise<WearableData> {
+    const [created] = await db
+      .insert(wearableData)
+      .values(data)
+      .returning();
+    return created;
+  }
+
+  async getLatestWearableData(playerId: number, dataType: string): Promise<WearableData | undefined> {
+    const [latest] = await db
+      .select()
+      .from(wearableData)
+      .where(and(
+        eq(wearableData.playerId, playerId),
+        eq(wearableData.dataType, dataType)
+      ))
+      .orderBy(wearableData.timestamp)
+      .limit(1);
+    return latest || undefined;
+  }
+
+  // Performance Metrics
+  async getPerformanceMetrics(playerId?: number, metricType?: string): Promise<PerformanceMetrics[]> {
+    const conditions = [];
+    if (playerId) conditions.push(eq(performanceMetrics.playerId, playerId));
+    if (metricType) conditions.push(eq(performanceMetrics.metricType, metricType));
+
+    if (conditions.length > 0) {
+      return await db.select().from(performanceMetrics).where(and(...conditions));
+    }
+    return await db.select().from(performanceMetrics);
+  }
+
+  async createPerformanceMetrics(metrics: InsertPerformanceMetrics): Promise<PerformanceMetrics> {
+    const [created] = await db
+      .insert(performanceMetrics)
+      .values(metrics)
+      .returning();
+    return created;
+  }
+
+  async getPlayerPerformanceTrends(playerId: number, days: number): Promise<PerformanceMetrics[]> {
+    return await db
+      .select()
+      .from(performanceMetrics)
+      .where(eq(performanceMetrics.playerId, playerId))
+      .orderBy(performanceMetrics.date);
   }
 }
 

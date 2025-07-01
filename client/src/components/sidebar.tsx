@@ -13,7 +13,8 @@ import {
   Trophy,
   BarChart3,
   PanelLeftClose,
-  PanelLeftOpen
+  PanelLeftOpen,
+  Activity
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSettings } from "@/contexts/SettingsContext";
@@ -31,6 +32,7 @@ const navigationItems = [
   { href: "/matches", icon: Trophy, label: "Matches", badge: null },
   { href: "/tactics", icon: Swords, label: "Tactics Board", badge: null },
   { href: "/analytics", icon: BarChart3, label: "Analytics", badge: null },
+  { href: "/wearables", icon: Activity, label: "Wearables", badge: null },
   { href: "/reports", icon: FileText, label: "Reports", badge: null },
   { href: "/settings", icon: Settings, label: "Settings", badge: null },
 ];

@@ -17,6 +17,7 @@ import Tactics from "@/pages/tactics";
 import Analytics from "@/pages/analytics";
 import Reports from "@/pages/reports";
 import Settings from "@/pages/settings";
+import Wearables from "@/pages/wearables";
 import NotFound from "@/pages/not-found";
 
 function Layout({ children }: { children: React.ReactNode }) {
@@ -45,6 +46,7 @@ function Router() {
       <Route path="/tactics" component={Tactics} />
       <Route path="/analytics" component={Analytics} />
       <Route path="/reports" component={Reports} />
+      <Route path="/wearables" component={Wearables} />
       <Route path="/settings" component={Settings} />
       <Route component={NotFound} />
     </Switch>

@@ -282,5 +282,67 @@ export type MatchSquad = typeof matchSquads.$inferSelect;
 export type InsertAnalyticsReport = z.infer<typeof insertAnalyticsReportSchema>;
 export type AnalyticsReport = typeof analyticsReports.$inferSelect;
 
+// Wearable Devices - For tracking connected fitness devices
+export const wearableDevices = pgTable("wearable_devices", {
+  id: serial("id").primaryKey(),
+  playerId: integer("player_id").notNull(),
+  deviceType: text("device_type").notNull(), // fitbit, apple_watch, garmin, polar, etc.
+  deviceModel: text("device_model").notNull(),
+  deviceId: text("device_id").notNull().unique(), // unique device identifier
+  authToken: text("auth_token"), // encrypted auth token for device API
+  lastSyncAt: timestamp("last_sync_at"),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Wearable Data - Raw data from wearable devices
+export const wearableData = pgTable("wearable_data", {
+  id: serial("id").primaryKey(),
+  deviceId: integer("device_id").notNull(),
+  playerId: integer("player_id").notNull(),
+  dataType: text("data_type").notNull(), // heart_rate, steps, calories, sleep, distance, etc.
+  value: text("value").notNull(), // JSON string for complex data or simple value
+  unit: text("unit"), // bpm, steps, calories, minutes, km, etc.
+  timestamp: timestamp("timestamp").notNull(), // when the data was recorded
+  sessionId: integer("session_id"), // link to training session if applicable
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Performance Metrics - Processed analytics from wearable data
+export const performanceMetrics = pgTable("performance_metrics", {
+  id: serial("id").primaryKey(),
+  playerId: integer("player_id").notNull(),
+  metricType: text("metric_type").notNull(), // daily_activity, workout_intensity, recovery_score, etc.
+  date: text("date").notNull(), // YYYY-MM-DD format
+  value: integer("value").notNull(),
+  additionalData: jsonb("additional_data"), // any extra metrics as JSON
+  sessionId: integer("session_id"), // link to training session
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertWearableDeviceSchema = createInsertSchema(wearableDevices).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertWearableDataSchema = createInsertSchema(wearableData).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPerformanceMetricsSchema = createInsertSchema(performanceMetrics).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type InsertSystemSettings = z.infer<typeof insertSystemSettingsSchema>;
 export type SystemSettings = typeof systemSettings.$inferSelect;
+
+export type InsertWearableDevice = z.infer<typeof insertWearableDeviceSchema>;
+export type WearableDevice = typeof wearableDevices.$inferSelect;
+
+export type InsertWearableData = z.infer<typeof insertWearableDataSchema>;
+export type WearableData = typeof wearableData.$inferSelect;
+
+export type InsertPerformanceMetrics = z.infer<typeof insertPerformanceMetricsSchema>;
+export type PerformanceMetrics = typeof performanceMetrics.$inferSelect;

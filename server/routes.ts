@@ -577,6 +577,155 @@ export async function registerRoutes(app: Express, upload?: any): Promise<Server
     }
   });
 
+  // Wearable Devices routes
+  app.get("/api/wearable-devices", async (req, res) => {
+    try {
+      const playerId = req.query.playerId ? parseInt(req.query.playerId as string) : undefined;
+      const devices = await storage.getWearableDevices(playerId);
+      res.json(devices);
+    } catch (error) {
+      console.error("Error fetching wearable devices:", error);
+      res.status(500).json({ error: "Failed to fetch wearable devices" });
+    }
+  });
+
+  app.get("/api/wearable-devices/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const device = await storage.getWearableDevice(id);
+      
+      if (!device) {
+        return res.status(404).json({ error: "Wearable device not found" });
+      }
+      
+      res.json(device);
+    } catch (error) {
+      console.error("Error fetching wearable device:", error);
+      res.status(500).json({ error: "Failed to fetch wearable device" });
+    }
+  });
+
+  app.post("/api/wearable-devices", async (req, res) => {
+    try {
+      const device = await storage.createWearableDevice(req.body);
+      res.json(device);
+    } catch (error) {
+      console.error("Error creating wearable device:", error);
+      res.status(500).json({ error: "Failed to create wearable device" });
+    }
+  });
+
+  app.put("/api/wearable-devices/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const device = await storage.updateWearableDevice(id, req.body);
+      
+      if (!device) {
+        return res.status(404).json({ error: "Wearable device not found" });
+      }
+      
+      res.json(device);
+    } catch (error) {
+      console.error("Error updating wearable device:", error);
+      res.status(500).json({ error: "Failed to update wearable device" });
+    }
+  });
+
+  app.delete("/api/wearable-devices/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteWearableDevice(id);
+      
+      if (!success) {
+        return res.status(404).json({ error: "Wearable device not found" });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting wearable device:", error);
+      res.status(500).json({ error: "Failed to delete wearable device" });
+    }
+  });
+
+  // Wearable Data routes
+  app.get("/api/wearable-data", async (req, res) => {
+    try {
+      const deviceId = req.query.deviceId ? parseInt(req.query.deviceId as string) : undefined;
+      const playerId = req.query.playerId ? parseInt(req.query.playerId as string) : undefined;
+      const dataType = req.query.dataType as string;
+      
+      const data = await storage.getWearableData(deviceId, playerId, dataType);
+      res.json(data);
+    } catch (error) {
+      console.error("Error fetching wearable data:", error);
+      res.status(500).json({ error: "Failed to fetch wearable data" });
+    }
+  });
+
+  app.post("/api/wearable-data", async (req, res) => {
+    try {
+      const data = await storage.createWearableData(req.body);
+      res.json(data);
+    } catch (error) {
+      console.error("Error creating wearable data:", error);
+      res.status(500).json({ error: "Failed to create wearable data" });
+    }
+  });
+
+  app.get("/api/wearable-data/latest", async (req, res) => {
+    try {
+      const playerId = parseInt(req.query.playerId as string);
+      const dataType = req.query.dataType as string;
+      
+      if (!playerId || !dataType) {
+        return res.status(400).json({ error: "playerId and dataType are required" });
+      }
+      
+      const data = await storage.getLatestWearableData(playerId, dataType);
+      res.json(data);
+    } catch (error) {
+      console.error("Error fetching latest wearable data:", error);
+      res.status(500).json({ error: "Failed to fetch latest wearable data" });
+    }
+  });
+
+  // Performance Metrics routes
+  app.get("/api/performance-metrics", async (req, res) => {
+    try {
+      const playerId = req.query.playerId ? parseInt(req.query.playerId as string) : undefined;
+      const metricType = req.query.metricType as string;
+      
+      const metrics = await storage.getPerformanceMetrics(playerId, metricType);
+      res.json(metrics);
+    } catch (error) {
+      console.error("Error fetching performance metrics:", error);
+      res.status(500).json({ error: "Failed to fetch performance metrics" });
+    }
+  });
+
+  app.post("/api/performance-metrics", async (req, res) => {
+    try {
+      const metrics = await storage.createPerformanceMetrics(req.body);
+      res.json(metrics);
+    } catch (error) {
+      console.error("Error creating performance metrics:", error);
+      res.status(500).json({ error: "Failed to create performance metrics" });
+    }
+  });
+
+  app.get("/api/performance-metrics/trends/:playerId", async (req, res) => {
+    try {
+      const playerId = parseInt(req.params.playerId);
+      const days = parseInt(req.query.days as string) || 30;
+      
+      const trends = await storage.getPlayerPerformanceTrends(playerId, days);
+      res.json(trends);
+    } catch (error) {
+      console.error("Error fetching performance trends:", error);
+      res.status(500).json({ error: "Failed to fetch performance trends" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
