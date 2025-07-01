@@ -18,7 +18,7 @@ import {
   Target,
   Activity,
   Star,
-  DollarSign
+  Wallet
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -67,7 +67,7 @@ export default function Dashboard() {
       title: "Monthly Budget",
       value: formatCurrency(15000, currency),
       change: `Equipment & Training costs`,
-      icon: DollarSign,
+      icon: Wallet,
       color: "text-blue-600",
       bgColor: "bg-blue-100 dark:bg-blue-900/20"
     },
