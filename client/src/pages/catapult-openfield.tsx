@@ -152,26 +152,11 @@ export default function CatapultOpenFieldPage() {
       <div className="flex justify-between items-center">
         <div>
           <div className="flex items-center space-x-3 mb-2">
-            <div className="flex items-center">
-              <svg 
-                className="h-8 w-auto" 
-                viewBox="0 0 180 40" 
-                fill="none" 
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <g fill="currentColor">
-                  {/* Catapult icon - stylized C with motion lines */}
-                  <path d="M8 20c0-6.627 5.373-12 12-12s12 5.373 12 12-5.373 12-12 12S8 26.627 8 20zm4 0c0 4.418 3.582 8 8 8s8-3.582 8-8-3.582-8-8-8-8 3.582-8 8z"/>
-                  <path d="M28 16l4-2v12l-4-2V16z"/>
-                  <path d="M34 14l3-1.5v15L34 26V14z"/>
-                  <path d="M39 12l2-1v18l-2-1V12z"/>
-                  {/* CATAPULT text */}
-                  <text x="50" y="26" className="fill-current text-lg font-bold" style={{fontFamily: 'Arial, sans-serif'}}>
-                    CATAPULT
-                  </text>
-                </g>
-              </svg>
-            </div>
+            <img 
+              src="@assets/catapult-logo_1751360180223.png" 
+              alt="Catapult Logo"
+              className="h-8 w-auto"
+            />
             <h1 className="text-3xl font-bold">OpenField Integration</h1>
           </div>
           <p className="text-muted-foreground">

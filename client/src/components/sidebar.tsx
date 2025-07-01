@@ -52,7 +52,7 @@ const navigationItems = [
   { href: "/tactics", icon: Swords, label: "Tactics Board", badge: null },
   { href: "/analytics", icon: BarChart3, label: "Analytics", badge: null },
   { href: "/wearables", icon: Activity, label: "Wearable Devices", badge: null },
-  { href: "/catapult-openfield", icon: CatapultIcon, label: "Catapult OpenField", badge: "NEW" },
+  { href: "/catapult-openfield", icon: CatapultIcon, label: "CATAPULT-OpenField", badge: "NEW" },
   { href: "/reports", icon: FileText, label: "Reports", badge: null },
   { href: "/settings", icon: Settings, label: "Settings", badge: null },
 ];
