@@ -6,6 +6,7 @@ import { z } from "zod";
 import { insertPlayerSchema } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useSettings } from "@/contexts/SettingsContext";
 import {
   Dialog,
   DialogContent,
@@ -44,6 +45,28 @@ type FormData = z.infer<typeof formSchema>;
 export default function AddPlayerDialog({ open, onOpenChange }: AddPlayerDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { currency } = useSettings();
+
+  // Helper function to get currency symbol
+  const getCurrencySymbol = (currency: string) => {
+    const symbols: { [key: string]: string } = {
+      USD: '$', EUR: '€', GBP: '£', JPY: '¥',
+      SAR: 'SR', QAR: 'QR', AED: 'AED', OMR: 'OMR',
+      KWD: 'KD', BHD: 'BD'
+    };
+    return symbols[currency] || currency;
+  };
+
+  // Calculate total contract value
+  const calculateContractTotal = (startDate: string, endDate: string, monthlySalary: number) => {
+    if (!startDate || !endDate || !monthlySalary) return 0;
+    
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const months = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 30.44)); // Average days per month
+    
+    return months > 0 ? months * monthlySalary : 0;
+  };
   
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -63,6 +86,9 @@ export default function AddPlayerDialog({ open, onOpenChange }: AddPlayerDialogP
       profilePicture: "",
       idDocument: "",
       contractDocument: "",
+      contractStartDate: "",
+      contractEndDate: "",
+      monthlySalary: "",
       isActive: true,
     },
   });
@@ -79,6 +105,9 @@ export default function AddPlayerDialog({ open, onOpenChange }: AddPlayerDialogP
         profilePicture: data.profilePicture || null,
         idDocument: data.idDocument || null,
         contractDocument: data.contractDocument || null,
+        contractStartDate: data.contractStartDate || null,
+        contractEndDate: data.contractEndDate || null,
+        monthlySalary: data.monthlySalary || null,
         shirtNumber: data.shirtNumber || null,
         height: data.height || null,
         weight: data.weight || null,
@@ -308,6 +337,82 @@ export default function AddPlayerDialog({ open, onOpenChange }: AddPlayerDialogP
                 </FormItem>
               )}
             />
+
+            {/* Contract Information */}
+            <div className="col-span-2 space-y-6 border-t pt-6">
+              <h3 className="text-lg font-semibold">Contract Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <FormField
+                  control={form.control}
+                  name="contractStartDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Contract Start Date</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="contractEndDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Contract End Date</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="monthlySalary"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Monthly Salary ({getCurrencySymbol(currency)})</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input 
+                            type="number" 
+                            step="0.01" 
+                            placeholder="0.00" 
+                            {...field}
+                            className="pl-8"
+                          />
+                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
+                            {getCurrencySymbol(currency)}
+                          </span>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              {/* Contract Total Calculation */}
+              {form.watch("contractStartDate") && form.watch("contractEndDate") && form.watch("monthlySalary") && (
+                <div className="mt-4 p-4 bg-muted/50 rounded-lg">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">Total Contract Value:</span>
+                    <span className="text-lg font-bold text-primary">
+                      {getCurrencySymbol(currency)}{calculateContractTotal(
+                        form.watch("contractStartDate") || "",
+                        form.watch("contractEndDate") || "",
+                        parseFloat(form.watch("monthlySalary") || "0")
+                      ).toLocaleString()}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Calculated based on contract duration and monthly salary
+                  </p>
+                </div>
+              )}
+            </div>
 
             {/* File Upload Section */}
             <div className="col-span-2 space-y-6 border-t pt-6">
