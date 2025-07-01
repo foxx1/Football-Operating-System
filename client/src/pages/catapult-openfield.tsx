@@ -13,6 +13,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, AreaChart, Area } from "recharts";
+import catapultLogo from "@assets/catapult-logo_1751360180223.png";
 
 interface Player {
   id: number;
@@ -153,7 +154,7 @@ export default function CatapultOpenFieldPage() {
         <div>
           <div className="flex items-center space-x-3 mb-2">
             <img 
-              src="@assets/catapult-logo_1751360180223.png" 
+              src={catapultLogo} 
               alt="Catapult Logo"
               className="h-8 w-auto"
             />
