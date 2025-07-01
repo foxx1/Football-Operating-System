@@ -1055,6 +1055,122 @@ export async function registerRoutes(app: Express, upload?: any): Promise<Server
     }
   });
 
+  // Catapult OpenField API Integration
+  app.post("/api/catapult/connect", async (req, res) => {
+    try {
+      const { playerId, apiKey, baseUrl } = req.body;
+      
+      if (!playerId || !apiKey) {
+        return res.status(400).json({ error: "Player ID and API key are required" });
+      }
+
+      // In a real implementation, this would make actual API calls to Catapult
+      // For now, we'll simulate the connection and return success
+      console.log(`Connecting player ${playerId} to Catapult OpenField...`);
+      console.log(`API Base URL: ${baseUrl}`);
+      console.log(`API Key provided: ${apiKey.substring(0, 8)}...`);
+
+      // Simulate API validation (in real app, make actual call to Catapult)
+      if (apiKey.length < 10) {
+        return res.status(401).json({ error: "Invalid API key format" });
+      }
+
+      // Store connection details (in real app, save to database)
+      const connectionData = {
+        playerId,
+        provider: "catapult_openfield",
+        apiKey: apiKey.substring(0, 8) + "...", // Don't store full key in logs
+        baseUrl,
+        connectedAt: new Date().toISOString(),
+        status: "connected",
+        lastSync: new Date().toISOString()
+      };
+
+      console.log("Catapult connection established:", connectionData);
+
+      res.json({
+        success: true,
+        message: "Successfully connected to Catapult OpenField",
+        connection: {
+          playerId,
+          provider: "catapult_openfield",
+          status: "connected",
+          connectedAt: connectionData.connectedAt
+        }
+      });
+    } catch (error) {
+      console.error("Error connecting to Catapult OpenField:", error);
+      res.status(500).json({ error: "Failed to connect to Catapult OpenField" });
+    }
+  });
+
+  app.get("/api/catapult/players/:playerId/data", async (req, res) => {
+    try {
+      const { playerId } = req.params;
+      const { dataType, startDate, endDate } = req.query;
+
+      // In real implementation, fetch from Catapult API
+      // For now, return mock data structure similar to Catapult's format
+      const mockCatapultData = {
+        player: {
+          id: playerId,
+          external_id: `catapult_${playerId}`,
+          first_name: "Ahmed",
+          last_name: "Al-Dosari",
+          position: "Midfielder"
+        },
+        sessions: [
+          {
+            id: "session_001",
+            date: "2025-01-01",
+            session_type: "Training",
+            duration_minutes: 90,
+            gps_data: {
+              total_distance_meters: 8420,
+              high_speed_running_meters: 1250,
+              sprint_count: 15,
+              max_speed_kmh: 28.5,
+              average_speed_kmh: 6.2
+            },
+            load_metrics: {
+              player_load: 485.2,
+              player_load_per_minute: 5.39,
+              accelerations: 45,
+              decelerations: 38,
+              impacts: 28
+            },
+            heart_rate: {
+              max_hr: 185,
+              average_hr: 155,
+              time_in_zones: {
+                zone_1: 12,
+                zone_2: 25,
+                zone_3: 30,
+                zone_4: 20,
+                zone_5: 3
+              }
+            }
+          }
+        ],
+        wellness_data: {
+          readiness_score: 8.5,
+          fatigue_level: 3.1,
+          wellness_score: 7.2,
+          sleep_quality: 8.0
+        }
+      };
+
+      res.json({
+        success: true,
+        data: mockCatapultData,
+        fetched_at: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("Error fetching Catapult player data:", error);
+      res.status(500).json({ error: "Failed to fetch player data from Catapult" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

@@ -14,7 +14,8 @@ import {
   BarChart3,
   PanelLeftClose,
   PanelLeftOpen,
-  Activity
+  Activity,
+  Target
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSettings } from "@/contexts/SettingsContext";
@@ -32,7 +33,8 @@ const navigationItems = [
   { href: "/matches", icon: Trophy, label: "Matches", badge: null },
   { href: "/tactics", icon: Swords, label: "Tactics Board", badge: null },
   { href: "/analytics", icon: BarChart3, label: "Analytics", badge: null },
-  { href: "/terra-wearables", icon: Activity, label: "Terra Wearables", badge: "NEW" },
+  { href: "/wearables", icon: Activity, label: "Wearable Devices", badge: null },
+  { href: "/catapult-openfield", icon: Target, label: "Catapult OpenField", badge: "NEW" },
   { href: "/reports", icon: FileText, label: "Reports", badge: null },
   { href: "/settings", icon: Settings, label: "Settings", badge: null },
 ];
