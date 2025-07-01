@@ -58,17 +58,17 @@ export function useSettings() {
   return context;
 }
 
-// Currency symbol mapping
+// Currency symbol mapping - using English abbreviations for better compatibility
 export const getCurrencySymbol = (currency: string): string => {
   const symbols: Record<string, string> = {
     USD: "$",
     EUR: "€",
-    SAR: "ر.س",
-    QAR: "ر.ق",
-    AED: "د.إ",
-    OMR: "ر.ع.",
-    KWD: "د.ك",
-    BHD: "د.ب",
+    SAR: "SR",
+    QAR: "QR", 
+    AED: "AED",
+    OMR: "OMR",
+    KWD: "KD",
+    BHD: "BD",
     GBP: "£",
     JPY: "¥",
   };

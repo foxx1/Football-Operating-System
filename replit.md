@@ -121,6 +121,15 @@ The system uses PostgreSQL with the following core entities:
 
 ## Recent Changes
 
+### July 1, 2025 - Database Migration and Currency Format Enhancement
+✓ Migrated from MemStorage to DatabaseStorage for data persistence
+✓ Switched to PostgreSQL database with permanent settings storage
+✓ Fixed logo display in sidebar with persistent logo_url setting
+✓ Updated currency formatting to use English abbreviations (BD, SR, AED, etc.)
+✓ Replaced DollarSign icon with Wallet icon for multi-currency support
+✓ Dashboard Monthly Budget now shows "BD15,000" format for Bahraini Dinar
+✓ Settings persist across server restarts with database storage
+
 ### June 30, 2025 - Global Settings Context and Currency Integration
 ✓ Created global SettingsContext for cross-component settings sharing
 ✓ Fixed timezone and currency dropdown refresh issues in Settings page
