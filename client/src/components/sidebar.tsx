@@ -15,7 +15,8 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Activity,
-  Target
+  Target,
+  Wallet
 } from "lucide-react";
 
 // Custom Catapult Icon Component
@@ -53,6 +54,7 @@ const navigationItems = [
   { href: "/analytics", icon: BarChart3, label: "Analytics", badge: null },
   { href: "/wearables", icon: Activity, label: "Wearable Devices", badge: null },
   { href: "/catapult-openfield", icon: CatapultIcon, label: "CATAPULT-OpenField", badge: "NEW" },
+  { href: "/monthly-budgets", icon: Wallet, label: "Monthly Budgets", badge: null },
   { href: "/reports", icon: FileText, label: "Reports", badge: null },
   { href: "/settings", icon: Settings, label: "Settings", badge: null },
 ];

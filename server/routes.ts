@@ -5,7 +5,8 @@ import {
   insertPlayerSchema, insertTeamSchema, insertTrainingSessionSchema,
   insertSessionAttendanceSchema, insertTacticalFormationSchema, insertPlayerStatsSchema,
   insertStaffSchema, insertMatchSchema, insertMatchSquadSchema,
-  insertAnalyticsReportSchema, insertSystemSettingsSchema
+  insertAnalyticsReportSchema, insertSystemSettingsSchema,
+  insertMonthlyBudgetSchema, insertExpenseSchema, insertPlayerContractSchema
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express, upload?: any): Promise<Server> {
@@ -1168,6 +1169,210 @@ export async function registerRoutes(app: Express, upload?: any): Promise<Server
     } catch (error) {
       console.error("Error fetching Catapult player data:", error);
       res.status(500).json({ error: "Failed to fetch player data from Catapult" });
+    }
+  });
+
+  // Monthly Budgets API endpoints
+  app.get("/api/budgets", async (req, res) => {
+    try {
+      const budgets = await storage.getMonthlyBudgets();
+      res.json(budgets);
+    } catch (error) {
+      console.error("Error fetching budgets:", error);
+      res.status(500).json({ error: "Failed to fetch budgets" });
+    }
+  });
+
+  app.get("/api/budgets/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const budget = await storage.getMonthlyBudget(id);
+      
+      if (!budget) {
+        return res.status(404).json({ error: "Budget not found" });
+      }
+      
+      res.json(budget);
+    } catch (error) {
+      console.error("Error fetching budget:", error);
+      res.status(500).json({ error: "Failed to fetch budget" });
+    }
+  });
+
+  app.post("/api/budgets", async (req, res) => {
+    try {
+      const validatedData = insertMonthlyBudgetSchema.parse(req.body);
+      const budget = await storage.createMonthlyBudget(validatedData);
+      res.status(201).json(budget);
+    } catch (error) {
+      console.error("Error creating budget:", error);
+      res.status(400).json({ error: "Invalid budget data", details: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
+  app.put("/api/budgets/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const budget = await storage.updateMonthlyBudget(id, req.body);
+      
+      if (!budget) {
+        return res.status(404).json({ error: "Budget not found" });
+      }
+      
+      res.json(budget);
+    } catch (error) {
+      console.error("Error updating budget:", error);
+      res.status(500).json({ error: "Failed to update budget" });
+    }
+  });
+
+  app.delete("/api/budgets/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteMonthlyBudget(id);
+      
+      if (!success) {
+        return res.status(404).json({ error: "Budget not found" });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting budget:", error);
+      res.status(500).json({ error: "Failed to delete budget" });
+    }
+  });
+
+  // Expense Management API endpoints
+  app.get("/api/expenses", async (req, res) => {
+    try {
+      const budgetId = req.query.budgetId ? parseInt(req.query.budgetId as string) : undefined;
+      const expenses = await storage.getExpenses(budgetId);
+      res.json(expenses);
+    } catch (error) {
+      console.error("Error fetching expenses:", error);
+      res.status(500).json({ error: "Failed to fetch expenses" });
+    }
+  });
+
+  app.get("/api/expenses/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const expense = await storage.getExpense(id);
+      
+      if (!expense) {
+        return res.status(404).json({ error: "Expense not found" });
+      }
+      
+      res.json(expense);
+    } catch (error) {
+      console.error("Error fetching expense:", error);
+      res.status(500).json({ error: "Failed to fetch expense" });
+    }
+  });
+
+  app.post("/api/expenses", async (req, res) => {
+    try {
+      const validatedData = insertExpenseSchema.parse(req.body);
+      const expense = await storage.createExpense(validatedData);
+      res.status(201).json(expense);
+    } catch (error) {
+      console.error("Error creating expense:", error);
+      res.status(400).json({ error: "Invalid expense data", details: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
+  app.put("/api/expenses/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const expense = await storage.updateExpense(id, req.body);
+      
+      if (!expense) {
+        return res.status(404).json({ error: "Expense not found" });
+      }
+      
+      res.json(expense);
+    } catch (error) {
+      console.error("Error updating expense:", error);
+      res.status(500).json({ error: "Failed to update expense" });
+    }
+  });
+
+  app.delete("/api/expenses/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteExpense(id);
+      
+      if (!success) {
+        return res.status(404).json({ error: "Expense not found" });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting expense:", error);
+      res.status(500).json({ error: "Failed to delete expense" });
+    }
+  });
+
+  app.patch("/api/expenses/:id/approve", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const approvedBy = 1; // Current user ID from session/auth
+      const expense = await storage.approveExpense(id, approvedBy);
+      
+      if (!expense) {
+        return res.status(404).json({ error: "Expense not found" });
+      }
+      
+      res.json(expense);
+    } catch (error) {
+      console.error("Error approving expense:", error);
+      res.status(500).json({ error: "Failed to approve expense" });
+    }
+  });
+
+  // Budget Analysis endpoints
+  app.get("/api/budgets/salary-summary/:month", async (req, res) => {
+    try {
+      const month = req.params.month;
+      const salarySummary = await storage.getTotalMonthlySalaries(month);
+      res.json(salarySummary);
+    } catch (error) {
+      console.error("Error fetching salary summary:", error);
+      res.status(500).json({ error: "Failed to fetch salary summary" });
+    }
+  });
+
+  app.get("/api/budgets/summary/:budgetId", async (req, res) => {
+    try {
+      const budgetId = parseInt(req.params.budgetId);
+      const budgetSummary = await storage.getBudgetVsActualExpenses(budgetId);
+      res.json(budgetSummary);
+    } catch (error) {
+      console.error("Error fetching budget summary:", error);
+      res.status(500).json({ error: "Failed to fetch budget summary" });
+    }
+  });
+
+  // Player Contracts API endpoints
+  app.get("/api/player-contracts", async (req, res) => {
+    try {
+      const playerId = req.query.playerId ? parseInt(req.query.playerId as string) : undefined;
+      const contracts = await storage.getPlayerContracts(playerId);
+      res.json(contracts);
+    } catch (error) {
+      console.error("Error fetching player contracts:", error);
+      res.status(500).json({ error: "Failed to fetch player contracts" });
+    }
+  });
+
+  app.post("/api/player-contracts", async (req, res) => {
+    try {
+      const validatedData = insertPlayerContractSchema.parse(req.body);
+      const contract = await storage.createPlayerContract(validatedData);
+      res.status(201).json(contract);
+    } catch (error) {
+      console.error("Error creating player contract:", error);
+      res.status(400).json({ error: "Invalid contract data", details: error instanceof Error ? error.message : String(error) });
     }
   });
 

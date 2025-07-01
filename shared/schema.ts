@@ -179,6 +179,68 @@ export const systemSettings = pgTable("system_settings", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Monthly Budget Management
+export const monthlyBudgets = pgTable("monthly_budgets", {
+  id: serial("id").primaryKey(),
+  month: text("month").notNull(), // YYYY-MM format
+  budgetName: text("budget_name").notNull(),
+  totalBudget: decimal("total_budget", { precision: 12, scale: 2 }).notNull(),
+  salariesBudget: decimal("salaries_budget", { precision: 12, scale: 2 }).notNull(),
+  operationalBudget: decimal("operational_budget", { precision: 12, scale: 2 }).notNull(),
+  equipmentBudget: decimal("equipment_budget", { precision: 12, scale: 2 }).notNull(),
+  travelBudget: decimal("travel_budget", { precision: 12, scale: 2 }).notNull(),
+  medicalBudget: decimal("medical_budget", { precision: 12, scale: 2 }).notNull(),
+  facilitiesBudget: decimal("facilities_budget", { precision: 12, scale: 2 }).notNull(),
+  marketingBudget: decimal("marketing_budget", { precision: 12, scale: 2 }).notNull(),
+  otherBudget: decimal("other_budget", { precision: 12, scale: 2 }).notNull(),
+  notes: text("notes"),
+  status: text("status").default("active").notNull(), // active, archived, draft
+  createdBy: integer("created_by").notNull(),
+  approvedBy: integer("approved_by"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Expense Tracking
+export const expenses = pgTable("expenses", {
+  id: serial("id").primaryKey(),
+  budgetId: integer("budget_id").references(() => monthlyBudgets.id).notNull(),
+  category: text("category").notNull(), // salaries, operational, equipment, travel, medical, facilities, marketing, other
+  subcategory: text("subcategory"), // specific expense type
+  description: text("description").notNull(),
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  expenseDate: text("expense_date").notNull(), // YYYY-MM-DD
+  vendor: text("vendor"), // supplier/vendor name
+  paymentMethod: text("payment_method"), // cash, card, transfer, cheque
+  receipt: text("receipt"), // file path to receipt/invoice
+  status: text("status").default("pending").notNull(), // pending, approved, rejected, paid
+  approvedBy: integer("approved_by"),
+  approvedAt: timestamp("approved_at"),
+  paymentReference: text("payment_reference"),
+  notes: text("notes"),
+  createdBy: integer("created_by").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Player Salaries (extending player info with salary details)
+export const playerContracts = pgTable("player_contracts", {
+  id: serial("id").primaryKey(),
+  playerId: integer("player_id").references(() => players.id).notNull(),
+  contractType: text("contract_type").notNull(), // professional, amateur, youth, loan
+  startDate: text("start_date").notNull(),
+  endDate: text("end_date").notNull(),
+  monthlySalary: decimal("monthly_salary", { precision: 12, scale: 2 }),
+  bonuses: decimal("bonuses", { precision: 12, scale: 2 }), // monthly performance bonuses
+  currency: text("currency").default("USD").notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  contractDocument: text("contract_document"), // file path
+  notes: text("notes"),
+  createdBy: integer("created_by").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Terra-like Unified Wearable API System
 export const terraDeviceProviders = pgTable("terra_device_providers", {
   id: serial("id").primaryKey(),
@@ -459,6 +521,25 @@ export const insertTerraWebhookLogSchema = createInsertSchema(terraWebhookLogs).
   createdAt: true,
 });
 
+export const insertMonthlyBudgetSchema = createInsertSchema(monthlyBudgets).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertExpenseSchema = createInsertSchema(expenses).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  approvedAt: true,
+});
+
+export const insertPlayerContractSchema = createInsertSchema(playerContracts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -495,6 +576,15 @@ export type MatchSquad = typeof matchSquads.$inferSelect;
 
 export type InsertAnalyticsReport = z.infer<typeof insertAnalyticsReportSchema>;
 export type AnalyticsReport = typeof analyticsReports.$inferSelect;
+
+export type InsertMonthlyBudget = z.infer<typeof insertMonthlyBudgetSchema>;
+export type MonthlyBudget = typeof monthlyBudgets.$inferSelect;
+
+export type InsertExpense = z.infer<typeof insertExpenseSchema>;
+export type Expense = typeof expenses.$inferSelect;
+
+export type InsertPlayerContract = z.infer<typeof insertPlayerContractSchema>;
+export type PlayerContract = typeof playerContracts.$inferSelect;
 
 // Wearable Devices - For tracking connected fitness devices
 export const wearableDevices = pgTable("wearable_devices", {

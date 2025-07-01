@@ -121,6 +121,20 @@ The system uses PostgreSQL with the following core entities:
 
 ## Recent Changes
 
+### July 1, 2025 - Monthly Budgets and Financial Management System
+✓ Implemented comprehensive Monthly Budgets management with salary summation and expense control
+✓ Added budget and expense database schema with proper validation and TypeScript types
+✓ Created monthly-budgets.tsx page with multi-tab interface: Overview, Expense Management, Budget Analysis
+✓ Built API endpoints for budget CRUD operations (/api/budgets, /api/expenses, /api/player-contracts)
+✓ Integrated salary summation for staff and players with auto-calculation in budget creation
+✓ Added expense tracking with approval workflow for club admin and admin users
+✓ Implemented budget vs actual analysis with category-wise spending breakdown
+✓ Added comprehensive progress indicators and budget utilization tracking
+✓ Enhanced sidebar navigation with Monthly Budgets menu item using Wallet icon
+✓ Financial dashboard includes: Total Budget, Salary Costs, Actual Expenses, Remaining Budget
+✓ Expense filtering, approval system, and detailed financial reporting capabilities
+✓ Ready for production use with proper error handling and data validation
+
 ### July 1, 2025 - Enhanced Catapult OpenField API Integration
 ✓ Added Catapult OpenField integration to sidebar under wearables section with official Catapult logo
 ✓ Created comprehensive Catapult OpenField page with API connection functionality

@@ -1,7 +1,7 @@
 import {
   users, players, teams, teamPlayers, trainingSessions, sessionAttendance, 
   tacticalFormations, playerStats, staff, matches, matchSquads, analyticsReports, systemSettings,
-  wearableDevices, wearableData, performanceMetrics,
+  wearableDevices, wearableData, performanceMetrics, monthlyBudgets, expenses, playerContracts,
   type User, type InsertUser, type Player, type InsertPlayer,
   type Team, type InsertTeam, type TeamPlayer, type InsertTeamPlayer,
   type TrainingSession, type InsertTrainingSession,
@@ -13,7 +13,10 @@ import {
   type SystemSettings, type InsertSystemSettings,
   type WearableDevice, type InsertWearableDevice,
   type WearableData, type InsertWearableData,
-  type PerformanceMetrics, type InsertPerformanceMetrics
+  type PerformanceMetrics, type InsertPerformanceMetrics,
+  type MonthlyBudget, type InsertMonthlyBudget,
+  type Expense, type InsertExpense,
+  type PlayerContract, type InsertPlayerContract
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
@@ -115,6 +118,33 @@ export interface IStorage {
   getPerformanceMetrics(playerId?: number, metricType?: string): Promise<PerformanceMetrics[]>;
   createPerformanceMetrics(metrics: InsertPerformanceMetrics): Promise<PerformanceMetrics>;
   getPlayerPerformanceTrends(playerId: number, days: number): Promise<PerformanceMetrics[]>;
+
+  // Budget Management
+  getMonthlyBudgets(): Promise<MonthlyBudget[]>;
+  getMonthlyBudget(id: number): Promise<MonthlyBudget | undefined>;
+  getMonthlyBudgetByMonth(month: string): Promise<MonthlyBudget | undefined>;
+  createMonthlyBudget(budget: InsertMonthlyBudget): Promise<MonthlyBudget>;
+  updateMonthlyBudget(id: number, budget: Partial<InsertMonthlyBudget>): Promise<MonthlyBudget | undefined>;
+  deleteMonthlyBudget(id: number): Promise<boolean>;
+
+  // Expense Management  
+  getExpenses(budgetId?: number): Promise<Expense[]>;
+  getExpense(id: number): Promise<Expense | undefined>;
+  createExpense(expense: InsertExpense): Promise<Expense>;
+  updateExpense(id: number, expense: Partial<InsertExpense>): Promise<Expense | undefined>;
+  deleteExpense(id: number): Promise<boolean>;
+  approveExpense(id: number, approvedBy: number): Promise<Expense | undefined>;
+
+  // Player Contracts
+  getPlayerContracts(playerId?: number): Promise<PlayerContract[]>;
+  getPlayerContract(id: number): Promise<PlayerContract | undefined>;
+  createPlayerContract(contract: InsertPlayerContract): Promise<PlayerContract>;
+  updatePlayerContract(id: number, contract: Partial<InsertPlayerContract>): Promise<PlayerContract | undefined>;
+  deletePlayerContract(id: number): Promise<boolean>;
+
+  // Budget Summary Methods
+  getTotalMonthlySalaries(month: string): Promise<{ staff: number; players: number; total: number }>;
+  getBudgetVsActualExpenses(budgetId: number): Promise<{ budgeted: number; actual: number; remaining: number; categories: any[] }>;
 }
 
 export class MemStorage implements IStorage {
