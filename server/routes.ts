@@ -1342,6 +1342,18 @@ export async function registerRoutes(app: Express, upload?: any): Promise<Server
     }
   });
 
+  // Salary summary without month parameter (fallback)
+  app.get("/api/budgets/salary-summary", async (req, res) => {
+    try {
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      const salarySummary = await storage.getTotalMonthlySalaries(currentMonth);
+      res.json(salarySummary);
+    } catch (error) {
+      console.error("Error fetching salary summary:", error);
+      res.status(500).json({ error: "Failed to fetch salary summary" });
+    }
+  });
+
   app.get("/api/budgets/summary/:budgetId", async (req, res) => {
     try {
       const budgetId = parseInt(req.params.budgetId);

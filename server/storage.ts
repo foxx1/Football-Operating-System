@@ -19,7 +19,7 @@ import {
   type PlayerContract, type InsertPlayerContract
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 
 export interface IStorage {
   // Users
@@ -1132,6 +1132,208 @@ export class DatabaseStorage implements IStorage {
       .from(performanceMetrics)
       .where(eq(performanceMetrics.playerId, playerId))
       .orderBy(performanceMetrics.date);
+  }
+
+  // Budget Management
+  async getMonthlyBudgets(): Promise<MonthlyBudget[]> {
+    return await db.select().from(monthlyBudgets).orderBy(monthlyBudgets.month);
+  }
+
+  async getMonthlyBudget(id: number): Promise<MonthlyBudget | undefined> {
+    const [budget] = await db.select().from(monthlyBudgets).where(eq(monthlyBudgets.id, id));
+    return budget || undefined;
+  }
+
+  async getMonthlyBudgetByMonth(month: string): Promise<MonthlyBudget | undefined> {
+    const [budget] = await db.select().from(monthlyBudgets).where(eq(monthlyBudgets.month, month));
+    return budget || undefined;
+  }
+
+  async createMonthlyBudget(budget: InsertMonthlyBudget): Promise<MonthlyBudget> {
+    const [created] = await db
+      .insert(monthlyBudgets)
+      .values(budget)
+      .returning();
+    return created;
+  }
+
+  async updateMonthlyBudget(id: number, budget: Partial<InsertMonthlyBudget>): Promise<MonthlyBudget | undefined> {
+    const [updated] = await db
+      .update(monthlyBudgets)
+      .set(budget)
+      .where(eq(monthlyBudgets.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteMonthlyBudget(id: number): Promise<boolean> {
+    const result = await db.delete(monthlyBudgets).where(eq(monthlyBudgets.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  // Expense Management  
+  async getExpenses(budgetId?: number): Promise<Expense[]> {
+    if (budgetId) {
+      return await db.select().from(expenses).where(eq(expenses.budgetId, budgetId));
+    }
+    return await db.select().from(expenses);
+  }
+
+  async getExpense(id: number): Promise<Expense | undefined> {
+    const [expense] = await db.select().from(expenses).where(eq(expenses.id, id));
+    return expense || undefined;
+  }
+
+  async createExpense(expense: InsertExpense): Promise<Expense> {
+    const [created] = await db
+      .insert(expenses)
+      .values(expense)
+      .returning();
+    return created;
+  }
+
+  async updateExpense(id: number, expense: Partial<InsertExpense>): Promise<Expense | undefined> {
+    const [updated] = await db
+      .update(expenses)
+      .set(expense)
+      .where(eq(expenses.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteExpense(id: number): Promise<boolean> {
+    const result = await db.delete(expenses).where(eq(expenses.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async approveExpense(id: number, approvedBy: number): Promise<Expense | undefined> {
+    const [updated] = await db
+      .update(expenses)
+      .set({ 
+        status: "approved",
+        approvedBy: approvedBy,
+        approvedAt: new Date()
+      })
+      .where(eq(expenses.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  // Player Contracts
+  async getPlayerContracts(playerId?: number): Promise<PlayerContract[]> {
+    if (playerId) {
+      return await db.select().from(playerContracts).where(eq(playerContracts.playerId, playerId));
+    }
+    return await db.select().from(playerContracts);
+  }
+
+  async getPlayerContract(id: number): Promise<PlayerContract | undefined> {
+    const [contract] = await db.select().from(playerContracts).where(eq(playerContracts.id, id));
+    return contract || undefined;
+  }
+
+  async createPlayerContract(contract: InsertPlayerContract): Promise<PlayerContract> {
+    const [created] = await db
+      .insert(playerContracts)
+      .values(contract)
+      .returning();
+    return created;
+  }
+
+  async updatePlayerContract(id: number, contract: Partial<InsertPlayerContract>): Promise<PlayerContract | undefined> {
+    const [updated] = await db
+      .update(playerContracts)
+      .set(contract)
+      .where(eq(playerContracts.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deletePlayerContract(id: number): Promise<boolean> {
+    const result = await db.delete(playerContracts).where(eq(playerContracts.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  // Budget Summary Methods
+  async getTotalMonthlySalaries(month: string): Promise<{ staff: number; players: number; total: number }> {
+    // Get staff salaries
+    const staffSalaries = await db
+      .select({
+        total: sql<number>`sum(salary)`
+      })
+      .from(staff)
+      .where(eq(staff.isActive, true));
+
+    // Get player contract salaries
+    const playerSalaries = await db
+      .select({
+        total: sql<number>`sum(monthly_salary)`
+      })
+      .from(playerContracts)
+      .where(eq(playerContracts.isActive, true));
+
+    const staffTotal = staffSalaries[0]?.total || 0;
+    const playersTotal = playerSalaries[0]?.total || 0;
+
+    return {
+      staff: staffTotal,
+      players: playersTotal,
+      total: staffTotal + playersTotal
+    };
+  }
+
+  async getBudgetVsActualExpenses(budgetId: number): Promise<{ budgeted: number; actual: number; remaining: number; categories: any[] }> {
+    // Get budget details
+    const budget = await this.getMonthlyBudget(budgetId);
+    if (!budget) {
+      return { budgeted: 0, actual: 0, remaining: 0, categories: [] };
+    }
+
+    // Get actual expenses
+    const actualExpenses = await db
+      .select({
+        category: expenses.category,
+        total: sql<number>`sum(cast(amount as decimal))`
+      })
+      .from(expenses)
+      .where(eq(expenses.budgetId, budgetId))
+      .groupBy(expenses.category);
+
+    const totalBudgeted = parseFloat(budget.totalBudget);
+    const totalActual = actualExpenses.reduce((sum, exp) => sum + (exp.total || 0), 0);
+
+    // Create category breakdown
+    const categories = [
+      { category: 'operational', budgeted: parseFloat(budget.operationalBudget), actual: 0 },
+      { category: 'equipment', budgeted: parseFloat(budget.equipmentBudget), actual: 0 },
+      { category: 'travel', budgeted: parseFloat(budget.travelBudget), actual: 0 },
+      { category: 'medical', budgeted: parseFloat(budget.medicalBudget), actual: 0 },
+      { category: 'facilities', budgeted: parseFloat(budget.facilitiesBudget), actual: 0 },
+      { category: 'marketing', budgeted: parseFloat(budget.marketingBudget), actual: 0 },
+      { category: 'other', budgeted: parseFloat(budget.otherBudget), actual: 0 }
+    ];
+
+    // Map actual expenses to categories
+    actualExpenses.forEach(expense => {
+      const category = categories.find(cat => cat.category === expense.category);
+      if (category) {
+        category.actual = expense.total || 0;
+      }
+    });
+
+    // Calculate percentages and remaining amounts
+    const categoriesWithMetrics = categories.map(cat => ({
+      ...cat,
+      remaining: cat.budgeted - cat.actual,
+      percentage: cat.budgeted > 0 ? (cat.actual / cat.budgeted) * 100 : 0
+    }));
+
+    return {
+      budgeted: totalBudgeted,
+      actual: totalActual,
+      remaining: totalBudgeted - totalActual,
+      categories: categoriesWithMetrics
+    };
   }
 }
 

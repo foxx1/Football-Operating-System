@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useSettings, formatCurrency } from "@/contexts/SettingsContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,6 +24,21 @@ import {
 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+
+// Get current fiscal year (July start)
+function getCurrentFiscalYear(): string {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth(); // 0-11
+  
+  // If we're in January-June, fiscal year started last year
+  // If we're in July-December, fiscal year started this year
+  if (currentMonth >= 6) { // July (6) to December (11)
+    return `${currentYear}-${(currentYear + 1).toString().slice(-2)}`;
+  } else { // January (0) to June (5)
+    return `${currentYear - 1}-${currentYear.toString().slice(-2)}`;
+  }
+}
 
 interface MonthlyBudget {
   id: number;
@@ -77,10 +92,12 @@ interface BudgetSummary {
   }[];
 }
 
+
+
 export default function MonthlyBudgets() {
   const { toast } = useToast();
   const { currency } = useSettings();
-  const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
+  const [selectedPeriod, setSelectedPeriod] = useState("2025-26");
   const [showCreateBudget, setShowCreateBudget] = useState(false);
   const [showCreateExpense, setShowCreateExpense] = useState(false);
   const [selectedBudgetId, setSelectedBudgetId] = useState<number | null>(null);
@@ -99,7 +116,7 @@ export default function MonthlyBudgets() {
 
   // Fetch salary summary
   const { data: salarySummary } = useQuery<SalarySummary>({
-    queryKey: ["/api/budgets/salary-summary", selectedMonth],
+    queryKey: [`/api/budgets/salary-summary/${selectedPeriod}`],
   });
 
   // Fetch budget vs actual summary
@@ -108,7 +125,16 @@ export default function MonthlyBudgets() {
     enabled: !!selectedBudgetId,
   });
 
-  const currentBudget = budgets?.find(b => b.month === selectedMonth);
+  const currentBudget = budgets?.find(b => b.month === selectedPeriod);
+  
+  // Set selectedBudgetId when currentBudget is found
+  useEffect(() => {
+    if (currentBudget) {
+      setSelectedBudgetId(currentBudget.id);
+    } else {
+      setSelectedBudgetId(null);
+    }
+  }, [currentBudget]);
 
   // Create budget mutation
   const createBudgetMutation = useMutation({
@@ -143,7 +169,7 @@ export default function MonthlyBudgets() {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const budget = {
-      month: selectedMonth,
+      month: selectedPeriod,
       budgetName: formData.get("budgetName"),
       totalBudget: formData.get("totalBudget"),
       salariesBudget: salarySummary?.total || 0,
@@ -198,20 +224,26 @@ export default function MonthlyBudgets() {
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Monthly Budgets</h1>
+          <h1 className="text-3xl font-bold">Fiscal Year Budgets</h1>
           <p className="text-muted-foreground">
-            Manage budgets, track expenses, and monitor salary costs
+            Manage fiscal year budgets, track expenses, and monitor salary costs
           </p>
         </div>
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-2">
             <CalendarIcon className="h-4 w-4" />
-            <Input
-              type="month"
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
-              className="w-40"
-            />
+            <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Select fiscal year" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="2023-24">Fiscal Year 2023-24</SelectItem>
+                <SelectItem value="2024-25">Fiscal Year 2024-25</SelectItem>
+                <SelectItem value="2025-26">Fiscal Year 2025-26</SelectItem>
+                <SelectItem value="2026-27">Fiscal Year 2026-27</SelectItem>
+                <SelectItem value="2027-28">Fiscal Year 2027-28</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <Dialog open={showCreateBudget} onOpenChange={setShowCreateBudget}>
             <DialogTrigger asChild>
@@ -233,10 +265,10 @@ export default function MonthlyBudgets() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {currentBudget ? formatCurrency(parseFloat(currentBudget.totalBudget, currency), currency) : formatCurrency(0, currency)}
+              {currentBudget ? formatCurrency(parseFloat(currentBudget.totalBudget), currency) : formatCurrency(0, currency)}
             </div>
             <p className="text-xs text-muted-foreground">
-              {selectedMonth} budget allocation
+              Fiscal Year {selectedPeriod} budget allocation
             </p>
           </CardContent>
         </Card>
@@ -381,7 +413,7 @@ export default function MonthlyBudgets() {
                         <TableCell className="capitalize">{expense.category}</TableCell>
                         <TableCell>{expense.description}</TableCell>
                         <TableCell>{expense.vendor || "-"}</TableCell>
-                        <TableCell>{formatCurrency(expense.amount, currency)}</TableCell>
+                        <TableCell>{formatCurrency(parseFloat(expense.amount), currency)}</TableCell>
                         <TableCell>
                           <Badge className={getStatusColor(expense.status)}>
                             {expense.status}
@@ -422,7 +454,7 @@ export default function MonthlyBudgets() {
                         <AlertDescription>
                           {budgetSummary.remaining > 0 
                             ? `You are ${formatCurrency(budgetSummary.remaining, currency)} under budget this month.`
-                            : `You are ${formatCurrency(Math.abs(budgetSummary.remaining, currency))} over budget this month.`
+                            : `You are ${formatCurrency(Math.abs(budgetSummary.remaining), currency)} over budget this month.`
                           }
                         </AlertDescription>
                       </Alert>
@@ -483,11 +515,11 @@ export default function MonthlyBudgets() {
             <Wallet className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">No Budget Found</h3>
             <p className="text-muted-foreground mb-4">
-              Create a budget for {selectedMonth} to start tracking expenses
+              Create a budget for fiscal year {selectedPeriod} to start tracking expenses
             </p>
             <Button onClick={() => setShowCreateBudget(true)}>
               <Plus className="h-4 w-4 mr-2" />
-              Create Budget for {selectedMonth}
+              Create Budget for {selectedPeriod}
             </Button>
           </CardContent>
         </Card>
@@ -497,9 +529,9 @@ export default function MonthlyBudgets() {
       <Dialog open={showCreateBudget} onOpenChange={setShowCreateBudget}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Create Monthly Budget</DialogTitle>
+            <DialogTitle>Create Fiscal Year Budget</DialogTitle>
             <DialogDescription>
-              Set up budget allocations for {selectedMonth}
+              Set up budget allocations for fiscal year {selectedPeriod}
             </DialogDescription>
           </DialogHeader>
         <form onSubmit={handleCreateBudget} className="space-y-4">
