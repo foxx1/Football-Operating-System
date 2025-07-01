@@ -18,7 +18,6 @@ import Analytics from "@/pages/analytics";
 import Reports from "@/pages/reports";
 import Settings from "@/pages/settings";
 import Wearables from "@/pages/wearables";
-import TerraWearables from "@/pages/terra-wearables";
 import NotFound from "@/pages/not-found";
 
 function Layout({ children }: { children: React.ReactNode }) {
@@ -48,7 +47,7 @@ function Router() {
       <Route path="/analytics" component={Analytics} />
       <Route path="/reports" component={Reports} />
       <Route path="/wearables" component={Wearables} />
-      <Route path="/terra-wearables" component={TerraWearables} />
+
       <Route path="/settings" component={Settings} />
       <Route component={NotFound} />
     </Switch>

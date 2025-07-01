@@ -976,7 +976,7 @@ export async function registerRoutes(app: Express, upload?: any): Promise<Server
   });
 
   // Wearable Data Webhooks - Handle incoming data from our connected devices
-  app.post("/api/terra/webhook", async (req, res) => {
+  app.post("/api/wearable/webhook", async (req, res) => {
     try {
       const webhookData = req.body;
       
@@ -986,7 +986,7 @@ export async function registerRoutes(app: Express, upload?: any): Promise<Server
       // Store webhook data (in real implementation, this would process and store the data)
       const webhookLog = {
         id: Date.now(),
-        terraUserId: webhookData.user?.user_id || "unknown",
+        deviceId: webhookData.device?.device_id || "unknown",
         type: webhookData.type || "unknown",
         status: "success",
         payload: webhookData,

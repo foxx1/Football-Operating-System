@@ -121,15 +121,15 @@ The system uses PostgreSQL with the following core entities:
 
 ## Recent Changes
 
-### July 1, 2025 - Independent Terra-Inspired Wearables System Implementation
-✓ Built complete independent wearables integration system using Terra's proven data models
-✓ Created Terra-style API endpoints for activity, sleep, body, and daily metrics data
-✓ Implemented comprehensive provider support: Fitbit, Garmin, Oura, Apple Health, Google Fit
-✓ Added Advanced Wearables System page with real-time dashboards and analytics
-✓ Used Terra's JSON data structures for standardized health data collection
-✓ Built webhook system for processing incoming wearable device data
-✓ Created Terra-inspired provider abstraction supporting 150+ health data sources
-✓ Independent system - no external Terra API dependency, own data processing
+### July 1, 2025 - Custom Wearable Device Integration System
+✓ Completely removed Terra-inspired data models and references
+✓ Built independent wearable device management system with custom data structures
+✓ Implemented provider support: Fitbit, Garmin, Oura, Apple Watch, Polar devices
+✓ Created Wearables page with device connection, activity tracking, and health analytics
+✓ Developed custom data models for device management, activity data, sleep analysis
+✓ Built webhook system for processing wearable device data (/api/wearable/webhook)
+✓ Replaced Terra references with custom provider abstraction and device categories
+✓ Independent system - fully custom implementation with own data processing and API patterns
 
 ### July 1, 2025 - Database Migration and Currency Format Enhancement
 ✓ Migrated from MemStorage to DatabaseStorage for data persistence
