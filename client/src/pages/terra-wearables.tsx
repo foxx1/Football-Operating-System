@@ -249,8 +249,8 @@ export default function TerraWearablesPage() {
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Terra Health & Fitness API</h1>
-          <p className="text-gray-600">Unified API for wearable data - Connect 150+ health sources</p>
+          <h1 className="text-3xl font-bold">Advanced Wearables System</h1>
+          <p className="text-gray-600">Independent wearable integration using Terra-inspired data models</p>
         </div>
         <Dialog open={isConnectDialogOpen} onOpenChange={setIsConnectDialogOpen}>
           <DialogTrigger asChild>
@@ -263,7 +263,7 @@ export default function TerraWearablesPage() {
             <DialogHeader>
               <DialogTitle>Connect Health Data Source</DialogTitle>
               <DialogDescription>
-                Connect a player to their wearable device or health app using Terra's unified API
+                Connect a player to their wearable device or health app using our Terra-inspired system
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleConnect} className="grid gap-4 py-4">
