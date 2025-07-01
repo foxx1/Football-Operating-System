@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useSettings, formatCurrency } from "@/contexts/SettingsContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -78,6 +79,7 @@ interface BudgetSummary {
 
 export default function MonthlyBudgets() {
   const { toast } = useToast();
+  const { currency } = useSettings();
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
   const [showCreateBudget, setShowCreateBudget] = useState(false);
   const [showCreateExpense, setShowCreateExpense] = useState(false);
@@ -176,13 +178,7 @@ export default function MonthlyBudgets() {
     createExpenseMutation.mutate(expense);
   };
 
-  const formatCurrency = (amount: string | number) => {
-    const num = typeof amount === 'string' ? parseFloat(amount) : amount;
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(num);
-  };
+
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -237,7 +233,7 @@ export default function MonthlyBudgets() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {currentBudget ? formatCurrency(currentBudget.totalBudget) : formatCurrency(0)}
+              {currentBudget ? formatCurrency(parseFloat(currentBudget.totalBudget, currency), currency) : formatCurrency(0, currency)}
             </div>
             <p className="text-xs text-muted-foreground">
               {selectedMonth} budget allocation
@@ -252,11 +248,11 @@ export default function MonthlyBudgets() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {salarySummary ? formatCurrency(salarySummary.total) : formatCurrency(0)}
+              {salarySummary ? formatCurrency(salarySummary.total, currency) : formatCurrency(0, currency)}
             </div>
             <p className="text-xs text-muted-foreground">
-              Staff: {salarySummary ? formatCurrency(salarySummary.staff) : formatCurrency(0)} | 
-              Players: {salarySummary ? formatCurrency(salarySummary.players) : formatCurrency(0)}
+              Staff: {salarySummary ? formatCurrency(salarySummary.staff, currency) : formatCurrency(0, currency)} | 
+              Players: {salarySummary ? formatCurrency(salarySummary.players, currency) : formatCurrency(0, currency)}
             </p>
           </CardContent>
         </Card>
@@ -268,7 +264,7 @@ export default function MonthlyBudgets() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {budgetSummary ? formatCurrency(budgetSummary.actual) : formatCurrency(0)}
+              {budgetSummary ? formatCurrency(budgetSummary.actual, currency) : formatCurrency(0, currency)}
             </div>
             <p className="text-xs text-muted-foreground">
               {budgetSummary && currentBudget 
@@ -286,7 +282,7 @@ export default function MonthlyBudgets() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {budgetSummary ? formatCurrency(budgetSummary.remaining) : formatCurrency(0)}
+              {budgetSummary ? formatCurrency(budgetSummary.remaining, currency) : formatCurrency(0, currency)}
             </div>
             <p className="text-xs text-muted-foreground">
               Available for spending
@@ -316,13 +312,13 @@ export default function MonthlyBudgets() {
                     <div className="flex justify-between items-center">
                       <Label className="capitalize">{category.category.replace('_', ' ')}</Label>
                       <div className="text-sm text-muted-foreground">
-                        {formatCurrency(category.actual)} / {formatCurrency(category.budgeted)}
+                        {formatCurrency(category.actual, currency)} / {formatCurrency(category.budgeted, currency)}
                       </div>
                     </div>
                     <Progress value={category.percentage} className="h-2" />
                     <div className="flex justify-between text-xs text-muted-foreground">
                       <span>{category.percentage.toFixed(1)}% used</span>
-                      <span>{formatCurrency(category.remaining)} remaining</span>
+                      <span>{formatCurrency(category.remaining, currency)} remaining</span>
                     </div>
                   </div>
                 ))}
@@ -385,7 +381,7 @@ export default function MonthlyBudgets() {
                         <TableCell className="capitalize">{expense.category}</TableCell>
                         <TableCell>{expense.description}</TableCell>
                         <TableCell>{expense.vendor || "-"}</TableCell>
-                        <TableCell>{formatCurrency(expense.amount)}</TableCell>
+                        <TableCell>{formatCurrency(expense.amount, currency)}</TableCell>
                         <TableCell>
                           <Badge className={getStatusColor(expense.status)}>
                             {expense.status}
@@ -425,8 +421,8 @@ export default function MonthlyBudgets() {
                         <AlertTriangle className="h-4 w-4" />
                         <AlertDescription>
                           {budgetSummary.remaining > 0 
-                            ? `You are ${formatCurrency(budgetSummary.remaining)} under budget this month.`
-                            : `You are ${formatCurrency(Math.abs(budgetSummary.remaining))} over budget this month.`
+                            ? `You are ${formatCurrency(budgetSummary.remaining, currency)} under budget this month.`
+                            : `You are ${formatCurrency(Math.abs(budgetSummary.remaining, currency))} over budget this month.`
                           }
                         </AlertDescription>
                       </Alert>
@@ -457,20 +453,20 @@ export default function MonthlyBudgets() {
                       <div className="grid grid-cols-2 gap-4">
                         <div className="text-center p-4 bg-blue-50 rounded-lg">
                           <div className="text-2xl font-bold text-blue-600">
-                            {formatCurrency(salarySummary.staff)}
+                            {formatCurrency(salarySummary.staff, currency)}
                           </div>
                           <div className="text-sm text-blue-600">Staff Salaries</div>
                         </div>
                         <div className="text-center p-4 bg-green-50 rounded-lg">
                           <div className="text-2xl font-bold text-green-600">
-                            {formatCurrency(salarySummary.players)}
+                            {formatCurrency(salarySummary.players, currency)}
                           </div>
                           <div className="text-sm text-green-600">Player Salaries</div>
                         </div>
                       </div>
                       <div className="text-center p-4 bg-gray-50 rounded-lg">
                         <div className="text-3xl font-bold">
-                          {formatCurrency(salarySummary.total)}
+                          {formatCurrency(salarySummary.total, currency)}
                         </div>
                         <div className="text-sm text-muted-foreground">Total Monthly Salaries</div>
                       </div>
@@ -533,7 +529,7 @@ export default function MonthlyBudgets() {
           <div className="space-y-2">
             <Label>Salary Budget (Auto-calculated)</Label>
             <Input
-              value={salarySummary ? formatCurrency(salarySummary.total) : "Loading..."}
+              value={salarySummary ? formatCurrency(salarySummary.total, currency) : "Loading..."}
               disabled
               className="bg-gray-50"
             />

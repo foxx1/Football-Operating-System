@@ -14,7 +14,7 @@ interface SettingsContextType {
   dateFormat: string;
 }
 
-const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
+export const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const { data: settings = [], isLoading } = useQuery({
