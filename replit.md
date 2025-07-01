@@ -121,7 +121,7 @@ The system uses PostgreSQL with the following core entities:
 
 ## Recent Changes
 
-### July 1, 2025 - Catapult OpenField API Integration
+### July 1, 2025 - Enhanced Catapult OpenField API Integration
 ✓ Added Catapult OpenField integration to sidebar under wearables section with official Catapult logo
 ✓ Created comprehensive Catapult OpenField page with API connection functionality
 ✓ Built API endpoints (/api/catapult/connect, /api/catapult/players/:id/data) for OpenField integration
@@ -130,6 +130,10 @@ The system uses PostgreSQL with the following core entities:
 ✓ Created mock data structure matching Catapult's actual API format for demonstration
 ✓ Added performance insights and benchmark comparisons with team averages
 ✓ Integrated comprehensive dashboard with load trends, wellness indicators, and sprint analysis
+✓ Enhanced with data export and sync management functionality (Export Data, Sync Data buttons)
+✓ Added Catapult Connect integration banner with real-time API status indicator
+✓ Included injury risk monitoring and AI-powered performance insights
+✓ Comprehensive heart rate zone analysis and load vs target comparisons
 ✓ Ready for production API key integration with secure connection management
 
 ### July 1, 2025 - Custom Wearable Device Integration System

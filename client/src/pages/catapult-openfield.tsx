@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,129 +8,143 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AlertCircle, Activity, Heart, Zap, Users, TrendingUp, Wifi, Settings, Link, Target } from "lucide-react";
+import { AlertCircle, Activity, Heart, Zap, Users, TrendingUp, Wifi, Settings, Link, Target, Download, RefreshCw, Clock } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, AreaChart, Area } from "recharts";
-import type { Player } from "@shared/schema";
 
-// Mock Catapult data for demonstration
-const mockCatapultData = {
-  athletes: [
-    {
-      id: "cat_001",
-      playerId: 1,
-      name: "Ahmed Al-Dosari",
-      position: "Midfielder",
-      isConnected: true,
-      lastSession: "2025-01-01T10:30:00Z",
-      status: "active"
-    },
-    {
-      id: "cat_002", 
-      playerId: 2,
-      name: "Omar Hassan",
-      position: "Forward",
-      isConnected: true,
-      lastSession: "2025-01-01T09:15:00Z",
-      status: "active"
-    }
-  ],
-  sessions: [
-    {
-      id: "session_001",
-      playerId: 1,
-      date: "2025-01-01",
-      sessionType: "Training",
-      duration: 90,
-      gpsData: {
-        totalDistance: 8420,
-        highSpeedRunning: 1250,
-        sprints: 15,
-        maxSpeed: 28.5,
-        averageSpeed: 6.2
-      },
-      loads: {
-        playerLoad: 485.2,
-        playerLoadPerMinute: 5.39,
-        accelerations: 45,
-        decelerations: 38,
-        impacts: 28
-      },
-      heartRate: {
-        maxHr: 185,
-        averageHr: 155,
-        timeInZones: {
-          zone1: 12,
-          zone2: 25,
-          zone3: 30,
-          zone4: 20,
-          zone5: 3
-        }
-      }
-    }
-  ],
-  performanceMetrics: [
-    {
-      playerId: 1,
-      week: "Week 1",
-      totalDistance: 42100,
-      highIntensityMeters: 6250,
-      playerLoad: 2426,
-      sprintCount: 78,
-      wellness: 7.2,
-      fatigue: 3.1,
-      readiness: 8.5
-    },
-    {
-      playerId: 1,
-      week: "Week 2", 
-      totalDistance: 38900,
-      highIntensityMeters: 5800,
-      playerLoad: 2198,
-      sprintCount: 65,
-      wellness: 6.8,
-      fatigue: 4.2,
-      readiness: 7.1
-    }
-  ]
-};
+interface Player {
+  id: number;
+  firstName: string;
+  lastName: string;
+  position: string;
+  shirtNumber: number | null;
+}
 
 export default function CatapultOpenFieldPage() {
-  const [selectedPlayerId, setSelectedPlayerId] = useState("");
   const [isConnectDialogOpen, setIsConnectDialogOpen] = useState(false);
   const [apiKey, setApiKey] = useState("");
-  const [baseUrl, setBaseUrl] = useState("https://openfield.catapultsports.com/api/v2");
+  const [baseUrl, setBaseUrl] = useState("https://api.catapultsports.com");
+  const [selectedPlayerId, setSelectedPlayerId] = useState("");
 
-  // Fetch players
   const { data: players = [] } = useQuery({
-    queryKey: ["/api/players"],
+    queryKey: ['/api/players'],
   });
 
-  const connectCatapultMutation = useMutation({
-    mutationFn: async (data: { playerId: number, apiKey: string, baseUrl: string }) => {
-      const response = await apiRequest("POST", "/api/catapult/connect", data);
-      return await response.json();
-    },
-    onSuccess: () => {
-      setIsConnectDialogOpen(false);
-      setSelectedPlayerId("");
-      setApiKey("");
-    },
-  });
+  // Mock Catapult data for demonstration
+  const mockCatapultData = {
+    athletes: [
+      {
+        id: 1,
+        name: "Ahmed Al-Rashid",
+        isConnected: true,
+        lastSync: "2025-01-01T08:30:00Z",
+        gpsData: {
+          totalDistance: 8420,
+          topSpeed: 34.2,
+          sprintCount: 12,
+          accelerations: 45,
+          decelerations: 38
+        },
+        loadData: {
+          playerLoad: 485,
+          explosiveEfforts: 23,
+          highIntensityRunning: 1240,
+          metabolicPower: 18.5
+        },
+        heartRate: {
+          maxHR: 192,
+          avgHR: 158,
+          hrZones: {
+            zone1: 12,
+            zone2: 18,
+            zone3: 25,
+            zone4: 32,
+            zone5: 13
+          }
+        }
+      },
+      {
+        id: 2,
+        name: "Omar Hassan",
+        isConnected: true,
+        lastSync: "2025-01-01T08:30:00Z",
+        gpsData: {
+          totalDistance: 7850,
+          topSpeed: 32.8,
+          sprintCount: 9,
+          accelerations: 38,
+          decelerations: 42
+        },
+        loadData: {
+          playerLoad: 456,
+          explosiveEfforts: 19,
+          highIntensityRunning: 1180,
+          metabolicPower: 17.2
+        },
+        heartRate: {
+          maxHR: 188,
+          avgHR: 162,
+          hrZones: {
+            zone1: 15,
+            zone2: 22,
+            zone3: 28,
+            zone4: 25,
+            zone5: 10
+          }
+        }
+      }
+    ],
+    sessions: [
+      {
+        id: 1,
+        date: "2025-01-01",
+        type: "Training",
+        duration: 90,
+        participants: 22,
+        avgLoad: 470
+      },
+      {
+        id: 2,
+        date: "2024-12-30",
+        type: "Match",
+        duration: 95,
+        participants: 18,
+        avgLoad: 520
+      }
+    ]
+  };
 
-  const handleConnectCatapult = () => {
-    if (!selectedPlayerId || !apiKey) {
-      alert("Please select a player and enter API key");
-      return;
-    }
+  const loadTrendData = [
+    { date: "Dec 26", load: 450, teamAvg: 465 },
+    { date: "Dec 27", load: 485, teamAvg: 470 },
+    { date: "Dec 28", load: 420, teamAvg: 455 },
+    { date: "Dec 29", load: 510, teamAvg: 480 },
+    { date: "Dec 30", load: 520, teamAvg: 490 },
+    { date: "Dec 31", load: 475, teamAvg: 470 },
+    { date: "Jan 01", load: 485, teamAvg: 475 }
+  ];
 
-    connectCatapultMutation.mutate({
-      playerId: parseInt(selectedPlayerId),
-      apiKey,
-      baseUrl,
+  const performanceMetrics = [
+    { metric: "Distance", value: 8420, unit: "m", change: "+2.3%" },
+    { metric: "Top Speed", value: 34.2, unit: "km/h", change: "+1.8%" },
+    { metric: "Sprints", value: 12, unit: "count", change: "-5.2%" },
+    { metric: "Player Load", value: 485, unit: "AU", change: "+3.1%" }
+  ];
+
+  const handleConnectAPI = async () => {
+    await apiRequest("/api/catapult/connect", {
+      method: "POST",
+      body: JSON.stringify({
+        playerId: parseInt(selectedPlayerId),
+        apiKey,
+        baseUrl,
+      }),
     });
+    
+    queryClient.invalidateQueries({ queryKey: ['/api/catapult'] });
+    setIsConnectDialogOpen(false);
   };
 
   return (
@@ -149,82 +163,83 @@ export default function CatapultOpenFieldPage() {
             Connect with Catapult OpenField API to access comprehensive athlete performance data and analytics
           </p>
         </div>
-        <Dialog open={isConnectDialogOpen} onOpenChange={setIsConnectDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Link className="mr-2 h-4 w-4" />
-              Connect API
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>Connect Catapult OpenField API</DialogTitle>
-              <DialogDescription>
-                Configure your Catapult API connection to sync player performance data
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="player">Select Player</Label>
-                <Select value={selectedPlayerId} onValueChange={setSelectedPlayerId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose a player" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(players as Player[]).map((player: Player) => (
-                      <SelectItem key={player.id} value={player.id.toString()}>
-                        {player.firstName} {player.lastName} - #{player.shirtNumber}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <Label htmlFor="baseUrl">API Base URL</Label>
-                <Input
-                  id="baseUrl"
-                  value={baseUrl}
-                  onChange={(e) => setBaseUrl(e.target.value)}
-                  placeholder="https://openfield.catapultsports.com/api/v2"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="apiKey">API Key</Label>
-                <Input
-                  id="apiKey"
-                  type="password"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="Enter your Catapult API key"
-                />
-                <p className="text-sm text-muted-foreground mt-1">
-                  Get your API key from your Catapult OpenField dashboard
-                </p>
-              </div>
-
-              <Alert>
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  This will establish a secure connection to retrieve athlete performance data including GPS tracking, load metrics, and heart rate data.
-                </AlertDescription>
-              </Alert>
-
-              <Button 
-                onClick={handleConnectCatapult}
-                disabled={!selectedPlayerId || !apiKey || connectCatapultMutation.isPending}
-                className="w-full"
-              >
-                {connectCatapultMutation.isPending ? "Connecting..." : "Connect to OpenField"}
+        <div className="flex space-x-2">
+          <Button variant="outline" size="sm">
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Sync Data
+          </Button>
+          <Button variant="outline" size="sm">
+            <Download className="mr-2 h-4 w-4" />
+            Export Data
+          </Button>
+          <Dialog open={isConnectDialogOpen} onOpenChange={setIsConnectDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Link className="mr-2 h-4 w-4" />
+                Connect API
               </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle>Connect to Catapult OpenField</DialogTitle>
+                <DialogDescription>
+                  Enter your Catapult OpenField API credentials to connect and sync athlete data
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 pt-4">
+                <div className="space-y-2">
+                  <Label htmlFor="apiKey">API Key</Label>
+                  <Input
+                    id="apiKey"
+                    type="password"
+                    placeholder="Enter your Catapult API key"
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="baseUrl">Base URL</Label>
+                  <Input
+                    id="baseUrl"
+                    placeholder="https://api.catapultsports.com"
+                    value={baseUrl}
+                    onChange={(e) => setBaseUrl(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="player">Select Player</Label>
+                  <Select value={selectedPlayerId} onValueChange={setSelectedPlayerId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose a player to connect" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(players as Player[]).map((player: Player) => (
+                        <SelectItem key={player.id} value={player.id.toString()}>
+                          {player.firstName} {player.lastName} - {player.position}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex justify-end space-x-2 pt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsConnectDialogOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button onClick={handleConnectAPI}>
+                    Connect
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList>
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="athletes">Connected Athletes</TabsTrigger>
           <TabsTrigger value="sessions">Session Data</TabsTrigger>
@@ -233,6 +248,29 @@ export default function CatapultOpenFieldPage() {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
+          {/* Integration Status Banner */}
+          <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-blue-200">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+                    <Wifi className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-blue-900 dark:text-blue-100">Catapult Connect Integration</h3>
+                    <p className="text-sm text-blue-700 dark:text-blue-300">
+                      Seamlessly sync OpenField data with your proprietary team platform
+                    </p>
+                  </div>
+                </div>
+                <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                  <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                  API Ready
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -249,34 +287,40 @@ export default function CatapultOpenFieldPage() {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Latest Session</CardTitle>
+                <CardTitle className="text-sm font-medium">Last Sync</CardTitle>
+                <Clock className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">5 min</div>
+                <p className="text-xs text-muted-foreground">
+                  ago • Auto-sync enabled
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Avg Player Load</CardTitle>
                 <Activity className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">8.42 km</div>
-                <p className="text-xs text-muted-foreground">Total distance covered</p>
+                <div className="text-2xl font-bold">470</div>
+                <p className="text-xs text-muted-foreground">
+                  +3.2% from last session
+                </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Player Load</CardTitle>
-                <Zap className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium">Data Quality</CardTitle>
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">485.2</div>
-                <p className="text-xs text-muted-foreground">5.39 per minute</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Max Speed</CardTitle>
-                <Target className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">28.5 km/h</div>
-                <p className="text-xs text-muted-foreground">Sprint performance</p>
+                <div className="text-2xl font-bold">98%</div>
+                <p className="text-xs text-muted-foreground">
+                  GPS signal quality
+                </p>
               </CardContent>
             </Card>
           </div>
@@ -284,35 +328,39 @@ export default function CatapultOpenFieldPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <Card>
               <CardHeader>
-                <CardTitle>Weekly Load Trend</CardTitle>
-                <CardDescription>Player load progression over time</CardDescription>
+                <CardTitle>Load Trends</CardTitle>
+                <CardDescription>7-day player load comparison with team average</CardDescription>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <AreaChart data={mockCatapultData.performanceMetrics}>
+                <ResponsiveContainer width="100%" height={200}>
+                  <LineChart data={loadTrendData}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="week" />
+                    <XAxis dataKey="date" />
                     <YAxis />
                     <Tooltip />
-                    <Area type="monotone" dataKey="playerLoad" stroke="#8884d8" fill="#8884d8" fillOpacity={0.6} />
-                  </AreaChart>
+                    <Line type="monotone" dataKey="load" stroke="#8884d8" strokeWidth={2} />
+                    <Line type="monotone" dataKey="teamAvg" stroke="#82ca9d" strokeWidth={2} strokeDasharray="5 5" />
+                  </LineChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle>Heart Rate Zones</CardTitle>
-                <CardDescription>Time distribution in heart rate zones</CardDescription>
+                <CardTitle>Recent Sessions</CardTitle>
+                <CardDescription>Latest training and match data from OpenField</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  {Object.entries(mockCatapultData.sessions[0].heartRate.timeInZones).map(([zone, time]) => (
-                    <div key={zone} className="flex items-center justify-between">
-                      <span className="text-sm font-medium capitalize">{zone.replace('zone', 'Zone ')}</span>
-                      <div className="flex items-center space-x-2">
-                        <Progress value={time} className="w-20" />
-                        <span className="text-sm">{time}%</span>
+                <div className="space-y-4">
+                  {mockCatapultData.sessions.map((session) => (
+                    <div key={session.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div>
+                        <div className="font-medium">{session.type}</div>
+                        <div className="text-sm text-muted-foreground">{session.date}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-medium">{session.avgLoad} AU</div>
+                        <div className="text-sm text-muted-foreground">{session.participants} players</div>
                       </div>
                     </div>
                   ))}
@@ -323,35 +371,52 @@ export default function CatapultOpenFieldPage() {
         </TabsContent>
 
         <TabsContent value="athletes" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {mockCatapultData.athletes.map((athlete) => (
               <Card key={athlete.id}>
                 <CardHeader>
                   <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg">{athlete.name}</CardTitle>
+                    <Badge variant={athlete.isConnected ? "default" : "secondary"}>
+                      {athlete.isConnected ? "Connected" : "Disconnected"}
+                    </Badge>
+                  </div>
+                  <CardDescription>
+                    Last sync: {new Date(athlete.lastSync).toLocaleString()}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <CardTitle className="text-lg">{athlete.name}</CardTitle>
-                      <CardDescription>{athlete.position}</CardDescription>
+                      <div className="text-sm font-medium text-muted-foreground">Distance</div>
+                      <div className="text-2xl font-bold">{athlete.gpsData.totalDistance}m</div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Badge variant={athlete.isConnected ? "default" : "secondary"}>
-                        {athlete.isConnected ? "Connected" : "Disconnected"}
-                      </Badge>
+                    <div>
+                      <div className="text-sm font-medium text-muted-foreground">Top Speed</div>
+                      <div className="text-2xl font-bold">{athlete.gpsData.topSpeed} km/h</div>
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-muted-foreground">Player Load</div>
+                      <div className="text-2xl font-bold">{athlete.loadData.playerLoad} AU</div>
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-muted-foreground">Max HR</div>
+                      <div className="text-2xl font-bold">{athlete.heartRate.maxHR} bpm</div>
                     </div>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Status</span>
-                      <Badge variant="outline" className="capitalize">{athlete.status}</Badge>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Last Session</span>
-                      <span className="text-sm">{new Date(athlete.lastSession).toLocaleDateString()}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Catapult ID</span>
-                      <span className="text-sm font-mono">{athlete.id}</span>
+                  
+                  <div>
+                    <div className="text-sm font-medium mb-2">Heart Rate Zones</div>
+                    <div className="space-y-2">
+                      {Object.entries(athlete.heartRate.hrZones).map(([zone, percentage]) => (
+                        <div key={zone} className="flex items-center justify-between">
+                          <span className="text-sm capitalize">{zone.replace('zone', 'Zone ')}</span>
+                          <div className="flex items-center space-x-2">
+                            <Progress value={percentage} className="w-20 h-2" />
+                            <span className="text-sm font-medium">{percentage}%</span>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </CardContent>
@@ -361,122 +426,115 @@ export default function CatapultOpenFieldPage() {
         </TabsContent>
 
         <TabsContent value="sessions" className="space-y-4">
-          {mockCatapultData.sessions.map((session) => (
-            <Card key={session.id}>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-lg">Training Session</CardTitle>
-                    <CardDescription>{session.date} • {session.duration} minutes</CardDescription>
-                  </div>
-                  <Badge variant="outline">{session.sessionType}</Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="space-y-3">
-                    <h4 className="font-medium text-green-600">GPS Data</h4>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-sm text-muted-foreground">Total Distance</span>
-                        <span className="text-sm font-medium">{(session.gpsData.totalDistance / 1000).toFixed(2)} km</span>
+          <Card>
+            <CardHeader>
+              <CardTitle>Session History</CardTitle>
+              <CardDescription>Training and match sessions from Catapult OpenField</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {mockCatapultData.sessions.map((session) => (
+                  <div key={session.id} className="border rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h3 className="font-semibold">{session.type} Session</h3>
+                        <p className="text-sm text-muted-foreground">{session.date}</p>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-muted-foreground">High Speed Running</span>
-                        <span className="text-sm font-medium">{session.gpsData.highSpeedRunning} m</span>
+                      <Badge variant="outline">{session.duration} min</Badge>
+                    </div>
+                    
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <div className="text-sm font-medium text-muted-foreground">Participants</div>
+                        <div className="text-lg font-bold">{session.participants}</div>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-muted-foreground">Sprints</span>
-                        <span className="text-sm font-medium">{session.gpsData.sprints}</span>
+                      <div>
+                        <div className="text-sm font-medium text-muted-foreground">Avg Load</div>
+                        <div className="text-lg font-bold">{session.avgLoad} AU</div>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-muted-foreground">Max Speed</span>
-                        <span className="text-sm font-medium">{session.gpsData.maxSpeed} km/h</span>
+                      <div>
+                        <div className="text-sm font-medium text-muted-foreground">Duration</div>
+                        <div className="text-lg font-bold">{session.duration} min</div>
                       </div>
                     </div>
                   </div>
-
-                  <div className="space-y-3">
-                    <h4 className="font-medium text-blue-600">Load Metrics</h4>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-sm text-muted-foreground">Player Load</span>
-                        <span className="text-sm font-medium">{session.loads.playerLoad}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-muted-foreground">Load/Min</span>
-                        <span className="text-sm font-medium">{session.loads.playerLoadPerMinute}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-muted-foreground">Accelerations</span>
-                        <span className="text-sm font-medium">{session.loads.accelerations}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-muted-foreground">Impacts</span>
-                        <span className="text-sm font-medium">{session.loads.impacts}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    <h4 className="font-medium text-red-600">Heart Rate</h4>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-sm text-muted-foreground">Max HR</span>
-                        <span className="text-sm font-medium">{session.heartRate.maxHr} bpm</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-muted-foreground">Average HR</span>
-                        <span className="text-sm font-medium">{session.heartRate.averageHr} bpm</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-muted-foreground">Zone 4+5</span>
-                        <span className="text-sm font-medium">
-                          {session.heartRate.timeInZones.zone4 + session.heartRate.timeInZones.zone5}%
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="performance" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {performanceMetrics.map((metric, index) => (
+              <Card key={index}>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">{metric.metric}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{metric.value} {metric.unit}</div>
+                  <p className={`text-xs font-medium ${
+                    metric.change.startsWith('+') ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {metric.change} vs last session
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
           <Card>
             <CardHeader>
-              <CardTitle>Weekly Performance Metrics</CardTitle>
-              <CardDescription>Comprehensive performance tracking over time</CardDescription>
+              <CardTitle>Performance Breakdown</CardTitle>
+              <CardDescription>Detailed metrics from latest session</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <h4 className="font-medium mb-3">Distance & Load</h4>
-                  <ResponsiveContainer width="100%" height={250}>
-                    <BarChart data={mockCatapultData.performanceMetrics}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="week" />
-                      <YAxis />
-                      <Tooltip />
-                      <Bar dataKey="totalDistance" fill="#8884d8" name="Total Distance (m)" />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <h4 className="font-semibold mb-3">GPS Metrics</h4>
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-sm">Total Distance</span>
+                      <span className="font-medium">8,420 m</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm">High-Intensity Running</span>
+                      <span className="font-medium">1,240 m</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm">Sprint Count</span>
+                      <span className="font-medium">12</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm">Accelerations</span>
+                      <span className="font-medium">45</span>
+                    </div>
+                  </div>
                 </div>
-
+                
                 <div>
-                  <h4 className="font-medium mb-3">Wellness Indicators</h4>
-                  <ResponsiveContainer width="100%" height={250}>
-                    <LineChart data={mockCatapultData.performanceMetrics}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="week" />
-                      <YAxis />
-                      <Tooltip />
-                      <Line type="monotone" dataKey="wellness" stroke="#82ca9d" name="Wellness" />
-                      <Line type="monotone" dataKey="readiness" stroke="#8884d8" name="Readiness" />
-                      <Line type="monotone" dataKey="fatigue" stroke="#ff7300" name="Fatigue" />
-                    </LineChart>
-                  </ResponsiveContainer>
+                  <h4 className="font-semibold mb-3">Load Metrics</h4>
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-sm">Player Load</span>
+                      <span className="font-medium">485 AU</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm">Explosive Efforts</span>
+                      <span className="font-medium">23</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm">Metabolic Power</span>
+                      <span className="font-medium">18.5 W/kg</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm">Load vs Target</span>
+                      <div className="flex items-center space-x-2">
+                        <span className="font-medium">103%</span>
+                        <Progress value={63} className="w-12 h-2" />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -512,6 +570,13 @@ export default function CatapultOpenFieldPage() {
                       <strong>Sprint Performance:</strong> Sprint count is 17% below seasonal average. Focus on speed work in upcoming sessions.
                     </AlertDescription>
                   </Alert>
+
+                  <Alert className="border-orange-200 bg-orange-50 dark:bg-orange-950">
+                    <AlertCircle className="h-4 w-4 text-orange-600" />
+                    <AlertDescription className="text-orange-800 dark:text-orange-200">
+                      <strong>Injury Risk:</strong> High-intensity running distance 15% above normal. Monitor for overload symptoms.
+                    </AlertDescription>
+                  </Alert>
                 </div>
               </CardContent>
             </Card>
@@ -519,40 +584,40 @@ export default function CatapultOpenFieldPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Benchmark Comparisons</CardTitle>
-                <CardDescription>Performance vs team and position averages</CardDescription>
+                <CardDescription>Performance vs team and league averages</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   <div>
                     <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm font-medium">Total Distance</span>
-                      <span className="text-sm text-green-600">+15% vs avg</span>
+                      <span className="text-sm font-medium">Distance vs Team Avg</span>
+                      <span className="text-sm font-bold text-green-600">+12%</span>
+                    </div>
+                    <Progress value={78} className="h-2" />
+                  </div>
+                  
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm font-medium">Load vs Position Avg</span>
+                      <span className="text-sm font-bold text-green-600">+8%</span>
+                    </div>
+                    <Progress value={65} className="h-2" />
+                  </div>
+                  
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm font-medium">Sprint vs League Avg</span>
+                      <span className="text-sm font-bold text-red-600">-5%</span>
+                    </div>
+                    <Progress value={45} className="h-2" />
+                  </div>
+                  
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm font-medium">Acceleration vs Peers</span>
+                      <span className="text-sm font-bold text-green-600">+15%</span>
                     </div>
                     <Progress value={85} className="h-2" />
-                  </div>
-
-                  <div>
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm font-medium">High Intensity Running</span>
-                      <span className="text-sm text-red-600">-8% vs avg</span>
-                    </div>
-                    <Progress value={72} className="h-2" />
-                  </div>
-
-                  <div>
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm font-medium">Player Load</span>
-                      <span className="text-sm text-green-600">+12% vs avg</span>
-                    </div>
-                    <Progress value={88} className="h-2" />
-                  </div>
-
-                  <div>
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm font-medium">Sprint Count</span>
-                      <span className="text-sm text-red-600">-17% vs avg</span>
-                    </div>
-                    <Progress value={63} className="h-2" />
                   </div>
                 </div>
               </CardContent>
