@@ -120,6 +120,7 @@ export const staff = pgTable("staff", {
   salary: integer("salary"), // monthly salary
   qualifications: text("qualifications"),
   emergencyContact: text("emergency_contact"),
+  idNumber: text("id_number"), // official ID or passport number
   profilePicture: text("profile_picture"), // file path to profile photo
   idDocument: text("id_document"), // file path to ID/passport copy
   contractDocument: text("contract_document"), // file path to signed contract

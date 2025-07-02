@@ -60,6 +60,7 @@ export default function StaffForm({ staff, onSuccess }: StaffFormProps) {
       salary: staff?.salary || null,
       qualifications: staff?.qualifications || null,
       emergencyContact: staff?.emergencyContact || null,
+      idNumber: staff?.idNumber || null,
       profilePicture: staff?.profilePicture || null,
       idDocument: staff?.idDocument || null,
       contractDocument: staff?.contractDocument || null,
@@ -75,6 +76,7 @@ export default function StaffForm({ staff, onSuccess }: StaffFormProps) {
         phoneNumber: data.phoneNumber || null,
         emergencyContact: data.emergencyContact || null,
         qualifications: data.qualifications || null,
+        idNumber: data.idNumber || null,
         profilePicture: data.profilePicture || null,
         idDocument: data.idDocument || null,
         contractDocument: data.contractDocument || null,
@@ -173,6 +175,36 @@ export default function StaffForm({ staff, onSuccess }: StaffFormProps) {
           />
         </div>
 
+        {/* ID Information */}
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="idNumber"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Official ID / Passport Number</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter ID or passport number" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="emergencyContact"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Emergency Contact</FormLabel>
+                <FormControl>
+                  <Input placeholder="Emergency contact details" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
         {/* Role & Department */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
@@ -227,44 +259,29 @@ export default function StaffForm({ staff, onSuccess }: StaffFormProps) {
         </div>
 
         {/* Employment Information */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="employmentType"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Employment Type</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select employment type" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="full_time">Full Time</SelectItem>
-                    <SelectItem value="part_time">Part Time</SelectItem>
-                    <SelectItem value="contract">Contract</SelectItem>
-                    <SelectItem value="volunteer">Volunteer</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="emergencyContact"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Emergency Contact</FormLabel>
+        <FormField
+          control={form.control}
+          name="employmentType"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Employment Type</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
-                  <Input placeholder="Emergency contact details" {...field} />
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select employment type" />
+                  </SelectTrigger>
                 </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+                <SelectContent>
+                  <SelectItem value="full_time">Full Time</SelectItem>
+                  <SelectItem value="part_time">Part Time</SelectItem>
+                  <SelectItem value="contract">Contract</SelectItem>
+                  <SelectItem value="volunteer">Volunteer</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <FormField
           control={form.control}
