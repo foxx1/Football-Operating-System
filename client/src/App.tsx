@@ -21,6 +21,7 @@ import Wearables from "@/pages/wearables";
 import CatapultOpenField from "@/pages/catapult-openfield";
 import MonthlyBudgets from "@/pages/monthly-budgets";
 import PerformanceReactionsPage from "@/pages/performance-reactions";
+import TacticalBoardPage from "@/pages/tactical-board";
 import NotFound from "@/pages/not-found";
 
 function Layout({ children }: { children: React.ReactNode }) {
@@ -47,6 +48,7 @@ function Router() {
       <Route path="/training" component={Training} />
       <Route path="/matches" component={Matches} />
       <Route path="/tactics" component={Tactics} />
+      <Route path="/tactical-board" component={TacticalBoardPage} />
       <Route path="/analytics" component={Analytics} />
       <Route path="/performance-reactions" component={PerformanceReactionsPage} />
       <Route path="/reports" component={Reports} />
