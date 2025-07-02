@@ -121,6 +121,18 @@ The system uses PostgreSQL with the following core entities:
 
 ## Recent Changes
 
+### July 2, 2025 - Enhanced Staff Form with Official ID and Complete Contract Management
+✓ Added Official ID/Passport Number field to staff database schema and form interface
+✓ Completely rewritten Staff form to match player form structure with enhanced features
+✓ Added comprehensive contract management: start date, end date, monthly salary with automatic total calculation
+✓ Integrated profile picture, ID document, and contract document upload sections
+✓ Enhanced form validation and error handling with proper TypeScript types
+✓ Professional layout with organized sections: Basic Info, Contact, ID Information, Role & Department, Employment, Contract, Documents
+✓ Currency preferences integration for salary display and calculations
+✓ Successfully tested with sample staff members (Head Coach and Physiotherapist)
+✓ All database operations working correctly with new ID number field
+✓ Form includes: name, email, phone, official ID number, emergency contact, role, department, employment type, contract details, qualifications, and document uploads
+
 ### July 2, 2025 - Interactive Player Performance Dashboard with Animated Charts
 ✓ Completely redesigned Analytics page with comprehensive interactive dashboard
 ✓ Implemented 5-tab navigation: Performance, Fitness, Position Analysis, Training, Comparison
