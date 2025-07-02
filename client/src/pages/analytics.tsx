@@ -1,10 +1,14 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { BarChart3, TrendingUp, Users, Target, Calendar, Download, Plus, Activity, Award, Clock, Zap } from "lucide-react";
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+import * as htmlToImage from 'html-to-image';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { 
@@ -95,7 +99,151 @@ export default function AnalyticsPage() {
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
 
-  // Remove the unused filter since we're not using the old reports section anymore
+  // Export functionality
+  const exportToPDF = () => {
+    const pdf = new jsPDF();
+    const selectedPlayerName = selectedPlayer === "all" ? "All Players" : players.find(p => p.id.toString() === selectedPlayer)?.firstName + " " + players.find(p => p.id.toString() === selectedPlayer)?.lastName;
+    
+    // Add title
+    pdf.setFontSize(20);
+    pdf.text('Player Performance Report', 20, 20);
+    
+    // Add subtitle
+    pdf.setFontSize(14);
+    pdf.text(`Player: ${selectedPlayerName}`, 20, 35);
+    pdf.text(`Generated: ${new Date().toLocaleDateString()}`, 20, 45);
+    
+    // Performance KPIs
+    pdf.setFontSize(16);
+    pdf.text('Performance Summary', 20, 65);
+    
+    const performanceKPIs = [
+      ['Metric', 'Value', 'Change'],
+      ['Goals This Season', '35', '+12%'],
+      ['Assists', '22', '+5%'],
+      ['Average Fitness Score', '87%', 'Excellent'],
+      ['Minutes Played', '4,830', 'High involvement']
+    ];
+    
+    (pdf as any).autoTable({
+      head: [performanceKPIs[0]],
+      body: performanceKPIs.slice(1),
+      startY: 75,
+      margin: { left: 20 }
+    });
+    
+    // Monthly Performance Data
+    pdf.addPage();
+    pdf.setFontSize(16);
+    pdf.text('Monthly Performance Data', 20, 20);
+    
+    const monthlyData = performanceData.map(item => [
+      item.month,
+      item.goals.toString(),
+      item.assists.toString(),
+      item.minutes.toString(),
+      item.fitness.toString() + '%'
+    ]);
+    
+    (pdf as any).autoTable({
+      head: [['Month', 'Goals', 'Assists', 'Minutes', 'Fitness']],
+      body: monthlyData,
+      startY: 30,
+      margin: { left: 20 }
+    });
+    
+    // Fitness Profile
+    pdf.addPage();
+    pdf.setFontSize(16);
+    pdf.text('Fitness Profile', 20, 20);
+    
+    const fitnessTable = fitnessData.map(item => [
+      item.name,
+      item.value.toString() + '%'
+    ]);
+    
+    (pdf as any).autoTable({
+      head: [['Attribute', 'Score']],
+      body: fitnessTable,
+      startY: 30,
+      margin: { left: 20 }
+    });
+    
+    // Save the PDF
+    pdf.save(`${selectedPlayerName}_Performance_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
+  const exportToCSV = () => {
+    const selectedPlayerName = selectedPlayer === "all" ? "All_Players" : players.find(p => p.id.toString() === selectedPlayer)?.firstName + "_" + players.find(p => p.id.toString() === selectedPlayer)?.lastName;
+    
+    // Create CSV content
+    let csvContent = "data:text/csv;charset=utf-8,";
+    
+    // Add header
+    csvContent += "Player Performance Data\n";
+    csvContent += `Player: ${selectedPlayerName}\n`;
+    csvContent += `Generated: ${new Date().toLocaleDateString()}\n\n`;
+    
+    // Monthly Performance Data
+    csvContent += "Monthly Performance\n";
+    csvContent += "Month,Goals,Assists,Minutes,Fitness\n";
+    performanceData.forEach(item => {
+      csvContent += `${item.month},${item.goals},${item.assists},${item.minutes},${item.fitness}\n`;
+    });
+    
+    csvContent += "\nFitness Profile\n";
+    csvContent += "Attribute,Score\n";
+    fitnessData.forEach(item => {
+      csvContent += `${item.name},${item.value}\n`;
+    });
+    
+    csvContent += "\nWeekly Training Data\n";
+    csvContent += "Day,Intensity,Duration\n";
+    weeklyTrainingData.forEach(item => {
+      csvContent += `${item.day},${item.intensity},${item.duration}\n`;
+    });
+    
+    // Create and download file
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `${selectedPlayerName}_Performance_Data_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const exportChartsAsImages = async () => {
+    const selectedPlayerName = selectedPlayer === "all" ? "All_Players" : players.find(p => p.id.toString() === selectedPlayer)?.firstName + "_" + players.find(p => p.id.toString() === selectedPlayer)?.lastName;
+    
+    try {
+      // Get all chart containers
+      const chartContainers = document.querySelectorAll('.recharts-wrapper');
+      
+      for (let i = 0; i < chartContainers.length; i++) {
+        const chartContainer = chartContainers[i] as HTMLElement;
+        const chartTitle = chartContainer.closest('.card')?.querySelector('.card-title')?.textContent || `Chart_${i + 1}`;
+        
+        // Convert chart to image
+        const dataUrl = await htmlToImage.toPng(chartContainer, {
+          backgroundColor: '#ffffff',
+          width: chartContainer.offsetWidth,
+          height: chartContainer.offsetHeight,
+        });
+        
+        // Create download link
+        const link = document.createElement('a');
+        link.download = `${selectedPlayerName}_${chartTitle.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.png`;
+        link.href = dataUrl;
+        link.click();
+        
+        // Small delay between downloads
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    } catch (error) {
+      console.error('Error exporting charts:', error);
+    }
+  };
 
   const getTypeColor = (type: string) => {
     const colors = {
@@ -154,10 +302,28 @@ export default function AnalyticsPage() {
               ))}
             </SelectContent>
           </Select>
-          <Button className="flex items-center gap-2">
-            <Download className="w-4 h-4" />
-            Export Data
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button className="flex items-center gap-2">
+                <Download className="w-4 h-4" />
+                Export Data
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={exportToPDF}>
+                <Download className="w-4 h-4 mr-2" />
+                Export as PDF
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={exportToCSV}>
+                <Download className="w-4 h-4 mr-2" />
+                Export as CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={exportChartsAsImages}>
+                <Download className="w-4 h-4 mr-2" />
+                Export Charts as Images
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
