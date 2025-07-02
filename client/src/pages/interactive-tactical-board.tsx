@@ -1,7 +1,7 @@
-import InteractiveTacticalBoard from '@/components/tactical-board/InteractiveTacticalBoard';
+import NewKonvaTacticalBoard from '@/components/tactical-board/NewKonvaTacticalBoard';
 
 export default function InteractiveTacticalBoardPage() {
   return (
-    <InteractiveTacticalBoard />
+    <NewKonvaTacticalBoard />
   );
 }

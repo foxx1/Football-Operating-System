@@ -22,8 +22,8 @@ import {
 } from 'lucide-react';
 import * as htmlToImage from 'html-to-image';
 import { useToast } from '@/hooks/use-toast';
-import footballPitchSvg from '@/assets/football-pitch.svg';
-import classicFootballSvg from '@/assets/classic-football.svg';
+import { KonvaTacticalBoard } from './KonvaTacticalBoard';
+import { DrawingElement, DrawingTool, Player, Formation } from './types';
 
 interface Player {
   id: string;
