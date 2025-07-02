@@ -18,7 +18,8 @@ import {
   Target,
   Wallet,
   Smile,
-  LayoutGrid
+  LayoutGrid,
+  MousePointer2
 } from "lucide-react";
 
 // Custom Catapult Icon Component
@@ -53,7 +54,8 @@ const navigationItems = [
   { href: "/training", icon: Calendar, label: "Training Schedule", badge: null },
   { href: "/matches", icon: Trophy, label: "Matches", badge: null },
   { href: "/tactics", icon: Swords, label: "Tactics Board", badge: null },
-  { href: "/tactical-board", icon: LayoutGrid, label: "Interactive Board", badge: "NEW" },
+  { href: "/tactical-board", icon: LayoutGrid, label: "Simple Board", badge: null },
+  { href: "/interactive-tactical-board", icon: Target, label: "Interactive Board", badge: "NEW" },
   { href: "/analytics", icon: BarChart3, label: "Analytics", badge: null },
   { href: "/performance-reactions", icon: Smile, label: "Performance Reactions", badge: "NEW" },
   { href: "/wearables", icon: Activity, label: "Wearable Devices", badge: null },

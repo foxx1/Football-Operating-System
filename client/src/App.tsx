@@ -24,6 +24,7 @@ import PerformanceReactionsPage from "@/pages/performance-reactions";
 import TacticalBoardPage from "@/pages/tactical-board";
 import TacticalIconsDemo from "@/pages/tactical-icons-demo";
 import BubbleDesignPage from "@/pages/bubble-design";
+import InteractiveTacticalBoardPage from "@/pages/interactive-tactical-board";
 import NotFound from "@/pages/not-found";
 
 function Layout({ children }: { children: React.ReactNode }) {
@@ -51,6 +52,7 @@ function Router() {
       <Route path="/matches" component={Matches} />
       <Route path="/tactics" component={Tactics} />
       <Route path="/tactical-board" component={TacticalBoardPage} />
+      <Route path="/interactive-tactical-board" component={InteractiveTacticalBoardPage} />
       <Route path="/tactical-icons-demo" component={TacticalIconsDemo} />
       <Route path="/bubble-design" component={BubbleDesignPage} />
       <Route path="/analytics" component={Analytics} />
