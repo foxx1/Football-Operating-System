@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { BarChart3, TrendingUp, Users, Target, Calendar, Download, Plus, Activity, Award, Clock, Zap } from "lucide-react";
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import * as htmlToImage from 'html-to-image';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -125,7 +125,7 @@ export default function AnalyticsPage() {
       ['Minutes Played', '4,830', 'High involvement']
     ];
     
-    (pdf as any).autoTable({
+    autoTable(pdf, {
       head: [performanceKPIs[0]],
       body: performanceKPIs.slice(1),
       startY: 75,
@@ -145,7 +145,7 @@ export default function AnalyticsPage() {
       item.fitness.toString() + '%'
     ]);
     
-    (pdf as any).autoTable({
+    autoTable(pdf, {
       head: [['Month', 'Goals', 'Assists', 'Minutes', 'Fitness']],
       body: monthlyData,
       startY: 30,
@@ -162,7 +162,7 @@ export default function AnalyticsPage() {
       item.value.toString() + '%'
     ]);
     
-    (pdf as any).autoTable({
+    autoTable(pdf, {
       head: [['Attribute', 'Score']],
       body: fitnessTable,
       startY: 30,
