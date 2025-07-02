@@ -18,6 +18,7 @@ import {
 import * as htmlToImage from 'html-to-image';
 import { useToast } from '@/hooks/use-toast';
 import { useTacticalBoard, type Player, type DrawingElement } from '@/stores/tacticalBoardStore';
+import footballPitchSvg from '@/assets/football-pitch.svg';
 
 const TacticalBoardSimple: React.FC = () => {
   // Zustand store state
@@ -257,9 +258,13 @@ const TacticalBoardSimple: React.FC = () => {
             {/* Football Field */}
             <div 
               ref={boardRef}
-              className="relative w-full bg-green-600 rounded-lg overflow-hidden shadow-inner"
+              className="relative w-full rounded-lg overflow-hidden shadow-inner"
               style={{ 
-                paddingBottom: '65%',
+                paddingBottom: '66.67%', // 3:2 aspect ratio to match SVG
+                backgroundImage: `url(${footballPitchSvg})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat',
                 transform: `scale(${zoomLevel})`,
                 transformOrigin: 'top left'
               }}
@@ -267,33 +272,6 @@ const TacticalBoardSimple: React.FC = () => {
               onMouseUp={handleMouseUp}
               onMouseLeave={handleMouseUp}
             >
-              {/* Field markings */}
-              <div className="absolute inset-0">
-                {/* Center circle */}
-                <div className="absolute border-2 border-white rounded-full w-32 h-32 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"></div>
-                <div className="absolute w-1 h-1 bg-white rounded-full top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"></div>
-                
-                {/* Halfway line */}
-                <div className="absolute top-0 bottom-0 left-1/2 w-0.5 bg-white transform -translate-x-1/2"></div>
-                
-                {/* Goal areas */}
-                <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-20 h-6 border-2 border-white border-t-0"></div>
-                <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-20 h-6 border-2 border-white border-b-0"></div>
-                
-                {/* Penalty areas */}
-                <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-44 h-16 border-2 border-white border-t-0"></div>
-                <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-44 h-16 border-2 border-white border-b-0"></div>
-                
-                {/* Penalty spots */}
-                <div className="absolute w-1 h-1 bg-white rounded-full top-12 left-1/2 transform -translate-x-1/2"></div>
-                <div className="absolute w-1 h-1 bg-white rounded-full bottom-12 left-1/2 transform -translate-x-1/2"></div>
-                
-                {/* Corner arcs */}
-                <div className="absolute top-0 left-0 w-4 h-4 border-2 border-white border-t-0 border-l-0 rounded-br-full"></div>
-                <div className="absolute top-0 right-0 w-4 h-4 border-2 border-white border-t-0 border-r-0 rounded-bl-full"></div>
-                <div className="absolute bottom-0 left-0 w-4 h-4 border-2 border-white border-b-0 border-l-0 rounded-tr-full"></div>
-                <div className="absolute bottom-0 right-0 w-4 h-4 border-2 border-white border-b-0 border-r-0 rounded-tl-full"></div>
-              </div>
 
               {/* Players */}
               {players.map((player) => (
