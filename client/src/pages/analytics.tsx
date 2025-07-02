@@ -1,17 +1,44 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { BarChart3, TrendingUp, Users, Target, Calendar, Download, Plus } from "lucide-react";
+import { BarChart3, TrendingUp, Users, Target, Calendar, Download, Plus, Activity, Award, Clock, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { AnalyticsReport } from "@shared/schema";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Progress } from "@/components/ui/progress";
+import { 
+  LineChart, 
+  Line, 
+  BarChart, 
+  Bar, 
+  RadarChart, 
+  Radar, 
+  RadialBarChart,
+  RadialBar,
+  PieChart, 
+  Pie, 
+  Cell,
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  Legend, 
+  ResponsiveContainer,
+  Area,
+  AreaChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis
+} from "recharts";
+import type { AnalyticsReport, Player } from "@shared/schema";
 
 export default function AnalyticsPage() {
   const [selectedPeriod, setSelectedPeriod] = useState<string>("monthly");
   const [selectedType, setSelectedType] = useState<string>("all");
+  const [selectedPlayer, setSelectedPlayer] = useState<string>("all");
 
-  const { data: reports = [], isLoading } = useQuery({
+  const { data: reports = [], isLoading } = useQuery<AnalyticsReport[]>({
     queryKey: ["/api/analytics"],
   });
 
@@ -19,11 +46,56 @@ export default function AnalyticsPage() {
     queryKey: ["/api/dashboard/stats"],
   });
 
-  const filteredReports = reports.filter((report: AnalyticsReport) => {
-    const matchesPeriod = selectedPeriod === "all" || report.period === selectedPeriod;
-    const matchesType = selectedType === "all" || report.type === selectedType;
-    return matchesPeriod && matchesType;
+  const { data: players = [] } = useQuery<Player[]>({
+    queryKey: ["/api/players"],
   });
+
+  // Performance data for charts
+  const performanceData = [
+    { month: 'Jan', goals: 4, assists: 2, minutes: 720, fitness: 85 },
+    { month: 'Feb', goals: 6, assists: 4, minutes: 810, fitness: 88 },
+    { month: 'Mar', goals: 3, assists: 5, minutes: 690, fitness: 82 },
+    { month: 'Apr', goals: 8, assists: 3, minutes: 900, fitness: 91 },
+    { month: 'May', goals: 5, assists: 6, minutes: 780, fitness: 89 },
+    { month: 'Jun', goals: 7, assists: 2, minutes: 840, fitness: 87 },
+  ];
+
+  const playerStats = [
+    { name: 'Goals', value: 35, fill: '#8884d8' },
+    { name: 'Assists', value: 22, fill: '#82ca9d' },
+    { name: 'Yellow Cards', value: 8, fill: '#ffc658' },
+    { name: 'Red Cards', value: 2, fill: '#ff7c7c' },
+  ];
+
+  const positionData = [
+    { position: 'Forward', players: 8, avgGoals: 12 },
+    { position: 'Midfielder', players: 10, avgGoals: 6 },
+    { position: 'Defender', players: 8, avgGoals: 2 },
+    { position: 'Goalkeeper', players: 3, avgGoals: 0 },
+  ];
+
+  const fitnessData = [
+    { name: 'Stamina', value: 85, fullMark: 100 },
+    { name: 'Speed', value: 78, fullMark: 100 },
+    { name: 'Strength', value: 82, fullMark: 100 },
+    { name: 'Agility', value: 90, fullMark: 100 },
+    { name: 'Balance', value: 87, fullMark: 100 },
+    { name: 'Coordination', value: 84, fullMark: 100 },
+  ];
+
+  const weeklyTrainingData = [
+    { day: 'Mon', intensity: 75, duration: 90 },
+    { day: 'Tue', intensity: 60, duration: 75 },
+    { day: 'Wed', intensity: 85, duration: 105 },
+    { day: 'Thu', intensity: 45, duration: 60 },
+    { day: 'Fri', intensity: 80, duration: 90 },
+    { day: 'Sat', intensity: 90, duration: 120 },
+    { day: 'Sun', intensity: 0, duration: 0 },
+  ];
+
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
+
+  // Remove the unused filter since we're not using the old reports section anymore
 
   const getTypeColor = (type: string) => {
     const colors = {
@@ -65,173 +137,412 @@ export default function AnalyticsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Analytics & Insights</h1>
-          <p className="text-gray-600 mt-1">Performance data and strategic insights</p>
+          <h1 className="text-3xl font-bold text-gray-900">Player Performance Dashboard</h1>
+          <p className="text-gray-600 mt-1">Interactive analytics and performance insights</p>
         </div>
-        <Button className="flex items-center gap-2">
-          <Plus className="w-4 h-4" />
-          Generate Report
-        </Button>
+        <div className="flex gap-2">
+          <Select value={selectedPlayer} onValueChange={setSelectedPlayer}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Select Player" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Players</SelectItem>
+              {players.map((player: Player) => (
+                <SelectItem key={player.id} value={player.id.toString()}>
+                  {player.firstName} {player.lastName}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button className="flex items-center gap-2">
+            <Download className="w-4 h-4" />
+            Export Data
+          </Button>
+        </div>
       </div>
 
-      {/* Key Metrics */}
-      {dashboardStats && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Players</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{dashboardStats.totalPlayers}</div>
-              <p className="text-xs text-muted-foreground">
-                +2 from last month
-              </p>
-            </CardContent>
-          </Card>
+      {/* Performance KPIs */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Goals This Season</CardTitle>
+            <Target className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">35</div>
+            <Progress value={78} className="mt-2" />
+            <p className="text-xs text-muted-foreground mt-1">
+              +12% from last season
+            </p>
+          </CardContent>
+        </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Staff Members</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{dashboardStats.totalStaff || 0}</div>
-              <p className="text-xs text-muted-foreground">
-                Coaching & support staff
-              </p>
-            </CardContent>
-          </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Assists</CardTitle>
+            <Activity className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">22</div>
+            <Progress value={65} className="mt-2" />
+            <p className="text-xs text-muted-foreground mt-1">
+              +5% from last season
+            </p>
+          </CardContent>
+        </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Upcoming Matches</CardTitle>
-              <Target className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{dashboardStats.upcomingMatches || 0}</div>
-              <p className="text-xs text-muted-foreground">
-                Next 30 days
-              </p>
-            </CardContent>
-          </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Avg Fitness Score</CardTitle>
+            <Zap className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">87%</div>
+            <Progress value={87} className="mt-2" />
+            <p className="text-xs text-muted-foreground mt-1">
+              Excellent condition
+            </p>
+          </CardContent>
+        </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Training Sessions</CardTitle>
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{dashboardStats.weeklySessions}</div>
-              <p className="text-xs text-muted-foreground">
-                This week
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <Select value={selectedType} onValueChange={setSelectedType}>
-          <SelectTrigger className="w-full sm:w-48">
-            <SelectValue placeholder="Report Type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Types</SelectItem>
-            <SelectItem value="performance">Performance</SelectItem>
-            <SelectItem value="tactical">Tactical</SelectItem>
-            <SelectItem value="fitness">Fitness</SelectItem>
-            <SelectItem value="injury">Injury</SelectItem>
-            <SelectItem value="attendance">Attendance</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-          <SelectTrigger className="w-full sm:w-48">
-            <SelectValue placeholder="Time Period" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Periods</SelectItem>
-            <SelectItem value="weekly">Weekly</SelectItem>
-            <SelectItem value="monthly">Monthly</SelectItem>
-            <SelectItem value="season">Season</SelectItem>
-          </SelectContent>
-        </Select>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Minutes Played</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">4,830</div>
+            <Progress value={92} className="mt-2" />
+            <p className="text-xs text-muted-foreground mt-1">
+              High involvement
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Reports Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {filteredReports.map((report: AnalyticsReport) => {
-          const IconComponent = getTypeIcon(report.type);
-          
-          return (
-            <Card key={report.id} className="hover:shadow-lg transition-shadow">
+      {/* Interactive Dashboard */}
+      <Tabs defaultValue="performance" className="w-full">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="performance">Performance</TabsTrigger>
+          <TabsTrigger value="fitness">Fitness</TabsTrigger>
+          <TabsTrigger value="position">Position Analysis</TabsTrigger>
+          <TabsTrigger value="training">Training</TabsTrigger>
+          <TabsTrigger value="comparison">Comparison</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="performance" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Goals & Assists Trend */}
+            <Card>
               <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-blue-50 rounded-lg">
-                      <IconComponent className="w-5 h-5 text-blue-600" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg">{report.title}</CardTitle>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Badge className={`text-xs ${getTypeColor(report.type)}`}>
-                          {report.type.charAt(0).toUpperCase() + report.type.slice(1)}
-                        </Badge>
-                        <Badge variant="outline" className="text-xs capitalize">
-                          {report.period}
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
-                  <Button variant="ghost" size="sm">
-                    <Download className="w-4 h-4" />
-                  </Button>
-                </div>
+                <CardTitle>Goals & Assists Trend</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <AreaChart data={performanceData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Area 
+                      type="monotone" 
+                      dataKey="goals" 
+                      stackId="1" 
+                      stroke="#8884d8" 
+                      fill="#8884d8"
+                      animationBegin={0}
+                      animationDuration={1500}
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="assists" 
+                      stackId="1" 
+                      stroke="#82ca9d" 
+                      fill="#82ca9d"
+                      animationBegin={500}
+                      animationDuration={1500}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            {/* Player Statistics Pie Chart */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Season Statistics</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={playerStats}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, value }) => `${name}: ${value}`}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                      animationBegin={0}
+                      animationDuration={1000}
+                    >
+                      {playerStats.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Minutes Played & Fitness Chart */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Monthly Performance Trends</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={400}>
+                <LineChart data={performanceData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Line 
+                    type="monotone" 
+                    dataKey="minutes" 
+                    stroke="#ffc658"
+                    strokeWidth={3}
+                    name="Minutes Played"
+                    animationBegin={0}
+                    animationDuration={1500}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="fitness" 
+                    stroke="#ff7300"
+                    strokeWidth={3}
+                    name="Fitness Score"
+                    animationBegin={800}
+                    animationDuration={1500}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="fitness" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Fitness Radar Chart */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Fitness Profile</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={400}>
+                  <RadarChart data={fitnessData}>
+                    <PolarGrid />
+                    <PolarAngleAxis dataKey="name" />
+                    <PolarRadiusAxis angle={30} domain={[0, 100]} />
+                    <Radar
+                      name="Current"
+                      dataKey="value"
+                      stroke="#8884d8"
+                      fill="#8884d8"
+                      fillOpacity={0.6}
+                      animationBegin={0}
+                      animationDuration={1500}
+                    />
+                    <Tooltip />
+                  </RadarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            {/* Training Intensity */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Weekly Training Intensity</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={400}>
+                  <BarChart data={weeklyTrainingData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="day" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Bar 
+                      dataKey="intensity" 
+                      fill="#8884d8"
+                      animationBegin={0}
+                      animationDuration={1200}
+                    />
+                    <Bar 
+                      dataKey="duration" 
+                      fill="#82ca9d"
+                      animationBegin={600}
+                      animationDuration={1200}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="position" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Position-Based Performance Analysis</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={400}>
+                <BarChart data={positionData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="position" />
+                  <YAxis yAxisId="left" />
+                  <YAxis yAxisId="right" orientation="right" />
+                  <Tooltip />
+                  <Legend />
+                  <Bar 
+                    yAxisId="left" 
+                    dataKey="players" 
+                    fill="#8884d8"
+                    animationBegin={0}
+                    animationDuration={1500}
+                  />
+                  <Bar 
+                    yAxisId="right" 
+                    dataKey="avgGoals" 
+                    fill="#82ca9d"
+                    animationBegin={500}
+                    animationDuration={1500}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="training" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Training Load Radial Chart */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Training Load Distribution</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <RadialBarChart innerRadius="10%" outerRadius="80%" data={[
+                    { name: 'High Intensity', value: 30, fill: '#8884d8' },
+                    { name: 'Medium Intensity', value: 50, fill: '#82ca9d' },
+                    { name: 'Low Intensity', value: 20, fill: '#ffc658' },
+                  ]}>
+                    <RadialBar 
+                      dataKey="value" 
+                      cornerRadius={10} 
+                      fill="#8884d8"
+                      animationBegin={0}
+                      animationDuration={1500}
+                    />
+                    <Tooltip />
+                    <Legend />
+                  </RadialBarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            {/* Recovery Metrics */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Recovery Metrics</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {report.insights && (
-                  <div>
-                    <h4 className="font-medium text-sm text-gray-900 mb-2">Key Insights</h4>
-                    <p className="text-sm text-gray-600">{report.insights}</p>
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span>Sleep Quality</span>
+                    <span>85%</span>
                   </div>
-                )}
-
-                {report.recommendations && (
-                  <div>
-                    <h4 className="font-medium text-sm text-gray-900 mb-2">Recommendations</h4>
-                    <p className="text-sm text-gray-600">{report.recommendations}</p>
+                  <Progress value={85} />
+                </div>
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span>Heart Rate Variability</span>
+                    <span>78%</span>
                   </div>
-                )}
-
-                <div className="text-xs text-gray-500">
-                  Generated: {new Date(report.createdAt).toLocaleDateString()}
+                  <Progress value={78} />
+                </div>
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span>Stress Level</span>
+                    <span>35%</span>
+                  </div>
+                  <Progress value={35} />
+                </div>
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span>Readiness Score</span>
+                    <span>92%</span>
+                  </div>
+                  <Progress value={92} />
                 </div>
               </CardContent>
             </Card>
-          );
-        })}
-      </div>
+          </div>
+        </TabsContent>
 
-      {filteredReports.length === 0 && (
-        <Card className="text-center py-12">
-          <CardContent>
-            <BarChart3 className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No analytics reports found</h3>
-            <p className="text-gray-600 mb-4">
-              {selectedType !== "all" || selectedPeriod !== "all"
-                ? "Try adjusting your filter criteria."
-                : "Get started by generating your first analytics report."
-              }
-            </p>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              Generate Report
-            </Button>
-          </CardContent>
-        </Card>
-      )}
+        <TabsContent value="comparison" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Team vs Individual Performance</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={400}>
+                <LineChart data={performanceData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Line 
+                    type="monotone" 
+                    dataKey="goals" 
+                    stroke="#8884d8" 
+                    strokeWidth={3}
+                    name="Individual Goals"
+                    animationBegin={0}
+                    animationDuration={1500}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="assists" 
+                    stroke="#82ca9d" 
+                    strokeWidth={3}
+                    name="Individual Assists"
+                    animationBegin={500}
+                    animationDuration={1500}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="fitness" 
+                    stroke="#ffc658" 
+                    strokeWidth={3}
+                    name="Fitness Score"
+                    animationBegin={1000}
+                    animationDuration={1500}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
