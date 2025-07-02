@@ -3,6 +3,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 import { Stage, Layer, Image, Group, Line, Circle, Rect, Text, Transformer } from 'react-konva';
 import { KonvaEventObject } from 'konva/lib/Node';
 import { Stage as StageType } from 'konva/lib/Stage';
@@ -31,9 +37,18 @@ import {
   Sliders,
   Settings,
   Undo2,
-  Redo2
+  Redo2,
+  Save,
+  FolderOpen,
+  Library,
+  FileImage,
+  FileText
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { apiRequest } from '@/lib/queryClient';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 import footballPitchSvg from '@/assets/football-pitch.svg';
 import classicFootballSvg from '@/assets/classic-football.svg';
 import coneSvg from '@/assets/tactical-icons/cone.svg';
@@ -76,7 +91,7 @@ const NewKonvaTacticalBoard: React.FC = () => {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedTool, setSelectedTool] = useState<DrawingTool | null>(null);
   const [currentMode, setCurrentMode] = useState<'select' | 'draw'>('select');
-  const [toolColor, setToolColor] = useState('#FF0000');
+  const [toolColor, setToolColor] = useState('#FFFFFF');
   const [toolSize, setToolSize] = useState(3);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -87,7 +102,18 @@ const NewKonvaTacticalBoard: React.FC = () => {
   
   const stageRef = useRef<StageType>(null);
   const transformerRef = useRef<TransformerType>(null);
+  const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  // Save/Open/Export states
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [libraryDialogOpen, setLibraryDialogOpen] = useState(false);
+  const [saveName, setSaveName] = useState('');
+  const [saveDescription, setSaveDescription] = useState('');
+  const [saveFormation, setSaveFormation] = useState('');
+  const [saveTags, setSaveTags] = useState('');
+  const [isPublic, setIsPublic] = useState(false);
+  const [currentBoardId, setCurrentBoardId] = useState<number | null>(null);
 
   const FIELD_WIDTH = 800;
   const FIELD_HEIGHT = 520;
@@ -105,9 +131,54 @@ const NewKonvaTacticalBoard: React.FC = () => {
   ];
 
   const colorPresets = [
-    '#FF0000', '#00FF00', '#0000FF', '#FFFF00', 
-    '#FF00FF', '#00FFFF', '#FFA500', '#FFFFFF', '#000000'
+    '#FFFFFF', '#000000', '#FF0000', '#00FF00', '#0000FF', '#FFFF00', 
+    '#FF00FF', '#00FFFF', '#FFA500'
   ];
+
+  // API queries for tactical boards library
+  const { data: tacticalBoards = [] } = useQuery({
+    queryKey: ['/api/tactical-boards'],
+    enabled: libraryDialogOpen
+  });
+
+  // Save tactical board mutation
+  const saveBoardMutation = useMutation({
+    mutationFn: async (boardData: any) => {
+      if (currentBoardId) {
+        return apiRequest(`/api/tactical-boards/${currentBoardId}`, 'PUT', boardData);
+      } else {
+        return apiRequest('/api/tactical-boards', 'POST', boardData);
+      }
+    },
+    onSuccess: (data) => {
+      setCurrentBoardId(data.id);
+      queryClient.invalidateQueries({ queryKey: ['/api/tactical-boards'] });
+      setSaveDialogOpen(false);
+      toast({
+        title: "Board Saved",
+        description: `${saveName} has been saved to your library`
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Save Failed",
+        description: "Failed to save tactical board. Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Delete tactical board mutation
+  const deleteBoardMutation = useMutation({
+    mutationFn: (id: number) => apiRequest(`/api/tactical-boards/${id}`, 'DELETE'),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/tactical-boards'] });
+      toast({
+        title: "Board Deleted",
+        description: "Tactical board removed from library"
+      });
+    }
+  });
 
   // History management
   const saveToHistory = useCallback((elements: DrawingElement[]) => {
@@ -116,6 +187,107 @@ const NewKonvaTacticalBoard: React.FC = () => {
     setHistory(newHistory);
     setHistoryIndex(newHistory.length - 1);
   }, [history, historyIndex]);
+
+  // Save/Open functions
+  const handleSaveBoard = () => {
+    if (!saveName.trim()) {
+      toast({
+        title: "Name Required",
+        description: "Please enter a name for your tactical board",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const boardData = {
+      title: saveName,
+      description: saveDescription || null,
+      formation: saveFormation || null,
+      tags: saveTags ? saveTags.split(',').map(tag => tag.trim()) : [],
+      isPublic,
+      elements: JSON.stringify(drawingElements)
+    };
+
+    saveBoardMutation.mutate(boardData);
+  };
+
+  const handleLoadBoard = (board: any) => {
+    try {
+      const loadedElements = JSON.parse(board.elements);
+      setDrawingElements(loadedElements);
+      saveToHistory(loadedElements);
+      setCurrentBoardId(board.id);
+      setSaveName(board.title);
+      setSaveDescription(board.description || '');
+      setSaveFormation(board.formation || '');
+      setSaveTags(board.tags ? board.tags.join(', ') : '');
+      setIsPublic(board.isPublic);
+      setLibraryDialogOpen(false);
+      toast({
+        title: "Board Loaded",
+        description: `${board.title} has been loaded`
+      });
+    } catch (error) {
+      toast({
+        title: "Load Failed",
+        description: "Failed to load tactical board",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Export functions
+  const handleExportPNG = async () => {
+    const stage = stageRef.current;
+    if (!stage) return;
+
+    try {
+      const uri = stage.toDataURL({ pixelRatio: 2 });
+      const link = document.createElement('a');
+      link.download = `${saveName || 'tactical-board'}.png`;
+      link.href = uri;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast({
+        title: "PNG Exported",
+        description: "Tactical board saved as PNG image"
+      });
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: "Failed to export PNG image",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleExportPDF = async () => {
+    const stage = stageRef.current;
+    if (!stage) return;
+
+    try {
+      const uri = stage.toDataURL({ pixelRatio: 2 });
+      const pdf = new jsPDF('landscape');
+      const imgWidth = 297; // A4 landscape width in mm
+      const imgHeight = 210; // A4 landscape height in mm
+      
+      pdf.addImage(uri, 'PNG', 0, 0, imgWidth, imgHeight);
+      pdf.save(`${saveName || 'tactical-board'}.pdf`);
+      
+      toast({
+        title: "PDF Exported",
+        description: "Tactical board saved as PDF document"
+      });
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: "Failed to export PDF document",
+        variant: "destructive"
+      });
+    }
+  };
 
   const undo = useCallback(() => {
     if (historyIndex > 0) {
@@ -720,6 +892,143 @@ const NewKonvaTacticalBoard: React.FC = () => {
           </div>
           
           <div className="flex items-center gap-2">
+            <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Save className="h-4 w-4 mr-1" />
+                  Save
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Save Tactical Board</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="name">Board Name *</Label>
+                    <Input
+                      id="name"
+                      value={saveName}
+                      onChange={(e) => setSaveName(e.target.value)}
+                      placeholder="Enter board name"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea
+                      id="description"
+                      value={saveDescription}
+                      onChange={(e) => setSaveDescription(e.target.value)}
+                      placeholder="Brief description (optional)"
+                      rows={2}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="formation">Formation</Label>
+                    <Select value={saveFormation} onValueChange={setSaveFormation}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select formation" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="4-4-2">4-4-2</SelectItem>
+                        <SelectItem value="4-3-3">4-3-3</SelectItem>
+                        <SelectItem value="3-5-2">3-5-2</SelectItem>
+                        <SelectItem value="4-2-3-1">4-2-3-1</SelectItem>
+                        <SelectItem value="3-4-3">3-4-3</SelectItem>
+                        <SelectItem value="5-3-2">5-3-2</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="tags">Tags</Label>
+                    <Input
+                      id="tags"
+                      value={saveTags}
+                      onChange={(e) => setSaveTags(e.target.value)}
+                      placeholder="training, defense, attack (comma separated)"
+                    />
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="public"
+                      checked={isPublic}
+                      onChange={(e) => setIsPublic(e.target.checked)}
+                      className="rounded"
+                    />
+                    <Label htmlFor="public">Make public (share with team)</Label>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button 
+                    onClick={handleSaveBoard}
+                    disabled={saveBoardMutation.isPending}
+                  >
+                    {saveBoardMutation.isPending ? 'Saving...' : 'Save Board'}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            <Dialog open={libraryDialogOpen} onOpenChange={setLibraryDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Library className="h-4 w-4 mr-1" />
+                  Library
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Tactical Board Library</DialogTitle>
+                </DialogHeader>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {tacticalBoards.map((board: any) => (
+                    <Card key={board.id} className="cursor-pointer hover:shadow-md transition-shadow">
+                      <CardContent className="p-4">
+                        <h3 className="font-semibold mb-2">{board.title}</h3>
+                        {board.description && (
+                          <p className="text-sm text-gray-600 mb-2">{board.description}</p>
+                        )}
+                        {board.formation && (
+                          <Badge variant="outline" className="mb-2">{board.formation}</Badge>
+                        )}
+                        <div className="flex justify-between items-center mt-3">
+                          <Button 
+                            size="sm" 
+                            onClick={() => handleLoadBoard(board)}
+                          >
+                            Load
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="destructive"
+                            onClick={() => deleteBoardMutation.mutate(board.id)}
+                            disabled={deleteBoardMutation.isPending}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            <Separator orientation="vertical" className="h-6" />
+
+            <Button variant="outline" size="sm" onClick={handleExportPNG}>
+              <FileImage className="h-4 w-4 mr-1" />
+              PNG
+            </Button>
+
+            <Button variant="outline" size="sm" onClick={handleExportPDF}>
+              <FileText className="h-4 w-4 mr-1" />
+              PDF
+            </Button>
+
+            <Separator orientation="vertical" className="h-6" />
+
             <Button onClick={handleClearAll} size="sm" variant="outline" className="text-red-600">
               <Trash2 className="w-4 h-4 mr-1" />
               Clear All

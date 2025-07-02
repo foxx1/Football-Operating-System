@@ -7,7 +7,7 @@ import {
   insertStaffSchema, insertMatchSchema, insertMatchSquadSchema,
   insertAnalyticsReportSchema, insertSystemSettingsSchema,
   insertMonthlyBudgetSchema, insertExpenseSchema, insertPlayerContractSchema,
-  insertPerformanceReactionSchema
+  insertPerformanceReactionSchema, insertTacticalBoardSchema
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express, upload?: any): Promise<Server> {
@@ -1439,6 +1439,73 @@ export async function registerRoutes(app: Express, upload?: any): Promise<Server
     } catch (error) {
       console.error("Error deleting performance reaction:", error);
       res.status(500).json({ error: "Failed to delete reaction" });
+    }
+  });
+
+  // Tactical Boards API
+  app.get("/api/tactical-boards", async (req, res) => {
+    try {
+      const boards = await storage.getTacticalBoards();
+      res.json(boards);
+    } catch (error) {
+      console.error("Error fetching tactical boards:", error);
+      res.status(500).json({ error: "Failed to fetch tactical boards" });
+    }
+  });
+
+  app.get("/api/tactical-boards/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const board = await storage.getTacticalBoard(id);
+      if (!board) {
+        return res.status(404).json({ error: "Tactical board not found" });
+      }
+      res.json(board);
+    } catch (error) {
+      console.error("Error fetching tactical board:", error);
+      res.status(500).json({ error: "Failed to fetch tactical board" });
+    }
+  });
+
+  app.post("/api/tactical-boards", async (req, res) => {
+    try {
+      const validatedData = insertTacticalBoardSchema.parse(req.body);
+      // Set created by user ID (placeholder for now)
+      validatedData.createdBy = 1;
+      const board = await storage.createTacticalBoard(validatedData);
+      res.status(201).json(board);
+    } catch (error) {
+      console.error("Error creating tactical board:", error);
+      res.status(400).json({ error: "Invalid tactical board data", details: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
+  app.put("/api/tactical-boards/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validatedData = insertTacticalBoardSchema.parse(req.body);
+      const board = await storage.updateTacticalBoard(id, validatedData);
+      if (!board) {
+        return res.status(404).json({ error: "Tactical board not found" });
+      }
+      res.json(board);
+    } catch (error) {
+      console.error("Error updating tactical board:", error);
+      res.status(400).json({ error: "Invalid tactical board data", details: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
+  app.delete("/api/tactical-boards/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteTacticalBoard(id);
+      if (!success) {
+        return res.status(404).json({ error: "Tactical board not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting tactical board:", error);
+      res.status(500).json({ error: "Failed to delete tactical board" });
     }
   });
 

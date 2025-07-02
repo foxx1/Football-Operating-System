@@ -441,6 +441,21 @@ export const performanceReactions = pgTable("performance_reactions", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Tactical Boards Library - Save/Open tactical formations and drawings
+export const tacticalBoards = pgTable("tactical_boards", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  drawingElements: jsonb("drawing_elements").notNull(), // Array of drawing elements
+  thumbnail: text("thumbnail"), // Base64 or file path for thumbnail
+  tags: json("tags").$type<string[]>().default([]), // Array of tags for categorization
+  formation: text("formation"), // 4-4-2, 4-3-3, etc.
+  isPublic: boolean("is_public").default(false).notNull(), // Can be used by other apps
+  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -569,6 +584,12 @@ export const insertPlayerContractSchema = createInsertSchema(playerContracts).om
   updatedAt: true,
 });
 
+export const insertTacticalBoardSchema = createInsertSchema(tacticalBoards).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -614,6 +635,9 @@ export type Expense = typeof expenses.$inferSelect;
 
 export type InsertPlayerContract = z.infer<typeof insertPlayerContractSchema>;
 export type PlayerContract = typeof playerContracts.$inferSelect;
+
+export type InsertTacticalBoard = z.infer<typeof insertTacticalBoardSchema>;
+export type TacticalBoard = typeof tacticalBoards.$inferSelect;
 
 export type InsertPerformanceReaction = z.infer<typeof insertPerformanceReactionSchema>;
 export type PerformanceReaction = typeof performanceReactions.$inferSelect;
