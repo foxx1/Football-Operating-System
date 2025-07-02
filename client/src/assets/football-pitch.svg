@@ -1,6 +1,15 @@
 <svg width="1200" height="800" viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
   <!-- Football Pitch Background -->
-  <rect width="1200" height="800" fill="#2d7a2d" stroke="none"/>
+  <rect width="1200" height="800" fill="#4ade80" stroke="none"/>
+  
+  <!-- Grass stripes for realistic appearance -->
+  <defs>
+    <pattern id="grassStripes" patternUnits="userSpaceOnUse" width="60" height="800">
+      <rect width="30" height="800" fill="#4ade80"/>
+      <rect x="30" width="30" height="800" fill="#22c55e"/>
+    </pattern>
+  </defs>
+  <rect width="1200" height="800" fill="url(#grassStripes)" stroke="none"/>
   
   <!-- Outer boundary -->
   <rect x="50" y="50" width="1100" height="700" fill="none" stroke="white" stroke-width="4"/>

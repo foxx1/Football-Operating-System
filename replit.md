@@ -121,18 +121,19 @@ The system uses PostgreSQL with the following core entities:
 
 ## Recent Changes
 
-### July 2, 2025 - Professional Football Pitch SVG Background with Zustand State Management
+### July 2, 2025 - Professional Football Pitch SVG Background with Realistic Grass Colors
 ✓ Created high-resolution SVG football pitch background (1200x800px) with professional styling
 ✓ Implemented clean top-view design with accurate field dimensions and markings
+✓ Updated to realistic grass green colors (#4ade80 and #22c55e) based on user-provided football field image
+✓ Added alternating grass stripes pattern to simulate professionally mowed football pitch appearance
 ✓ Added all standard football pitch elements: center circle, penalty areas, goal areas, corner arcs, goals with nets
-✓ Professional green pitch (#2d7a2d) with white lines and proper proportions
 ✓ Integrated SVG background into tactical board component replacing basic CSS styling
 ✓ Enhanced tactical board with proper 3:2 aspect ratio matching the SVG dimensions
 ✓ Optimized for high-resolution display with scalable vector graphics
 ✓ Complete football pitch includes: outer boundary, center line, penalty spots, goal areas, corner markings
 ✓ No branding or text - clean, professional appearance suitable for tactical planning
 ✓ Fully responsive design that scales perfectly with zoom functionality
-✓ Enhanced user experience with realistic football field visualization
+✓ Enhanced user experience with realistic football field visualization matching real grass colors
 
 ### July 2, 2025 - Enhanced Staff Form with Official ID and Complete Contract Management
 ✓ Added Official ID/Passport Number field to staff database schema and form interface
