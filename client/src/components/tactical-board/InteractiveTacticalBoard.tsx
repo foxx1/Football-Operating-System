@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import * as htmlToImage from 'html-to-image';
 import { useToast } from '@/hooks/use-toast';
-import footballPitchSvg from '@/assets/football-pitch.svg';
+import classicFootballFieldSvg from '@/assets/classic-football-field.svg';
 
 interface Player {
   id: string;
@@ -78,6 +78,7 @@ const InteractiveTacticalBoard: React.FC = () => {
   const [drawingStart, setDrawingStart] = useState({ x: 0, y: 0 });
   const [drawingEnd, setDrawingEnd] = useState({ x: 0, y: 0 });
   const [previewElement, setPreviewElement] = useState<DrawingElement | null>(null);
+  const [mousePosition, setMousePosition] = useState<{ x: number; y: number } | null>(null);
   
   const boardRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -794,15 +795,24 @@ const InteractiveTacticalBoard: React.FC = () => {
             style={{
               width: `${800 * zoomLevel}px`,
               height: `${520 * zoomLevel}px`,
-              backgroundImage: `url(${footballPitchSvg})`,
+              backgroundImage: `url(${classicFootballFieldSvg})`,
               backgroundSize: 'cover',
               backgroundPosition: 'center',
-              backgroundRepeat: 'no-repeat'
+              backgroundRepeat: 'no-repeat',
+              userSelect: 'none',
+              WebkitUserSelect: 'none',
+              MozUserSelect: 'none'
             }}
             onMouseDown={handleBoardMouseDown}
-            onMouseMove={handleMouseMove}
+            onMouseMove={handleMouseMove} 
             onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
+            onMouseLeave={(e) => {
+              // Cancel any ongoing drawing when mouse leaves the board
+              if (isDrawingShape) {
+                setIsDrawingShape(false);
+                setPreviewElement(null);
+              }
+            }}
           >
             {/* Players */}
             {players.map((player) => (
