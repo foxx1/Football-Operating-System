@@ -100,13 +100,13 @@ const NewKonvaTacticalBoard: React.FC = () => {
     { id: 'circle', type: 'circle', name: 'Circle', icon: <CircleIcon className="w-4 h-4" /> },
     { id: 'square', type: 'square', name: 'Rectangle', icon: <Square className="w-4 h-4" /> },
     { id: 'cone', type: 'cone', name: 'Cone', icon: <div className="w-3 h-3 bg-orange-500 rounded-full" /> },
-    { id: 'ball', type: 'ball', name: 'Ball', icon: <div className="w-3 h-3 bg-brown-600 rounded-full" /> },
+    { id: 'ball', type: 'ball', name: 'Football', icon: <div className="w-3 h-3 rounded-full border border-black bg-white flex items-center justify-center"><div className="w-1 h-1 rounded-full bg-black"></div></div> },
     { id: 'flag', type: 'flag', name: 'Flag', icon: <div className="w-3 h-3 bg-red-500" /> }
   ];
 
   const colorPresets = [
     '#FF0000', '#00FF00', '#0000FF', '#FFFF00', 
-    '#FF00FF', '#00FFFF', '#FFA500', '#800080'
+    '#FF00FF', '#00FFFF', '#FFA500', '#FFFFFF', '#000000'
   ];
 
   // History management
@@ -163,6 +163,20 @@ const NewKonvaTacticalBoard: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedId, drawingElements, saveToHistory, undo, redo, toast]);
 
+  // Update transformer when selection changes
+  useEffect(() => {
+    if (transformerRef.current && stageRef.current && selectedId) {
+      const selectedNode = stageRef.current.findOne(`#${selectedId}`);
+      if (selectedNode) {
+        transformerRef.current.nodes([selectedNode]);
+        transformerRef.current.getLayer()?.batchDraw();
+      }
+    } else if (transformerRef.current) {
+      transformerRef.current.nodes([]);
+      transformerRef.current.getLayer()?.batchDraw();
+    }
+  }, [selectedId]);
+
   // Zoom controls
   const handleZoomIn = () => setZoomLevel(prev => Math.min(prev + 0.1, 2.0));
   const handleZoomOut = () => setZoomLevel(prev => Math.max(prev - 0.1, 0.5));
@@ -181,25 +195,20 @@ const NewKonvaTacticalBoard: React.FC = () => {
 
   // Stage event handlers
   const handleStageClick = useCallback((e: KonvaEventObject<MouseEvent>) => {
-    console.log('Stage clicked!', { currentMode, selectedTool: selectedTool?.name });
-    
     // Allow clicks on field image or stage
     const clickedOnEmpty = e.target === e.target.getStage() || e.target.getClassName() === 'Image';
-    console.log('Clicked on empty:', clickedOnEmpty, 'Target:', e.target.getClassName());
     
     if (clickedOnEmpty) {
       setSelectedId(null);
       
       if (currentMode === 'draw' && selectedTool) {
         const pos = e.target.getStage()?.getPointerPosition();
-        console.log('Drawing position:', pos);
         if (!pos) return;
 
         const resizableTools = ['line', 'arrow', 'circle', 'square'];
         
         if (resizableTools.includes(selectedTool.type)) {
           if (!isDrawing) {
-            console.log('Starting drawing for resizable tool:', selectedTool.type);
             setIsDrawing(true);
             setDrawingStart(pos);
             setPreviewElement({
@@ -214,7 +223,6 @@ const NewKonvaTacticalBoard: React.FC = () => {
           }
         } else {
           // Fixed-size elements
-          console.log('Adding fixed-size element:', selectedTool.type);
           const newElement: DrawingElement = {
             id: `element-${Date.now()}-${Math.random()}`,
             type: selectedTool.type,
@@ -225,7 +233,6 @@ const NewKonvaTacticalBoard: React.FC = () => {
             dashed: selectedTool.dashed || false
           };
           
-          console.log('New element:', newElement);
           const newElements = [...drawingElements, newElement];
           setDrawingElements(newElements);
           saveToHistory(newElements);
@@ -364,6 +371,7 @@ const NewKonvaTacticalBoard: React.FC = () => {
         return (
           <Line
             key={element.id}
+            id={element.id}
             x={element.x}
             y={element.y}
             points={[
@@ -389,6 +397,7 @@ const NewKonvaTacticalBoard: React.FC = () => {
         return (
           <Group
             key={element.id}
+            id={element.id}
             x={element.x}
             y={element.y}
             draggable={!isPreview}
@@ -421,6 +430,7 @@ const NewKonvaTacticalBoard: React.FC = () => {
         return (
           <Circle
             key={element.id}
+            id={element.id}
             x={element.x}
             y={element.y}
             radius={element.radius || 20}
@@ -437,6 +447,7 @@ const NewKonvaTacticalBoard: React.FC = () => {
         return (
           <Rect
             key={element.id}
+            id={element.id}
             x={element.x - (element.width || 40) / 2}
             y={element.y - (element.height || 40) / 2}
             width={element.width || 40}
@@ -454,6 +465,7 @@ const NewKonvaTacticalBoard: React.FC = () => {
         return footballImage ? (
           <Image
             key={element.id}
+            id={element.id}
             image={footballImage}
             x={element.x - 15}
             y={element.y - 15}
@@ -471,6 +483,7 @@ const NewKonvaTacticalBoard: React.FC = () => {
         ) : (
           <Circle
             key={element.id}
+            id={element.id}
             x={element.x}
             y={element.y}
             radius={15}
@@ -488,6 +501,7 @@ const NewKonvaTacticalBoard: React.FC = () => {
         return coneImage ? (
           <Image
             key={element.id}
+            id={element.id}
             image={coneImage}
             x={element.x - 12.5}
             y={element.y - 12.5}
@@ -505,6 +519,7 @@ const NewKonvaTacticalBoard: React.FC = () => {
         ) : (
           <Group
             key={element.id}
+            id={element.id}
             x={element.x}
             y={element.y}
             draggable={!isPreview}
@@ -532,6 +547,7 @@ const NewKonvaTacticalBoard: React.FC = () => {
         return flagImage ? (
           <Image
             key={element.id}
+            id={element.id}
             image={flagImage}
             x={element.x - 10}
             y={element.y - 15}
@@ -549,6 +565,7 @@ const NewKonvaTacticalBoard: React.FC = () => {
         ) : (
           <Group
             key={element.id}
+            id={element.id}
             x={element.x}
             y={element.y}
             draggable={!isPreview}
@@ -733,11 +750,9 @@ const NewKonvaTacticalBoard: React.FC = () => {
             scaleY={zoomLevel}
             onClick={handleStageClick}
             onMouseDown={(e) => {
-              console.log('Mouse down on stage');
               if (currentMode === 'draw' && selectedTool) {
                 const pos = e.target.getStage()?.getPointerPosition();
                 if (pos) {
-                  console.log('Starting drawing at:', pos);
                   handleStageClick(e);
                 }
               }
