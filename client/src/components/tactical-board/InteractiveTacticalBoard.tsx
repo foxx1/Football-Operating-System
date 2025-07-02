@@ -16,7 +16,7 @@ import {
   Square,
   Trash2,
   Save,
-  MousePointer,
+  MousePointer2,
   Palette,
   Settings
 } from 'lucide-react';
@@ -135,12 +135,22 @@ const InteractiveTacticalBoard: React.FC = () => {
   }, []);
 
   const handleBoardMouseDown = useCallback((e: React.MouseEvent) => {
-    if (currentMode !== 'draw' || !selectedTool) return;
+    e.preventDefault();
+    e.stopPropagation();
+    
+    console.log('Board mouse down - Mode:', currentMode, 'Tool:', selectedTool?.name);
+    
+    if (currentMode !== 'draw' || !selectedTool) {
+      console.log('Returning early - wrong mode or no tool');
+      return;
+    }
     
     const { x, y } = getBoardCoordinates(e.clientX, e.clientY);
+    console.log('Board coordinates:', x, y);
     
     // For shapes that need size adjustment (line, arrow, circle, square)
     if (['line', 'arrow', 'circle', 'square'].includes(selectedTool.type)) {
+      console.log('Starting shape drawing for:', selectedTool.type);
       setIsDrawingShape(true);
       setDrawingStart({ x, y });
       setDrawingEnd({ x, y });
@@ -165,6 +175,7 @@ const InteractiveTacticalBoard: React.FC = () => {
       setPreviewElement(preview);
     } else {
       // For fixed-size elements (cone, ball, flag)
+      console.log('Adding fixed-size element:', selectedTool.type);
       const newElement: DrawingElement = {
         id: `element-${Date.now()}`,
         type: selectedTool.type,
@@ -174,7 +185,10 @@ const InteractiveTacticalBoard: React.FC = () => {
         size: toolSize
       };
 
-      setDrawingElements(prev => [...prev, newElement]);
+      setDrawingElements(prev => {
+        console.log('Adding element to list, current count:', prev.length);
+        return [...prev, newElement];
+      });
       
       toast({
         title: "Drawing Element Added",
@@ -599,16 +613,23 @@ const InteractiveTacticalBoard: React.FC = () => {
               <Button
                 variant={currentMode === 'select' ? 'default' : 'outline'}
                 size="sm"
-                onClick={() => setCurrentMode('select')}
+                onClick={() => {
+                  console.log('Mode changed to: select');
+                  setCurrentMode('select');
+                  setSelectedTool(null);
+                }}
                 className="flex flex-col items-center gap-1 h-auto py-2"
               >
-                <MousePointer className="w-4 h-4" />
+                <MousePointer2 className="w-4 h-4" />
                 <span className="text-xs">Select</span>
               </Button>
               <Button
                 variant={currentMode === 'draw' ? 'default' : 'outline'}
                 size="sm"
-                onClick={() => setCurrentMode('draw')}
+                onClick={() => {
+                  console.log('Mode changed to: draw');
+                  setCurrentMode('draw');
+                }}
                 className="flex flex-col items-center gap-1 h-auto py-2"
               >
                 <Pencil className="w-4 h-4" />
@@ -635,13 +656,17 @@ const InteractiveTacticalBoard: React.FC = () => {
                   key={`${tool.type}-${index}`}
                   variant={selectedTool?.type === tool.type && selectedTool?.name === tool.name ? 'default' : 'outline'}
                   size="sm"
-                  onClick={() => setSelectedTool({
-                    ...tool,
-                    id: `tool-${index}`,
-                    x: 0,
-                    y: 0,
-                    isDraggable: true
-                  })}
+                  onClick={() => {
+                    console.log('Tool selected:', tool.name, tool.type);
+                    setCurrentMode('draw'); // Automatically switch to draw mode
+                    setSelectedTool({
+                      ...tool,
+                      id: `tool-${index}`,
+                      x: 0,
+                      y: 0,
+                      isDraggable: true
+                    });
+                  }}
                   className="flex flex-col items-center gap-1 h-auto py-3"
                 >
                   {tool.icon}
@@ -762,7 +787,10 @@ const InteractiveTacticalBoard: React.FC = () => {
         <div className="flex-1 flex items-center justify-center p-6 overflow-auto">
           <div
             ref={boardRef}
-            className="relative bg-green-600 border-4 border-white rounded-lg shadow-2xl cursor-crosshair"
+            className={`relative bg-green-600 border-4 border-white rounded-lg shadow-2xl ${
+              currentMode === 'draw' && selectedTool ? 'cursor-crosshair' : 
+              currentMode === 'select' ? 'cursor-pointer' : 'cursor-default'
+            }`}
             style={{
               width: `${800 * zoomLevel}px`,
               height: `${520 * zoomLevel}px`,
