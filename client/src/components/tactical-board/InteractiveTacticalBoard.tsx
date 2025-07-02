@@ -59,6 +59,8 @@ interface DrawingElement {
   startY?: number;
   endX?: number;
   endY?: number;
+  length?: number; // For lines and arrows
+  radius?: number; // For circles
 }
 
 const InteractiveTacticalBoard: React.FC = () => {
@@ -72,6 +74,10 @@ const InteractiveTacticalBoard: React.FC = () => {
   const [draggedElement, setDraggedElement] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [zoomLevel, setZoomLevel] = useState(1);
+  const [isDrawingShape, setIsDrawingShape] = useState(false);
+  const [drawingStart, setDrawingStart] = useState({ x: 0, y: 0 });
+  const [drawingEnd, setDrawingEnd] = useState({ x: 0, y: 0 });
+  const [previewElement, setPreviewElement] = useState<DrawingElement | null>(null);
   
   const boardRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -128,26 +134,53 @@ const InteractiveTacticalBoard: React.FC = () => {
     return { x: Math.max(0, Math.min(100, x)), y: Math.max(0, Math.min(100, y)) };
   }, []);
 
-  const handleBoardClick = useCallback((e: React.MouseEvent) => {
+  const handleBoardMouseDown = useCallback((e: React.MouseEvent) => {
     if (currentMode !== 'draw' || !selectedTool) return;
     
     const { x, y } = getBoardCoordinates(e.clientX, e.clientY);
     
-    const newElement: DrawingElement = {
-      id: `element-${Date.now()}`,
-      type: selectedTool.type,
-      x,
-      y,
-      color: toolColor,
-      size: toolSize
-    };
+    // For shapes that need size adjustment (line, arrow, circle, square)
+    if (['line', 'arrow', 'circle', 'square'].includes(selectedTool.type)) {
+      setIsDrawingShape(true);
+      setDrawingStart({ x, y });
+      setDrawingEnd({ x, y });
+      
+      // Create preview element
+      const preview: DrawingElement = {
+        id: 'preview',
+        type: selectedTool.type,
+        x,
+        y,
+        color: toolColor,
+        size: toolSize,
+        startX: x,
+        startY: y,
+        endX: x,
+        endY: y,
+        width: 0,
+        height: 0,
+        length: 0,
+        radius: 0
+      };
+      setPreviewElement(preview);
+    } else {
+      // For fixed-size elements (cone, ball, flag)
+      const newElement: DrawingElement = {
+        id: `element-${Date.now()}`,
+        type: selectedTool.type,
+        x,
+        y,
+        color: toolColor,
+        size: toolSize
+      };
 
-    setDrawingElements(prev => [...prev, newElement]);
-    
-    toast({
-      title: "Drawing Element Added",
-      description: `${selectedTool.name} placed on the field`
-    });
+      setDrawingElements(prev => [...prev, newElement]);
+      
+      toast({
+        title: "Drawing Element Added",
+        description: `${selectedTool.name} placed on the field`
+      });
+    }
   }, [currentMode, selectedTool, toolColor, toolSize, getBoardCoordinates, toast]);
 
   const handleElementMouseDown = useCallback((elementId: string, e: React.MouseEvent) => {
@@ -166,9 +199,62 @@ const InteractiveTacticalBoard: React.FC = () => {
   }, [currentMode, drawingElements, getBoardCoordinates]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    const { x, y } = getBoardCoordinates(e.clientX, e.clientY);
+    
+    // Handle shape drawing
+    if (isDrawingShape && previewElement) {
+      setDrawingEnd({ x, y });
+      
+      const startX = drawingStart.x;
+      const startY = drawingStart.y;
+      const endX = x;
+      const endY = y;
+      
+      // Calculate dimensions based on shape type
+      let updatedPreview = { ...previewElement };
+      
+      if (previewElement.type === 'line' || previewElement.type === 'arrow') {
+        const length = Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2));
+        const angle = Math.atan2(endY - startY, endX - startX);
+        
+        updatedPreview = {
+          ...previewElement,
+          x: startX,
+          y: startY,
+          endX,
+          endY,
+          length,
+          rotation: angle * (180 / Math.PI)
+        };
+      } else if (previewElement.type === 'circle') {
+        const radius = Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2));
+        updatedPreview = {
+          ...previewElement,
+          x: startX,
+          y: startY,
+          radius,
+          width: radius * 2,
+          height: radius * 2
+        };
+      } else if (previewElement.type === 'square') {
+        const width = Math.abs(endX - startX);
+        const height = Math.abs(endY - startY);
+        updatedPreview = {
+          ...previewElement,
+          x: Math.min(startX, endX) + width / 2,
+          y: Math.min(startY, endY) + height / 2,
+          width,
+          height
+        };
+      }
+      
+      setPreviewElement(updatedPreview);
+      return;
+    }
+    
+    // Handle element dragging
     if (!draggedElement) return;
     
-    const { x, y } = getBoardCoordinates(e.clientX, e.clientY);
     const newX = x - dragOffset.x;
     const newY = y - dragOffset.y;
     
@@ -177,11 +263,38 @@ const InteractiveTacticalBoard: React.FC = () => {
         ? { ...el, x: Math.max(0, Math.min(100, newX)), y: Math.max(0, Math.min(100, newY)) }
         : el
     ));
-  }, [draggedElement, dragOffset, getBoardCoordinates]);
+  }, [draggedElement, dragOffset, getBoardCoordinates, isDrawingShape, previewElement, drawingStart]);
 
   const handleMouseUp = useCallback(() => {
+    // Finalize shape drawing
+    if (isDrawingShape && previewElement && selectedTool) {
+      // Only add if there's meaningful size
+      const hasSize = previewElement.length && previewElement.length > 5 || 
+                     previewElement.radius && previewElement.radius > 2 ||
+                     previewElement.width && previewElement.width > 5;
+      
+      if (hasSize) {
+        const finalElement: DrawingElement = {
+          ...previewElement,
+          id: `element-${Date.now()}`
+        };
+        
+        setDrawingElements(prev => [...prev, finalElement]);
+        
+        toast({
+          title: "Drawing Element Added",
+          description: `${selectedTool.name} created with custom size`
+        });
+      }
+      
+      setIsDrawingShape(false);
+      setPreviewElement(null);
+      setDrawingStart({ x: 0, y: 0 });
+      setDrawingEnd({ x: 0, y: 0 });
+    }
+    
     setDraggedElement(null);
-  }, []);
+  }, [isDrawingShape, previewElement, selectedTool, toast]);
 
   const loadFormation = (formation: string) => {
     const formationData = formations[formation as keyof typeof formations];
@@ -238,19 +351,68 @@ const InteractiveTacticalBoard: React.FC = () => {
   const renderDrawingElement = (element: DrawingElement) => {
     const baseStyle = {
       position: 'absolute' as const,
-      left: `${element.x}%`,
-      top: `${element.y}%`,
-      transform: 'translate(-50%, -50%)',
       cursor: currentMode === 'select' ? 'move' : 'default',
-      zIndex: 10
+      zIndex: element.id === 'preview' ? 5 : 10,
+      opacity: element.id === 'preview' ? 0.7 : 1
     };
 
     switch (element.type) {
       case 'arrow':
+        if (element.endX !== undefined && element.endY !== undefined && element.rotation !== undefined) {
+          // Dynamic arrow with custom length
+          const length = element.length || 50;
+          return (
+            <div
+              key={element.id}
+              style={{
+                ...baseStyle,
+                left: `${element.x}%`,
+                top: `${element.y}%`,
+                width: `${Math.max(length * 2, 20)}px`,
+                height: `${element.size * 2}px`,
+                transform: `translate(-50%, -50%) rotate(${element.rotation}deg)`,
+                transformOrigin: 'center'
+              }}
+              onMouseDown={(e) => element.id !== 'preview' && handleElementMouseDown(element.id, e)}
+            >
+              <svg width="100%" height="100%" viewBox={`0 0 ${Math.max(length * 2, 20)} ${element.size * 2}`}>
+                <defs>
+                  <marker
+                    id={`arrowhead-${element.id}`}
+                    markerWidth="10"
+                    markerHeight="7"
+                    refX="9"
+                    refY="3.5"
+                    orient="auto"
+                    fill={element.color}
+                  >
+                    <polygon points="0 0, 10 3.5, 0 7" />
+                  </marker>
+                </defs>
+                <line
+                  x1="0"
+                  y1={element.size}
+                  x2={Math.max(length * 2, 20)}
+                  y2={element.size}
+                  stroke={element.color}
+                  strokeWidth={element.size}
+                  markerEnd={`url(#arrowhead-${element.id})`}
+                  strokeDasharray={element.color === '#ff0000' ? '5,5' : 'none'}
+                />
+              </svg>
+            </div>
+          );
+        }
+        // Fallback for regular arrow
         return (
           <div
             key={element.id}
-            style={baseStyle}
+            style={{
+              ...baseStyle,
+              left: `${element.x}%`,
+              top: `${element.y}%`,
+              transform: 'translate(-50%, -50%)'
+            }}
             onMouseDown={(e) => handleElementMouseDown(element.id, e)}
             className="flex items-center justify-center"
           >
@@ -263,47 +425,80 @@ const InteractiveTacticalBoard: React.FC = () => {
         );
       
       case 'line':
+        if (element.endX !== undefined && element.endY !== undefined && element.rotation !== undefined) {
+          // Dynamic line with custom length
+          const length = element.length || 50;
+          return (
+            <div
+              key={element.id}
+              style={{
+                ...baseStyle,
+                left: `${element.x}%`,
+                top: `${element.y}%`,
+                width: `${Math.max(length * 2, 10)}px`,
+                height: `${element.size}px`,
+                backgroundColor: element.color,
+                transform: `translate(-50%, -50%) rotate(${element.rotation}deg)`,
+                transformOrigin: 'center'
+              }}
+              onMouseDown={(e) => element.id !== 'preview' && handleElementMouseDown(element.id, e)}
+            />
+          );
+        }
+        // Fallback for regular line
         return (
           <div
             key={element.id}
             style={{
               ...baseStyle,
+              left: `${element.x}%`,
+              top: `${element.y}%`,
               width: `${element.size * 20}px`,
               height: '2px',
-              backgroundColor: element.color
+              backgroundColor: element.color,
+              transform: 'translate(-50%, -50%)'
             }}
             onMouseDown={(e) => handleElementMouseDown(element.id, e)}
           />
         );
       
       case 'circle':
+        const circleSize = element.radius ? element.radius * 2 : element.size * 15;
         return (
           <div
             key={element.id}
             style={{
               ...baseStyle,
-              width: `${element.size * 15}px`,
-              height: `${element.size * 15}px`,
+              left: `${element.x}%`,
+              top: `${element.y}%`,
+              width: `${Math.max(circleSize, 10)}px`,
+              height: `${Math.max(circleSize, 10)}px`,
               border: `2px solid ${element.color}`,
               borderRadius: '50%',
-              backgroundColor: 'transparent'
+              backgroundColor: 'transparent',
+              transform: 'translate(-50%, -50%)'
             }}
-            onMouseDown={(e) => handleElementMouseDown(element.id, e)}
+            onMouseDown={(e) => element.id !== 'preview' && handleElementMouseDown(element.id, e)}
           />
         );
       
       case 'square':
+        const squareWidth = element.width || element.size * 15;
+        const squareHeight = element.height || element.size * 15;
         return (
           <div
             key={element.id}
             style={{
               ...baseStyle,
-              width: `${element.size * 15}px`,  
-              height: `${element.size * 15}px`,
+              left: `${element.x}%`,
+              top: `${element.y}%`,
+              width: `${Math.max(squareWidth, 10)}px`,  
+              height: `${Math.max(squareHeight, 10)}px`,
               border: `2px solid ${element.color}`,
-              backgroundColor: 'transparent'
+              backgroundColor: 'transparent',
+              transform: 'translate(-50%, -50%)'
             }}
-            onMouseDown={(e) => handleElementMouseDown(element.id, e)}
+            onMouseDown={(e) => element.id !== 'preview' && handleElementMouseDown(element.id, e)}
           />
         );
       
@@ -311,7 +506,12 @@ const InteractiveTacticalBoard: React.FC = () => {
         return (
           <div
             key={element.id}
-            style={baseStyle}
+            style={{
+              ...baseStyle,
+              left: `${element.x}%`,
+              top: `${element.y}%`,
+              transform: 'translate(-50%, -50%)'
+            }}
             onMouseDown={(e) => handleElementMouseDown(element.id, e)}
           >
             <div 
@@ -332,11 +532,14 @@ const InteractiveTacticalBoard: React.FC = () => {
             key={element.id}
             style={{
               ...baseStyle,
+              left: `${element.x}%`,
+              top: `${element.y}%`,
               width: `${element.size * 10}px`,
               height: `${element.size * 10}px`,
               backgroundColor: element.color,
               borderRadius: '50%',
-              border: '1px solid #000'
+              border: '1px solid #000',
+              transform: 'translate(-50%, -50%)'
             }}
             onMouseDown={(e) => handleElementMouseDown(element.id, e)}
           />
@@ -346,7 +549,12 @@ const InteractiveTacticalBoard: React.FC = () => {
         return (
           <div
             key={element.id}
-            style={baseStyle}
+            style={{
+              ...baseStyle,
+              left: `${element.x}%`,
+              top: `${element.y}%`,
+              transform: 'translate(-50%, -50%)'
+            }}
             onMouseDown={(e) => handleElementMouseDown(element.id, e)}
             className="flex flex-col items-center"
           >
@@ -563,7 +771,7 @@ const InteractiveTacticalBoard: React.FC = () => {
               backgroundPosition: 'center',
               backgroundRepeat: 'no-repeat'
             }}
-            onClick={handleBoardClick}
+            onMouseDown={handleBoardMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
@@ -587,10 +795,28 @@ const InteractiveTacticalBoard: React.FC = () => {
             {/* Drawing Elements */}
             {drawingElements.map(renderDrawingElement)}
 
-            {/* Current Tool Preview */}
+            {/* Preview Element During Drawing */}
+            {previewElement && renderDrawingElement(previewElement)}
+
+            {/* Drawing Instructions */}
             {currentMode === 'draw' && selectedTool && (
-              <div className="absolute bottom-4 left-4 bg-black bg-opacity-50 text-white px-3 py-2 rounded text-sm">
-                Click to place: {selectedTool.name}
+              <div className="absolute bottom-4 left-4 bg-black bg-opacity-75 text-white px-4 py-3 rounded-lg text-sm max-w-xs">
+                <div className="font-semibold mb-1">Drawing: {selectedTool.name}</div>
+                {['line', 'arrow', 'circle', 'square'].includes(selectedTool.type) ? (
+                  <div>
+                    <div>• Click and drag to set size</div>
+                    <div>• Release to place element</div>
+                  </div>
+                ) : (
+                  <div>• Click to place element</div>
+                )}
+              </div>
+            )}
+
+            {/* Select Mode Instructions */}
+            {currentMode === 'select' && drawingElements.length > 0 && (
+              <div className="absolute bottom-4 left-4 bg-blue-900 bg-opacity-75 text-white px-4 py-2 rounded-lg text-sm">
+                Select Mode: Drag elements to move them
               </div>
             )}
           </div>

@@ -122,18 +122,21 @@ The system uses PostgreSQL with the following core entities:
 ## Recent Changes
 
 ### July 2, 2025 - Interactive Tactical Board with Draggable Drawing Tools and Complete Design System
-✓ Built full-featured Interactive Tactical Board with draggable drawing tools system
+✓ Built full-featured Interactive Tactical Board with dynamic draggable drawing tools system
 ✓ Implemented mode switching: Select (move elements), Draw (place tools), Player (add players)
 ✓ Created 8 draggable drawing tools: Pass arrows, run arrows, formation lines, zone circles, area markers, cones, balls, flags
-✓ Added comprehensive tool customization: color picker with 8 presets, size slider (1-10), custom color input
+✓ Added dynamic size adjustment: Users can click and drag to determine length of lines/arrows and size of circles/rectangles
+✓ Built real-time preview system showing element dimensions while dragging before placement
+✓ Enhanced tool customization: color picker with 8 presets, size slider (1-10), custom color input
 ✓ Built formation system with preset layouts: 4-4-2 and 4-3-3 with automatic player positioning
 ✓ Implemented drag-and-drop functionality for all drawing elements with boundary containment
 ✓ Added zoom controls (50%-200%) with reset functionality for detailed tactical planning
 ✓ Created professional sidebar tool panel with organized sections and visual feedback
 ✓ Integrated export functionality to PNG images for presentations and sharing
-✓ Built clear-all functionality and undo system for iterative tactical design
-✓ Enhanced UI with real-time tool preview and interactive element highlighting
+✓ Built clear-all functionality and contextual instructions for each drawing mode
+✓ Enhanced UI with real-time tool preview, dynamic SVG arrows, and interactive element highlighting
 ✓ Designed responsive layout with left sidebar tools and main canvas area
+✓ Added intelligent minimum size requirements to prevent accidental tiny elements
 ✓ Created comprehensive Bubble.io tactical board design guide with TacticalPad-style layout
 ✓ Designed complete database structure: Formation, Player_Position, Tactical_Setup, Drawing_Element data types
 ✓ Built detailed implementation guide with step-by-step Bubble.io workflows and configurations
