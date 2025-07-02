@@ -57,6 +57,22 @@ export default function AddPlayerDialog({ open, onOpenChange }: AddPlayerDialogP
     return symbols[currency] || currency;
   };
 
+  // Calculate age from date of birth
+  const calculateAge = (dateOfBirth: string) => {
+    if (!dateOfBirth) return null;
+    
+    const today = new Date();
+    const birthDate = new Date(dateOfBirth);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    
+    return age;
+  };
+
   // Calculate total contract value
   const calculateContractTotal = (startDate: string, endDate: string, monthlySalary: number) => {
     if (!startDate || !endDate || !monthlySalary) return 0;
@@ -253,7 +269,7 @@ export default function AddPlayerDialog({ open, onOpenChange }: AddPlayerDialogP
             </div>
 
             {/* Physical Stats */}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="dateOfBirth"
@@ -267,6 +283,24 @@ export default function AddPlayerDialog({ open, onOpenChange }: AddPlayerDialogP
                   </FormItem>
                 )}
               />
+              {/* Age Display */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                  Age
+                </label>
+                <div className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background">
+                  {form.watch("dateOfBirth") ? (
+                    <span className="text-foreground">
+                      {calculateAge(form.watch("dateOfBirth"))} years old
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">Enter date of birth to calculate age</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="height"

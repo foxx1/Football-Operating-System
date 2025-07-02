@@ -116,9 +116,13 @@ export const staff = pgTable("staff", {
   department: text("department").notNull(), // coaching, medical, analysis, operations
   employmentType: text("employment_type").notNull(), // full_time, part_time, contract, volunteer
   startDate: text("start_date").notNull(),
+  contractEndDate: text("contract_end_date"), // contract end date
   salary: integer("salary"), // monthly salary
   qualifications: text("qualifications"),
   emergencyContact: text("emergency_contact"),
+  profilePicture: text("profile_picture"), // file path to profile photo
+  idDocument: text("id_document"), // file path to ID/passport copy
+  contractDocument: text("contract_document"), // file path to signed contract
   isActive: boolean("is_active").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
