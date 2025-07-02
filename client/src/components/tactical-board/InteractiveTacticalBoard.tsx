@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import * as htmlToImage from 'html-to-image';
 import { useToast } from '@/hooks/use-toast';
-import classicFootballFieldSvg from '@/assets/classic-football-field.svg';
+import footballPitchSvg from '@/assets/football-pitch.svg';
 import classicFootballSvg from '@/assets/classic-football.svg';
 
 interface Player {
@@ -162,7 +162,7 @@ const InteractiveTacticalBoard: React.FC = () => {
       setDrawingStart({ x, y });
       setDrawingEnd({ x, y });
       
-      // Create preview element
+      // Create initial preview element
       const preview: DrawingElement = {
         id: 'preview',
         type: selectedTool.type,
@@ -178,6 +178,7 @@ const InteractiveTacticalBoard: React.FC = () => {
         height: 0,
         length: 0,
         radius: 0,
+        rotation: 0,
         dashed: selectedTool.dashed || false
       };
       setPreviewElement(preview);
@@ -835,7 +836,7 @@ const InteractiveTacticalBoard: React.FC = () => {
             style={{
               width: `${800 * zoomLevel}px`,
               height: `${520 * zoomLevel}px`,
-              backgroundImage: `url(${classicFootballFieldSvg})`,
+              backgroundImage: `url(${footballPitchSvg})`,
               backgroundSize: 'cover',
               backgroundPosition: 'center',
               backgroundRepeat: 'no-repeat',
@@ -843,11 +844,83 @@ const InteractiveTacticalBoard: React.FC = () => {
               WebkitUserSelect: 'none',
               MozUserSelect: 'none'
             }}
-            onMouseDown={handleBoardMouseDown}
-            onMouseMove={handleMouseMove} 
-            onMouseUp={handleMouseUp}
-            onMouseLeave={(e) => {
-              // Cancel any ongoing drawing when mouse leaves the board
+            onMouseDown={(e) => {
+              e.preventDefault();
+              if (currentMode === 'draw' && selectedTool) {
+                const { x, y } = getBoardCoordinates(e.clientX, e.clientY);
+                const resizableTools = ['line', 'arrow', 'circle', 'square'];
+                
+                if (resizableTools.includes(selectedTool.type)) {
+                  setIsDrawingShape(true);
+                  setDrawingStart({ x, y });
+                  setDrawingEnd({ x, y });
+                } else {
+                  // Fixed-size elements
+                  const newElement: DrawingElement = {
+                    id: `element-${Date.now()}`,
+                    type: selectedTool.type,
+                    x,
+                    y,
+                    color: toolColor,
+                    size: toolSize,
+                    dashed: selectedTool.dashed || false
+                  };
+                  setDrawingElements(prev => [...prev, newElement]);
+                }
+              }
+            }}
+            onMouseMove={(e) => {
+              const { x, y } = getBoardCoordinates(e.clientX, e.clientY);
+              setMousePosition({ x, y });
+              
+              if (isDrawingShape && selectedTool) {
+                const distance = Math.sqrt(
+                  Math.pow(x - drawingStart.x, 2) + Math.pow(y - drawingStart.y, 2)
+                );
+                const angle = Math.atan2(y - drawingStart.y, x - drawingStart.x);
+                
+                const preview: DrawingElement = {
+                  id: 'preview',
+                  type: selectedTool.type,
+                  x: selectedTool.type === 'circle' ? (drawingStart.x + x) / 2 : drawingStart.x,
+                  y: selectedTool.type === 'circle' ? (drawingStart.y + y) / 2 : drawingStart.y,
+                  color: toolColor,
+                  size: toolSize,
+                  startX: drawingStart.x,
+                  startY: drawingStart.y,
+                  endX: x,
+                  endY: y,
+                  width: selectedTool.type === 'square' ? Math.abs(x - drawingStart.x) : undefined,
+                  height: selectedTool.type === 'square' ? Math.abs(y - drawingStart.y) : undefined,
+                  length: ['line', 'arrow'].includes(selectedTool.type) ? distance : undefined,
+                  radius: selectedTool.type === 'circle' ? distance / 2 : undefined,
+                  rotation: ['line', 'arrow'].includes(selectedTool.type) ? angle * (180 / Math.PI) : undefined,
+                  dashed: selectedTool.dashed || false
+                };
+                
+                setPreviewElement(preview);
+                setDrawingEnd({ x, y });
+              }
+            }}
+            onMouseUp={() => {
+              if (isDrawingShape && previewElement) {
+                const distance = Math.sqrt(
+                  Math.pow(drawingEnd.x - drawingStart.x, 2) + Math.pow(drawingEnd.y - drawingStart.y, 2)
+                );
+                
+                if (distance > 10) { // Minimum size
+                  const finalElement: DrawingElement = {
+                    ...previewElement,
+                    id: `element-${Date.now()}`
+                  };
+                  setDrawingElements(prev => [...prev, finalElement]);
+                }
+                
+                setIsDrawingShape(false);
+                setPreviewElement(null);
+              }
+            }}
+            onMouseLeave={() => {
               if (isDrawingShape) {
                 setIsDrawingShape(false);
                 setPreviewElement(null);
