@@ -1,0 +1,21 @@
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <!-- Classic Football/Soccer Ball -->
+  <circle cx="12" cy="12" r="10" fill="#ffffff" stroke="#000000" stroke-width="1"/>
+  
+  <!-- Pentagon pattern in center -->
+  <polygon points="12,6 15,9 13.5,13 10.5,13 9,9" fill="#000000"/>
+  
+  <!-- Curved lines connecting to pentagon -->
+  <path d="M 12 6 Q 8 8 9 9" fill="none" stroke="#000000" stroke-width="1"/>
+  <path d="M 15 9 Q 17 12 13.5 13" fill="none" stroke="#000000" stroke-width="1"/>
+  <path d="M 13.5 13 Q 12 17 10.5 13" fill="none" stroke="#000000" stroke-width="1"/>
+  <path d="M 10.5 13 Q 7 12 9 9" fill="none" stroke="#000000" stroke-width="1"/>
+  <path d="M 9 9 Q 10 5 12 6" fill="none" stroke="#000000" stroke-width="1"/>
+  
+  <!-- Additional curved lines for classic soccer ball pattern -->
+  <path d="M 12 6 Q 16 4 18 8" fill="none" stroke="#000000" stroke-width="1"/>
+  <path d="M 15 9 Q 19 11 18 16" fill="none" stroke="#000000" stroke-width="1"/>
+  <path d="M 13.5 13 Q 14 18 10 18" fill="none" stroke="#000000" stroke-width="1"/>
+  <path d="M 10.5 13 Q 6 16 6 12" fill="none" stroke="#000000" stroke-width="1"/>
+  <path d="M 9 9 Q 5 6 8 4" fill="none" stroke="#000000" stroke-width="1"/>
+</svg>

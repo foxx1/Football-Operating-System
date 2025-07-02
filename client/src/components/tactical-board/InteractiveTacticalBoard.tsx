@@ -23,6 +23,7 @@ import {
 import * as htmlToImage from 'html-to-image';
 import { useToast } from '@/hooks/use-toast';
 import classicFootballFieldSvg from '@/assets/classic-football-field.svg';
+import classicFootballSvg from '@/assets/classic-football.svg';
 
 interface Player {
   id: string;
@@ -43,6 +44,7 @@ interface DrawingTool {
   x: number;
   y: number;
   isDraggable: boolean;
+  dashed?: boolean;
 }
 
 interface DrawingElement {
@@ -61,6 +63,7 @@ interface DrawingElement {
   endY?: number;
   length?: number; // For lines and arrows
   radius?: number; // For circles
+  dashed?: boolean; // For dashed lines
 }
 
 const InteractiveTacticalBoard: React.FC = () => {
@@ -87,11 +90,12 @@ const InteractiveTacticalBoard: React.FC = () => {
   const drawingTools: Omit<DrawingTool, 'x' | 'y' | 'id' | 'isDraggable'>[] = [
     { type: 'arrow', name: 'Pass Arrow', icon: <ArrowRight className="w-4 h-4" />, color: '#00ff00', size: 3 },
     { type: 'arrow', name: 'Run Arrow', icon: <ArrowRight className="w-4 h-4 transform rotate-45" />, color: '#ff0000', size: 3 },
-    { type: 'line', name: 'Formation Line', icon: <Minus className="w-4 h-4" />, color: '#ffffff', size: 2 },
+    { type: 'line', name: 'Solid Line', icon: <Minus className="w-4 h-4" />, color: '#ffffff', size: 2 },
+    { type: 'line', name: 'Dashed Line', icon: <div className="w-4 h-1 border-t-2 border-dashed border-white"></div>, color: '#ffffff', size: 2, dashed: true },
     { type: 'circle', name: 'Zone Circle', icon: <Circle className="w-4 h-4" />, color: '#ffff00', size: 4 },
     { type: 'square', name: 'Area Marker', icon: <Square className="w-4 h-4" />, color: '#00ffff', size: 4 },
     { type: 'cone', name: 'Training Cone', icon: <div className="w-0 h-0 border-l-2 border-r-2 border-b-4 border-transparent border-b-orange-500" />, color: '#ff8c00', size: 2 },
-    { type: 'ball', name: 'Football', icon: <Circle className="w-4 h-4 fill-current" />, color: '#8b4513', size: 2 },
+    { type: 'ball', name: 'Football', icon: <img src={classicFootballSvg} alt="Football" className="w-4 h-4" />, color: '#8b4513', size: 2 },
     { type: 'flag', name: 'Corner Flag', icon: <div className="w-1 h-4 bg-yellow-400 relative"><div className="absolute top-0 left-1 w-2 h-2 bg-red-500"></div></div>, color: '#ffff00', size: 1 }
   ];
 
@@ -149,9 +153,11 @@ const InteractiveTacticalBoard: React.FC = () => {
     const { x, y } = getBoardCoordinates(e.clientX, e.clientY);
     console.log('Board coordinates:', x, y);
     
-    // For shapes that need size adjustment (line, arrow, circle, square)
-    if (['line', 'arrow', 'circle', 'square'].includes(selectedTool.type)) {
-      console.log('Starting shape drawing for:', selectedTool.type);
+    // Only allow resizing for specific tools: line, arrow, circle, square
+    const resizableTools = ['line', 'arrow', 'circle', 'square'];
+    
+    if (resizableTools.includes(selectedTool.type)) {
+      console.log('Starting resizable shape drawing for:', selectedTool.type);
       setIsDrawingShape(true);
       setDrawingStart({ x, y });
       setDrawingEnd({ x, y });
@@ -171,11 +177,12 @@ const InteractiveTacticalBoard: React.FC = () => {
         width: 0,
         height: 0,
         length: 0,
-        radius: 0
+        radius: 0,
+        dashed: selectedTool.dashed || false
       };
       setPreviewElement(preview);
     } else {
-      // For fixed-size elements (cone, ball, flag)
+      // For fixed-size elements (cone, ball, flag) - place immediately
       console.log('Adding fixed-size element:', selectedTool.type);
       const newElement: DrawingElement = {
         id: `element-${Date.now()}`,
@@ -443,22 +450,55 @@ const InteractiveTacticalBoard: React.FC = () => {
         if (element.endX !== undefined && element.endY !== undefined && element.rotation !== undefined) {
           // Dynamic line with custom length
           const length = element.length || 50;
-          return (
-            <div
-              key={element.id}
-              style={{
-                ...baseStyle,
-                left: `${element.x}%`,
-                top: `${element.y}%`,
-                width: `${Math.max(length * 2, 10)}px`,
-                height: `${element.size}px`,
-                backgroundColor: element.color,
-                transform: `translate(-50%, -50%) rotate(${element.rotation}deg)`,
-                transformOrigin: 'center'
-              }}
-              onMouseDown={(e) => element.id !== 'preview' && handleElementMouseDown(element.id, e)}
-            />
-          );
+          
+          if (element.dashed) {
+            // Render dashed line using SVG
+            return (
+              <div
+                key={element.id}
+                style={{
+                  ...baseStyle,
+                  left: `${element.x}%`,
+                  top: `${element.y}%`,
+                  width: `${Math.max(length * 2, 10)}px`,
+                  height: `${element.size * 2}px`,
+                  transform: `translate(-50%, -50%) rotate(${element.rotation}deg)`,
+                  transformOrigin: 'center'
+                }}
+                onMouseDown={(e) => element.id !== 'preview' && handleElementMouseDown(element.id, e)}
+              >
+                <svg width="100%" height="100%" viewBox={`0 0 ${Math.max(length * 2, 10)} ${element.size * 2}`}>
+                  <line
+                    x1="0"
+                    y1={element.size}
+                    x2={Math.max(length * 2, 10)}
+                    y2={element.size}
+                    stroke={element.color}
+                    strokeWidth={element.size}
+                    strokeDasharray="8,4"
+                  />
+                </svg>
+              </div>
+            );
+          } else {
+            // Solid line
+            return (
+              <div
+                key={element.id}
+                style={{
+                  ...baseStyle,
+                  left: `${element.x}%`,
+                  top: `${element.y}%`,
+                  width: `${Math.max(length * 2, 10)}px`,
+                  height: `${element.size}px`,
+                  backgroundColor: element.color,
+                  transform: `translate(-50%, -50%) rotate(${element.rotation}deg)`,
+                  transformOrigin: 'center'
+                }}
+                onMouseDown={(e) => element.id !== 'preview' && handleElementMouseDown(element.id, e)}
+              />
+            );
+          }
         }
         // Fallback for regular line
         return (
