@@ -41,11 +41,11 @@
   <!-- Right penalty spot -->
   <circle cx="1030" cy="400" r="2" fill="white"/>
   
-  <!-- Left penalty arc - properly centered on penalty spot -->
-  <path d="M 170,315 A 85,85 0 0,1 170,485" fill="none" stroke="white" stroke-width="3"/>
+  <!-- Left penalty arc - properly positioned outside penalty area -->
+  <path d="M 224,335 A 85,85 0 0,1 224,465" fill="none" stroke="white" stroke-width="3"/>
   
-  <!-- Right penalty arc - properly centered on penalty spot -->
-  <path d="M 1030,315 A 85,85 0 0,0 1030,485" fill="none" stroke="white" stroke-width="3"/>
+  <!-- Right penalty arc - properly positioned outside penalty area -->
+  <path d="M 976,335 A 85,85 0 0,0 976,465" fill="none" stroke="white" stroke-width="3"/>
   
   <!-- Corner arcs - quarter circles at each corner -->
   <!-- Top-left corner -->
