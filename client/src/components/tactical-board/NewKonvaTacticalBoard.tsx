@@ -181,19 +181,24 @@ const NewKonvaTacticalBoard: React.FC = () => {
 
   // Stage event handlers
   const handleStageClick = useCallback((e: KonvaEventObject<MouseEvent>) => {
+    console.log('Stage clicked!', { currentMode, selectedTool: selectedTool?.name });
+    
     const clickedOnEmpty = e.target === e.target.getStage();
+    console.log('Clicked on empty:', clickedOnEmpty);
     
     if (clickedOnEmpty) {
       setSelectedId(null);
       
       if (currentMode === 'draw' && selectedTool) {
         const pos = e.target.getStage()?.getPointerPosition();
+        console.log('Drawing position:', pos);
         if (!pos) return;
 
         const resizableTools = ['line', 'arrow', 'circle', 'square'];
         
         if (resizableTools.includes(selectedTool.type)) {
           if (!isDrawing) {
+            console.log('Starting drawing for resizable tool:', selectedTool.type);
             setIsDrawing(true);
             setDrawingStart(pos);
             setPreviewElement({
@@ -208,6 +213,7 @@ const NewKonvaTacticalBoard: React.FC = () => {
           }
         } else {
           // Fixed-size elements
+          console.log('Adding fixed-size element:', selectedTool.type);
           const newElement: DrawingElement = {
             id: `element-${Date.now()}-${Math.random()}`,
             type: selectedTool.type,
@@ -218,6 +224,7 @@ const NewKonvaTacticalBoard: React.FC = () => {
             dashed: selectedTool.dashed || false
           };
           
+          console.log('New element:', newElement);
           const newElements = [...drawingElements, newElement];
           setDrawingElements(newElements);
           saveToHistory(newElements);
@@ -724,6 +731,16 @@ const NewKonvaTacticalBoard: React.FC = () => {
             scaleX={zoomLevel}
             scaleY={zoomLevel}
             onClick={handleStageClick}
+            onMouseDown={(e) => {
+              console.log('Mouse down on stage');
+              if (currentMode === 'draw' && selectedTool) {
+                const pos = e.target.getStage()?.getPointerPosition();
+                if (pos) {
+                  console.log('Starting drawing at:', pos);
+                  handleStageClick(e);
+                }
+              }
+            }}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             style={{
