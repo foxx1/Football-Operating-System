@@ -183,8 +183,9 @@ const NewKonvaTacticalBoard: React.FC = () => {
   const handleStageClick = useCallback((e: KonvaEventObject<MouseEvent>) => {
     console.log('Stage clicked!', { currentMode, selectedTool: selectedTool?.name });
     
-    const clickedOnEmpty = e.target === e.target.getStage();
-    console.log('Clicked on empty:', clickedOnEmpty);
+    // Allow clicks on field image or stage
+    const clickedOnEmpty = e.target === e.target.getStage() || e.target.getClassName() === 'Image';
+    console.log('Clicked on empty:', clickedOnEmpty, 'Target:', e.target.getClassName());
     
     if (clickedOnEmpty) {
       setSelectedId(null);
