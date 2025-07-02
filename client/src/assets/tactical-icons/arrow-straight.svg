@@ -1,0 +1,8 @@
+<svg width="48" height="16" viewBox="0 0 48 16" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#374151"/>
+    </marker>
+  </defs>
+  <line x1="4" y1="8" x2="40" y2="8" stroke="#374151" stroke-width="2" marker-end="url(#arrowhead)"/>
+</svg>
