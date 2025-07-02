@@ -18,36 +18,37 @@ import {
 } from 'lucide-react';
 import * as htmlToImage from 'html-to-image';
 import { useToast } from '@/hooks/use-toast';
-
-interface Player {
-  id: string;
-  name: string;
-  number: number;
-  x: number;
-  y: number;
-  team: 'home' | 'away';
-}
-
-interface DrawingElement {
-  id: string;
-  type: 'line' | 'arrow' | 'circle' | 'rectangle';
-  startX: number;
-  startY: number;
-  endX: number;
-  endY: number;
-  color: string;
-  strokeWidth: number;
-}
+import { useTacticalBoard, type Player, type DrawingElement } from '@/stores/tacticalBoardStore';
 
 type Tool = 'select' | 'draw' | 'line' | 'arrow' | 'circle' | 'rectangle';
 
 const TacticalBoard: React.FC = () => {
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [drawingElements, setDrawingElements] = useState<DrawingElement[]>([]);
-  const [selectedTool, setSelectedTool] = useState<Tool>('select');
-  const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null);
-  const [zoom, setZoom] = useState(1);
-  const [isDrawing, setIsDrawing] = useState(false);
+  // Zustand store state
+  const {
+    players,
+    selectedPlayer,
+    drawingElements,
+    currentTool,
+    currentColor,
+    currentWidth,
+    isDrawing,
+    zoomLevel,
+    setPlayers,
+    addPlayer,
+    updatePlayer,
+    removePlayer,
+    setSelectedPlayer,
+    addDrawingElement,
+    clearDrawings,
+    setCurrentTool,
+    setCurrentColor,
+    setCurrentWidth,
+    setIsDrawing,
+    setZoomLevel,
+    resetView
+  } = useTacticalBoard();
+
+  // Local component state for UI interactions
   const [currentDrawing, setCurrentDrawing] = useState<DrawingElement | null>(null);
   const [draggedPlayer, setDraggedPlayer] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -172,7 +173,7 @@ const TacticalBoard: React.FC = () => {
     setDragOffset({ x: 0, y: 0 });
   };
 
-  const addPlayer = () => {
+  const handleAddPlayer = () => {
     if (!newPlayerName || !newPlayerNumber) {
       toast({
         title: "Error",
@@ -186,12 +187,15 @@ const TacticalBoard: React.FC = () => {
       id: Date.now().toString(),
       name: newPlayerName,
       number: parseInt(newPlayerNumber),
+      position: selectedTeam === 'home' ? 'Player' : 'Player',
       x: 50,
       y: 50,
-      team: selectedTeam
+      team: selectedTeam,
+      color: selectedTeam === 'home' ? '#3b82f6' : '#ef4444',
+      icon: '⚽'
     };
 
-    setPlayers(prev => [...prev, newPlayer]);
+    addPlayer(newPlayer);
     setNewPlayerName('');
     setNewPlayerNumber('');
     toast({
@@ -200,9 +204,9 @@ const TacticalBoard: React.FC = () => {
     });
   };
 
-  const removePlayer = (playerId: string) => {
-    setPlayers(prev => prev.filter(p => p.id !== playerId));
-    if (selectedPlayer === playerId) {
+  const handleRemovePlayer = (playerId: string) => {
+    removePlayer(playerId);
+    if (selectedPlayer?.id === playerId) {
       setSelectedPlayer(null);
     }
   };

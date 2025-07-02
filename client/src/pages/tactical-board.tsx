@@ -1,9 +1,7 @@
-import TacticalBoard from '@/components/tactical-board/TacticalBoard';
+import TacticalBoardSimple from '@/components/tactical-board/TacticalBoardSimple';
 
 export default function TacticalBoardPage() {
   return (
-    <div className="container mx-auto p-6">
-      <TacticalBoard />
-    </div>
+    <TacticalBoardSimple />
   );
 }
