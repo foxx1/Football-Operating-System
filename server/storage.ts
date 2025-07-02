@@ -2,6 +2,7 @@ import {
   users, players, teams, teamPlayers, trainingSessions, sessionAttendance, 
   tacticalFormations, playerStats, staff, matches, matchSquads, analyticsReports, systemSettings,
   wearableDevices, wearableData, performanceMetrics, monthlyBudgets, expenses, playerContracts,
+  performanceReactions,
   type User, type InsertUser, type Player, type InsertPlayer,
   type Team, type InsertTeam, type TeamPlayer, type InsertTeamPlayer,
   type TrainingSession, type InsertTrainingSession,
@@ -16,7 +17,8 @@ import {
   type PerformanceMetrics, type InsertPerformanceMetrics,
   type MonthlyBudget, type InsertMonthlyBudget,
   type Expense, type InsertExpense,
-  type PlayerContract, type InsertPlayerContract
+  type PlayerContract, type InsertPlayerContract,
+  type PerformanceReaction, type InsertPerformanceReaction
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, sql } from "drizzle-orm";
@@ -145,6 +147,12 @@ export interface IStorage {
   // Budget Summary Methods
   getTotalMonthlySalaries(month: string): Promise<{ staff: number; players: number; total: number }>;
   getBudgetVsActualExpenses(budgetId: number): Promise<{ budgeted: number; actual: number; remaining: number; categories: any[] }>;
+
+  // Performance Reactions
+  getPerformanceReactions(playerId?: number, performanceType?: string): Promise<PerformanceReaction[]>;
+  getPlayerReactionsSummary(playerId: number): Promise<any>;
+  createPerformanceReaction(reaction: InsertPerformanceReaction): Promise<PerformanceReaction>;
+  deletePerformanceReaction(id: number): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -1334,6 +1342,70 @@ export class DatabaseStorage implements IStorage {
       remaining: totalBudgeted - totalActual,
       categories: categoriesWithMetrics
     };
+  }
+
+  // Performance Reactions Methods
+  async getPerformanceReactions(playerId?: number, performanceType?: string): Promise<PerformanceReaction[]> {
+    let query = db.select().from(performanceReactions);
+    
+    if (playerId) {
+      query = query.where(eq(performanceReactions.playerId, playerId));
+    }
+    
+    if (performanceType) {
+      query = query.where(eq(performanceReactions.performanceType, performanceType));
+    }
+    
+    return await query.orderBy(sql`created_at DESC`);
+  }
+
+  async getPlayerReactionsSummary(playerId: number): Promise<any> {
+    const reactions = await db
+      .select()
+      .from(performanceReactions)
+      .where(eq(performanceReactions.playerId, playerId));
+
+    const summary = {
+      totalReactions: reactions.length,
+      positiveReactions: reactions.filter(r => r.isPositive).length,
+      negativeReactions: reactions.filter(r => !r.isPositive).length,
+      avgIntensity: reactions.length > 0 ? reactions.reduce((sum, r) => sum + r.intensity, 0) / reactions.length : 0,
+      recentReactions: reactions.slice(0, 10), // Last 10 reactions
+      categoryBreakdown: this.getCategoryBreakdown(reactions),
+      emojiFrequency: this.getEmojiFrequency(reactions)
+    };
+
+    return summary;
+  }
+
+  private getCategoryBreakdown(reactions: PerformanceReaction[]) {
+    const categories = ['effort', 'skill', 'attitude', 'fitness', 'teamwork', 'improvement'];
+    return categories.map(category => ({
+      category,
+      count: reactions.filter(r => r.category === category).length,
+      positive: reactions.filter(r => r.category === category && r.isPositive).length,
+      negative: reactions.filter(r => r.category === category && !r.isPositive).length
+    }));
+  }
+
+  private getEmojiFrequency(reactions: PerformanceReaction[]) {
+    const emojiCounts: Record<string, number> = {};
+    reactions.forEach(r => {
+      emojiCounts[r.emoji] = (emojiCounts[r.emoji] || 0) + 1;
+    });
+    return Object.entries(emojiCounts)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, 10); // Top 10 emojis
+  }
+
+  async createPerformanceReaction(reaction: InsertPerformanceReaction): Promise<PerformanceReaction> {
+    const [newReaction] = await db.insert(performanceReactions).values(reaction).returning();
+    return newReaction;
+  }
+
+  async deletePerformanceReaction(id: number): Promise<boolean> {
+    const result = await db.delete(performanceReactions).where(eq(performanceReactions.id, id));
+    return result.rowCount! > 0;
   }
 }
 

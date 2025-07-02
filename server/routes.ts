@@ -6,7 +6,8 @@ import {
   insertSessionAttendanceSchema, insertTacticalFormationSchema, insertPlayerStatsSchema,
   insertStaffSchema, insertMatchSchema, insertMatchSquadSchema,
   insertAnalyticsReportSchema, insertSystemSettingsSchema,
-  insertMonthlyBudgetSchema, insertExpenseSchema, insertPlayerContractSchema
+  insertMonthlyBudgetSchema, insertExpenseSchema, insertPlayerContractSchema,
+  insertPerformanceReactionSchema
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express, upload?: any): Promise<Server> {
@@ -1385,6 +1386,59 @@ export async function registerRoutes(app: Express, upload?: any): Promise<Server
     } catch (error) {
       console.error("Error creating player contract:", error);
       res.status(400).json({ error: "Invalid contract data", details: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
+  // Performance Reactions API endpoints
+  app.get("/api/performance-reactions", async (req, res) => {
+    try {
+      const playerId = req.query.playerId ? parseInt(req.query.playerId as string) : undefined;
+      const performanceType = req.query.performanceType as string;
+      const reactions = await storage.getPerformanceReactions(playerId, performanceType);
+      res.json(reactions);
+    } catch (error) {
+      console.error("Error fetching performance reactions:", error);
+      res.status(500).json({ error: "Failed to fetch performance reactions" });
+    }
+  });
+
+  app.get("/api/performance-reactions/player/:playerId", async (req, res) => {
+    try {
+      const playerId = parseInt(req.params.playerId);
+      const reactions = await storage.getPlayerReactionsSummary(playerId);
+      res.json(reactions);
+    } catch (error) {
+      console.error("Error fetching player reactions summary:", error);
+      res.status(500).json({ error: "Failed to fetch player reactions" });
+    }
+  });
+
+  app.post("/api/performance-reactions", async (req, res) => {
+    try {
+      const validatedData = insertPerformanceReactionSchema.parse(req.body);
+      // Set coach ID from session (for now using ID 1 as placeholder)
+      validatedData.coachId = 1;
+      const reaction = await storage.createPerformanceReaction(validatedData);
+      res.status(201).json(reaction);
+    } catch (error) {
+      console.error("Error creating performance reaction:", error);
+      res.status(400).json({ error: "Invalid reaction data", details: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
+  app.delete("/api/performance-reactions/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deletePerformanceReaction(id);
+      
+      if (!success) {
+        return res.status(404).json({ error: "Reaction not found" });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting performance reaction:", error);
+      res.status(500).json({ error: "Failed to delete reaction" });
     }
   });
 

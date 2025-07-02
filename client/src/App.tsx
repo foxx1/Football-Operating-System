@@ -20,6 +20,7 @@ import Settings from "@/pages/settings";
 import Wearables from "@/pages/wearables";
 import CatapultOpenField from "@/pages/catapult-openfield";
 import MonthlyBudgets from "@/pages/monthly-budgets";
+import PerformanceReactionsPage from "@/pages/performance-reactions";
 import NotFound from "@/pages/not-found";
 
 function Layout({ children }: { children: React.ReactNode }) {
@@ -47,6 +48,7 @@ function Router() {
       <Route path="/matches" component={Matches} />
       <Route path="/tactics" component={Tactics} />
       <Route path="/analytics" component={Analytics} />
+      <Route path="/performance-reactions" component={PerformanceReactionsPage} />
       <Route path="/reports" component={Reports} />
       <Route path="/wearables" component={Wearables} />
       <Route path="/catapult-openfield" component={CatapultOpenField} />

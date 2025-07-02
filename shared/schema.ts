@@ -420,6 +420,22 @@ export const terraWebhookLogs = pgTable("terra_webhook_logs", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Performance Reactions - Quick emoji feedback for player performances
+export const performanceReactions = pgTable("performance_reactions", {
+  id: serial("id").primaryKey(),
+  playerId: integer("player_id").notNull().references(() => players.id),
+  coachId: integer("coach_id").notNull().references(() => users.id),
+  performanceType: text("performance_type").notNull(), // training, match, individual_session, assessment
+  performanceId: integer("performance_id"), // reference to specific training session, match, etc.
+  emoji: text("emoji").notNull(), // 👍, 👎, ⚡, 🔥, 💪, ⭐, 😴, 🎯, 💯, ❤️
+  category: text("category").notNull(), // effort, skill, attitude, fitness, teamwork, improvement
+  comment: text("comment"), // optional text comment
+  isPositive: boolean("is_positive").notNull(), // true for positive reactions, false for constructive feedback
+  intensity: integer("intensity").default(3).notNull(), // 1-5 scale for reaction intensity
+  contextDate: date("context_date").notNull(), // when the performance being reacted to occurred
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -484,6 +500,11 @@ export const insertAnalyticsReportSchema = createInsertSchema(analyticsReports).
 export const insertSystemSettingsSchema = createInsertSchema(systemSettings).omit({
   id: true,
   updatedAt: true,
+});
+
+export const insertPerformanceReactionSchema = createInsertSchema(performanceReactions).omit({
+  id: true,
+  createdAt: true,
 });
 
 // Terra-style insert schemas
@@ -588,6 +609,9 @@ export type Expense = typeof expenses.$inferSelect;
 
 export type InsertPlayerContract = z.infer<typeof insertPlayerContractSchema>;
 export type PlayerContract = typeof playerContracts.$inferSelect;
+
+export type InsertPerformanceReaction = z.infer<typeof insertPerformanceReactionSchema>;
+export type PerformanceReaction = typeof performanceReactions.$inferSelect;
 
 // Wearable Devices - For tracking connected fitness devices
 export const wearableDevices = pgTable("wearable_devices", {
