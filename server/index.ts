@@ -41,8 +41,21 @@ const upload = multer({
   }
 });
 
-// Serve uploaded files
-app.use('/uploads', express.static(uploadsDir));
+// Serve uploaded files with proper headers
+app.use('/uploads', express.static(uploadsDir, {
+  setHeaders: (res, path) => {
+    if (path.endsWith('.jpg') || path.endsWith('.jpeg') || path.endsWith('.jfif')) {
+      res.setHeader('Content-Type', 'image/jpeg');
+    } else if (path.endsWith('.png')) {
+      res.setHeader('Content-Type', 'image/png');
+    } else if (path.endsWith('.gif')) {
+      res.setHeader('Content-Type', 'image/gif');
+    } else if (path.endsWith('.pdf')) {
+      res.setHeader('Content-Type', 'application/pdf');
+    }
+    res.setHeader('Cache-Control', 'public, max-age=31536000');
+  }
+}));
 
 app.use((req, res, next) => {
   const start = Date.now();
