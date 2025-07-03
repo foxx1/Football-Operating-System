@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -129,6 +129,55 @@ export default function AddPlayerDialog({ open, onOpenChange, editingPlayer }: A
       isActive: true,
     },
   });
+
+  // Reset form when editingPlayer changes
+  useEffect(() => {
+    if (editingPlayer) {
+      form.reset({
+        firstName: editingPlayer.firstName || "",
+        lastName: editingPlayer.lastName || "",
+        position: editingPlayer.position || "midfielder",
+        nationality: editingPlayer.nationality || "",
+        dateOfBirth: editingPlayer.dateOfBirth || "",
+        email: editingPlayer.email || "",
+        phoneNumber: editingPlayer.phoneNumber || "",
+        shirtNumber: editingPlayer.shirtNumber || undefined,
+        height: editingPlayer.height || undefined,
+        weight: editingPlayer.weight || undefined,
+        emergencyContact: editingPlayer.emergencyContact || "",
+        medicalNotes: editingPlayer.medicalNotes || "",
+        profilePicture: editingPlayer.profilePicture || "",
+        idDocument: editingPlayer.idDocument || "",
+        contractDocument: editingPlayer.contractDocument || "",
+        contractStartDate: editingPlayer.contractStartDate || "",
+        contractEndDate: editingPlayer.contractEndDate || "",
+        monthlySalary: editingPlayer.monthlySalary || "",
+        isActive: editingPlayer.isActive ?? true,
+      });
+    } else {
+      form.reset({
+        firstName: "",
+        lastName: "",
+        position: "midfielder",
+        nationality: "",
+        dateOfBirth: "",
+        email: "",
+        phoneNumber: "",
+        shirtNumber: undefined,
+        height: undefined,
+        weight: undefined,
+        emergencyContact: "",
+        medicalNotes: "",
+        profilePicture: "",
+        idDocument: "",
+        contractDocument: "",
+        contractStartDate: "",
+        contractEndDate: "",
+        monthlySalary: "",
+        isActive: true,
+      });
+    }
+  }, [editingPlayer, form]);
 
   const mutation = useMutation({
     mutationFn: async (data: FormData) => {
