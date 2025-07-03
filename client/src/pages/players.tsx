@@ -193,21 +193,17 @@ export default function Players() {
             <CardContent className="p-6">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center space-x-3">
-                  {player.profilePicture ? (
-                    <img
-                      src={`http://localhost:5000${player.profilePicture}`}
-                      alt={`${player.firstName} ${player.lastName}`}
-                      className="w-12 h-12 rounded-full object-cover"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiByeD0iMjQiIGZpbGw9IiNlNWU3ZWIiLz4KPHN2ZyB4PSIxMiIgeT0iMTIiIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8cGF0aCBkPSJNMTIgMTJDMTQuNSAxMiAxNi41IDEwIDE2LjUgNy41QzE2LjUgNSAxNC41IDMgMTIgM0M5LjUgMyA3LjUgNSA3LjUgNy41QzcuNSAxMCA5LjUgMTIgMTIgMTJaTTEyIDE0LjVDOSAxNC41IDMgMTYgMyAxOVYyMUgyMVYxOUMyMSAxNiAxNSAxNC41IDEyIDE0LjVaIiBmaWxsPSIjOWNhM2FmIi8+Cjwvc3ZnPgo8L3N2Zz4K';
-                      }}
-                    />
-                  ) : (
-                    <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-medium">
-                      {player.firstName[0]}{player.lastName[0]}
-                    </div>
-                  )}
+                  <div 
+                    className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-medium"
+                    style={{
+                      backgroundImage: player.profilePicture ? `url(${player.profilePicture})` : 'none',
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                      color: player.profilePicture ? 'transparent' : '#6b7280'
+                    }}
+                  >
+                    {player.firstName[0]}{player.lastName[0]}
+                  </div>
                   <div>
                     <h3 className="font-semibold text-foreground">
                       {player.firstName} {player.lastName}
