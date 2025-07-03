@@ -181,6 +181,20 @@ export default function PlayerCard({
               <Edit className="w-3 h-3 mr-1" />
               Edit
             </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (window.confirm(`Are you sure you want to delete ${player.firstName} ${player.lastName}?`)) {
+                  onDelete(player.id);
+                }
+              }}
+            >
+              <Trash2 className="w-3 h-3 mr-1" />
+              Delete
+            </Button>
           </motion.div>
         </CardContent>
 
