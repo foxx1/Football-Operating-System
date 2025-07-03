@@ -194,12 +194,20 @@ export default function Players() {
             <CardContent className="p-6">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center space-x-3">
-                  <ProfileImage
-                    imageUrl={player.profilePicture}
-                    firstName={player.firstName}
-                    lastName={player.lastName}
-                    size="md"
-                  />
+                  <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-medium overflow-hidden">
+                    {player.profilePicture ? (
+                      <img
+                        src={`http://localhost:5000${player.profilePicture}`}
+                        alt={`${player.firstName} ${player.lastName}`}
+                        className="w-full h-full object-cover"
+                        style={{ display: 'block' }}
+                      />
+                    ) : (
+                      <span className="text-sm font-medium">
+                        {player.firstName[0]}{player.lastName[0]}
+                      </span>
+                    )}
+                  </div>
                   <div>
                     <h3 className="font-semibold text-foreground">
                       {player.firstName} {player.lastName}

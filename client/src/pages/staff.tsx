@@ -175,12 +175,20 @@ export default function StaffPage() {
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
                 <div className="flex items-center space-x-3">
-                  <ProfileImage
-                    imageUrl={member.profilePicture}
-                    firstName={member.firstName}
-                    lastName={member.lastName}
-                    size="md"
-                  />
+                  <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-medium overflow-hidden">
+                    {member.profilePicture ? (
+                      <img
+                        src={`http://localhost:5000${member.profilePicture}`}
+                        alt={`${member.firstName} ${member.lastName}`}
+                        className="w-full h-full object-cover"
+                        style={{ display: 'block' }}
+                      />
+                    ) : (
+                      <span className="text-sm font-medium">
+                        {member.firstName[0]}{member.lastName[0]}
+                      </span>
+                    )}
+                  </div>
                   <div>
                     <CardTitle className="text-lg">
                       {member.firstName} {member.lastName}
