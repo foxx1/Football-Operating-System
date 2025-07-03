@@ -174,16 +174,26 @@ export default function StaffPage() {
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
                 <div className="flex items-center space-x-3">
-                  <div 
-                    className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-medium"
-                    style={{
-                      backgroundImage: member.profilePicture ? `url(http://localhost:5000${member.profilePicture}?t=${Date.now()})` : 'none',
-                      backgroundSize: 'cover',
-                      backgroundPosition: 'center',
-                      color: member.profilePicture ? 'transparent' : '#6b7280'
-                    }}
-                  >
-                    {member.firstName[0]}{member.lastName[0]}
+                  <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-medium relative overflow-hidden">
+                    {member.profilePicture ? (
+                      <img
+                        src={`http://localhost:5000${member.profilePicture}?v=${Math.random()}`}
+                        alt={`${member.firstName} ${member.lastName}`}
+                        className="absolute inset-0 w-full h-full object-cover rounded-full"
+                        onLoad={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.style.opacity = '1';
+                        }}
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                        }}
+                        style={{ opacity: '0', transition: 'opacity 0.3s' }}
+                      />
+                    ) : null}
+                    <span className={`${member.profilePicture ? 'absolute' : ''} z-10`}>
+                      {member.firstName[0]}{member.lastName[0]}
+                    </span>
                   </div>
                   <div>
                     <CardTitle className="text-lg">

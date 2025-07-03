@@ -193,16 +193,26 @@ export default function Players() {
             <CardContent className="p-6">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center space-x-3">
-                  <div 
-                    className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-medium"
-                    style={{
-                      backgroundImage: player.profilePicture ? `url(http://localhost:5000${player.profilePicture}?t=${Date.now()})` : 'none',
-                      backgroundSize: 'cover',
-                      backgroundPosition: 'center',
-                      color: player.profilePicture ? 'transparent' : '#6b7280'
-                    }}
-                  >
-                    {player.firstName[0]}{player.lastName[0]}
+                  <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-medium relative overflow-hidden">
+                    {player.profilePicture ? (
+                      <img
+                        src={`http://localhost:5000${player.profilePicture}?v=${Math.random()}`}
+                        alt={`${player.firstName} ${player.lastName}`}
+                        className="absolute inset-0 w-full h-full object-cover rounded-full"
+                        onLoad={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.style.opacity = '1';
+                        }}
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                        }}
+                        style={{ opacity: '0', transition: 'opacity 0.3s' }}
+                      />
+                    ) : null}
+                    <span className={`${player.profilePicture ? 'absolute' : ''} z-10`}>
+                      {player.firstName[0]}{player.lastName[0]}
+                    </span>
                   </div>
                   <div>
                     <h3 className="font-semibold text-foreground">
