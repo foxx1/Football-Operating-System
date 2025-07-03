@@ -106,7 +106,7 @@ export default function DetailedPreview({
           .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px; }
           .info-section { background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; }
           .section-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #1e40af; border-bottom: 1px solid #cbd5e1; padding-bottom: 5px; }
-          .info-item { display: flex; justify-content: space-between; margin-bottom: 8px; }
+          .info-item { margin-bottom: 8px; }
           .info-label { font-weight: 600; color: #4b5563; }
           .info-value { color: #374151; }
           .full-width { grid-column: 1 / -1; }
@@ -138,13 +138,11 @@ export default function DetailedPreview({
               <div class="profile-name">${person.firstName} ${person.lastName}</div>
               <div class="profile-role">${isPlayer ? (person as Player).position : formatRole?.((person as Staff).role) || (person as Staff).role}</div>
               <div class="info-item">
-                <span class="info-label">Email:</span>
-                <span class="info-value">${person.email}</span>
+                <span class="info-label">Email:</span><span class="info-value">${person.email}</span>
               </div>
               ${person.phoneNumber ? `
                 <div class="info-item">
-                  <span class="info-label">Phone:</span>
-                  <span class="info-value">${person.phoneNumber}</span>
+                  <span class="info-label">Phone:</span><span class="info-value">${person.phoneNumber}</span>
                 </div>
               ` : ''}
             </div>
@@ -166,52 +164,42 @@ export default function DetailedPreview({
         <div class="info-section">
           <div class="section-title">Basic Information</div>
           <div class="info-item">
-            <span class="info-label">Date of Birth:</span>
-            <span class="info-value">${player.dateOfBirth ? new Date(player.dateOfBirth).toLocaleDateString() : 'N/A'}</span>
+            <span class="info-label">Date of Birth:</span><span class="info-value">${player.dateOfBirth ? new Date(player.dateOfBirth).toLocaleDateString() : 'N/A'}</span>
           </div>
           <div class="info-item">
-            <span class="info-label">Nationality:</span>
-            <span class="info-value">${player.nationality || 'N/A'}</span>
+            <span class="info-label">Nationality:</span><span class="info-value">${player.nationality || 'N/A'}</span>
           </div>
           <div class="info-item">
-            <span class="info-label">Height:</span>
-            <span class="info-value">${player.height || 'N/A'}</span>
+            <span class="info-label">Height:</span><span class="info-value">${player.height || 'N/A'}</span>
           </div>
           <div class="info-item">
-            <span class="info-label">Weight:</span>
-            <span class="info-value">${player.weight || 'N/A'}</span>
+            <span class="info-label">Weight:</span><span class="info-value">${player.weight || 'N/A'}</span>
           </div>
           <div class="info-item">
-            <span class="info-label">Jersey Number:</span>
-            <span class="info-value">${player.shirtNumber || 'N/A'}</span>
+            <span class="info-label">Jersey Number:</span><span class="info-value">${player.shirtNumber || 'N/A'}</span>
           </div>
         </div>
         
         <div class="info-section">
           <div class="section-title">Contract Details</div>
           <div class="info-item">
-            <span class="info-label">Contract Start:</span>
-            <span class="info-value">${player.contractStartDate ? new Date(player.contractStartDate).toLocaleDateString() : 'N/A'}</span>
+            <span class="info-label">Contract Start:</span><span class="info-value">${player.contractStartDate ? new Date(player.contractStartDate).toLocaleDateString() : 'N/A'}</span>
           </div>
           <div class="info-item">
-            <span class="info-label">Contract End:</span>
-            <span class="info-value">${player.contractEndDate ? new Date(player.contractEndDate).toLocaleDateString() : 'N/A'}</span>
+            <span class="info-label">Contract End:</span><span class="info-value">${player.contractEndDate ? new Date(player.contractEndDate).toLocaleDateString() : 'N/A'}</span>
           </div>
           <div class="info-item">
-            <span class="info-label">Monthly Salary:</span>
-            <span class="info-value">${player.monthlySalary && formatCurrency ? formatCurrency(player.monthlySalary.toString(), currency || 'USD') : 'N/A'}</span>
+            <span class="info-label">Monthly Salary:</span><span class="info-value">${player.monthlySalary && formatCurrency ? formatCurrency(player.monthlySalary.toString(), currency || 'USD') : 'N/A'}</span>
           </div>
         </div>
         
         <div class="info-section">
           <div class="section-title">Medical Information</div>
           <div class="info-item">
-            <span class="info-label">Medical Notes:</span>
-            <span class="info-value">${player.medicalNotes || 'None'}</span>
+            <span class="info-label">Medical Notes:</span><span class="info-value">${player.medicalNotes || 'None'}</span>
           </div>
           <div class="info-item">
-            <span class="info-label">Emergency Contact:</span>
-            <span class="info-value">${player.emergencyContact || 'N/A'}</span>
+            <span class="info-label">Emergency Contact:</span><span class="info-value">${player.emergencyContact || 'N/A'}</span>
           </div>
         </div>
       `;
@@ -221,35 +209,29 @@ export default function DetailedPreview({
         <div class="info-section">
           <div class="section-title">Role & Department</div>
           <div class="info-item">
-            <span class="info-label">Role:</span>
-            <span class="info-value">${formatRole?.(staff.role) || staff.role}</span>
+            <span class="info-label">Role:</span><span class="info-value">${formatRole?.(staff.role) || staff.role}</span>
           </div>
           <div class="info-item">
-            <span class="info-label">Department:</span>
-            <span class="info-value">${staff.department}</span>
+            <span class="info-label">Department:</span><span class="info-value">${staff.department}</span>
           </div>
           <div class="info-item">
-            <span class="info-label">Employment Type:</span>
-            <span class="info-value">${staff.employmentType.replace('_', ' ')}</span>
+            <span class="info-label">Employment Type:</span><span class="info-value">${staff.employmentType.replace('_', ' ')}</span>
           </div>
         </div>
         
         <div class="info-section">
           <div class="section-title">Employment Details</div>
           <div class="info-item">
-            <span class="info-label">Start Date:</span>
-            <span class="info-value">${new Date(staff.startDate).toLocaleDateString()}</span>
+            <span class="info-label">Start Date:</span><span class="info-value">${new Date(staff.startDate).toLocaleDateString()}</span>
           </div>
           ${staff.contractEndDate ? `
             <div class="info-item">
-              <span class="info-label">Contract End:</span>
-              <span class="info-value">${new Date(staff.contractEndDate).toLocaleDateString()}</span>
+              <span class="info-label">Contract End:</span><span class="info-value">${new Date(staff.contractEndDate).toLocaleDateString()}</span>
             </div>
           ` : ''}
           ${staff.salary ? `
             <div class="info-item">
-              <span class="info-label">Monthly Salary:</span>
-              <span class="info-value">${formatCurrency?.(staff.salary.toString(), currency || 'USD') || staff.salary}</span>
+              <span class="info-label">Monthly Salary:</span><span class="info-value">${formatCurrency?.(staff.salary.toString(), currency || 'USD') || staff.salary}</span>
             </div>
           ` : ''}
         </div>
@@ -258,20 +240,17 @@ export default function DetailedPreview({
           <div class="section-title">Additional Information</div>
           ${staff.qualifications ? `
             <div class="info-item">
-              <span class="info-label">Qualifications:</span>
-              <span class="info-value">${staff.qualifications}</span>
+              <span class="info-label">Qualifications:</span><span class="info-value">${staff.qualifications}</span>
             </div>
           ` : ''}
           ${staff.emergencyContact ? `
             <div class="info-item">
-              <span class="info-label">Emergency Contact:</span>
-              <span class="info-value">${staff.emergencyContact}</span>
+              <span class="info-label">Emergency Contact:</span><span class="info-value">${staff.emergencyContact}</span>
             </div>
           ` : ''}
           ${staff.idNumber ? `
             <div class="info-item">
-              <span class="info-label">ID Number:</span>
-              <span class="info-value">${staff.idNumber}</span>
+              <span class="info-label">ID Number:</span><span class="info-value">${staff.idNumber}</span>
             </div>
           ` : ''}
         </div>
