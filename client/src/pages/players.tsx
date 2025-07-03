@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ProfileImage } from "@/components/ui/profile-image";
 import { Plus, Search, Filter, MoreHorizontal, Edit, Trash2, User } from "lucide-react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import AddPlayerDialog from "@/components/players/add-player-dialog";
@@ -194,20 +193,15 @@ export default function Players() {
             <CardContent className="p-6">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center space-x-3">
-                  <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-medium overflow-hidden">
-                    {player.profilePicture ? (
-                      <img
-                        src={`http://localhost:5000${player.profilePicture}`}
-                        alt={`${player.firstName} ${player.lastName}`}
-                        className="w-full h-full object-cover"
-                        style={{ display: 'block' }}
-                      />
-                    ) : (
-                      <span className="text-sm font-medium">
-                        {player.firstName[0]}{player.lastName[0]}
-                      </span>
-                    )}
-                  </div>
+                  <Avatar className="h-12 w-12">
+                    <AvatarImage 
+                      src={player.profilePicture ? `http://localhost:5000${player.profilePicture}` : undefined}
+                      alt={`${player.firstName} ${player.lastName}`}
+                    />
+                    <AvatarFallback className="bg-muted text-muted-foreground">
+                      {player.firstName[0]}{player.lastName[0]}
+                    </AvatarFallback>
+                  </Avatar>
                   <div>
                     <h3 className="font-semibold text-foreground">
                       {player.firstName} {player.lastName}

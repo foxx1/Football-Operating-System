@@ -7,7 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ProfileImage } from "@/components/ui/profile-image";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useSettings, formatCurrency } from "@/contexts/SettingsContext";
@@ -175,20 +174,15 @@ export default function StaffPage() {
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
                 <div className="flex items-center space-x-3">
-                  <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-medium overflow-hidden">
-                    {member.profilePicture ? (
-                      <img
-                        src={`http://localhost:5000${member.profilePicture}`}
-                        alt={`${member.firstName} ${member.lastName}`}
-                        className="w-full h-full object-cover"
-                        style={{ display: 'block' }}
-                      />
-                    ) : (
-                      <span className="text-sm font-medium">
-                        {member.firstName[0]}{member.lastName[0]}
-                      </span>
-                    )}
-                  </div>
+                  <Avatar className="h-12 w-12">
+                    <AvatarImage 
+                      src={member.profilePicture ? `http://localhost:5000${member.profilePicture}` : undefined}
+                      alt={`${member.firstName} ${member.lastName}`}
+                    />
+                    <AvatarFallback className="bg-muted text-muted-foreground">
+                      {member.firstName[0]}{member.lastName[0]}
+                    </AvatarFallback>
+                  </Avatar>
                   <div>
                     <CardTitle className="text-lg">
                       {member.firstName} {member.lastName}
