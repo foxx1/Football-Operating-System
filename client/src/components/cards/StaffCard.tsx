@@ -162,7 +162,7 @@ export default function StaffCard({
               <Briefcase className="w-4 h-4 mr-2" />
               <span className="capitalize">{staff.department}</span>
               <span className="mx-2">•</span>
-              <span className="capitalize">{staff.employmentType?.replace('_', ' ')}</span>
+              <span className="capitalize">{staff.employmentType ? staff.employmentType.replace('_', ' ') : 'N/A'}</span>
             </div>
             
             <div className="flex items-center text-sm text-gray-600">
@@ -206,6 +206,39 @@ export default function StaffCard({
               <div className="flex items-center text-sm text-muted-foreground">
                 <Phone className="w-4 h-4 mr-2" />
                 <span>Emergency: {staff.emergencyContact}</span>
+              </div>
+            )}
+
+            {staff.passportExpiryDate && (
+              <div className="flex items-center text-sm">
+                <Calendar className="w-4 h-4 mr-2" />
+                <span className={`
+                  ${(() => {
+                    const expiryDate = new Date(staff.passportExpiryDate);
+                    const today = new Date();
+                    const diffTime = expiryDate.getTime() - today.getTime();
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    
+                    if (diffDays < 0) return 'text-red-600 font-medium';
+                    if (diffDays <= 90) return 'text-orange-600 font-medium';
+                    return 'text-green-600';
+                  })()}
+                `}>
+                  Passport: {(() => {
+                    const expiryDate = new Date(staff.passportExpiryDate);
+                    const today = new Date();
+                    const diffTime = expiryDate.getTime() - today.getTime();
+                    
+                    if (diffTime < 0) return '⚠️ Expired';
+                    
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    const years = Math.floor(diffDays / 365);
+                    const months = Math.floor((diffDays % 365) / 30);
+                    
+                    if (diffDays <= 90) return `⚠️ ${years > 0 ? `${years}y ` : ''}${months}m`;
+                    return `✅ ${years > 0 ? `${years}y ` : ''}${months}m`;
+                  })()}
+                </span>
               </div>
             )}
 

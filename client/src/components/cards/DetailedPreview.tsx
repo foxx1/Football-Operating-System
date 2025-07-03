@@ -263,7 +263,7 @@ export default function DetailedPreview({
             <span class="info-label">Department:</span><span class="info-value">${staff.department}</span>
           </div>
           <div class="info-item">
-            <span class="info-label">Employment Type:</span><span class="info-value">${staff.employmentType.replace('_', ' ')}</span>
+            <span class="info-label">Employment Type:</span><span class="info-value">${staff.employmentType ? staff.employmentType.replace('_', ' ') : 'N/A'}</span>
           </div>
         </div>
         
