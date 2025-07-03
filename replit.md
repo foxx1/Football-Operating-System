@@ -121,6 +121,15 @@ The system uses PostgreSQL with the following core entities:
 
 ## Recent Changes
 
+### July 3, 2025 - Player and Staff Card Image Display and Edit Functionality
+✓ Fixed player and staff profile image display issues with proper URL formatting
+✓ Activated edit button functionality for player cards with pre-populated form data
+✓ Enhanced AddPlayerDialog to support both add and edit modes with useEffect form reset
+✓ Added PATCH API endpoint for player updates to match frontend expectations
+✓ Fixed database storage issues for profile picture updates
+✓ Player and staff cards now properly display uploaded profile images
+✓ Complete edit workflow: click edit → form opens with current data → save updates database → images display on cards
+
 ### July 2, 2025 - React-Konva Professional Tactical Board Implementation
 → Completely rewriting tactical board with react-konva for professional-grade drawing capabilities
 → Building smooth 60fps interactions with draggable, selectable, deletable elements  

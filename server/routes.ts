@@ -62,6 +62,21 @@ export async function registerRoutes(app: Express, upload?: any): Promise<Server
     }
   });
 
+  app.patch("/api/players/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validatedData = insertPlayerSchema.partial().parse(req.body);
+      const player = await storage.updatePlayer(id, validatedData);
+      if (!player) {
+        return res.status(404).json({ message: "Player not found" });
+      }
+      res.json(player);
+    } catch (error) {
+      console.error("PATCH /api/players/:id - Error:", error);
+      res.status(400).json({ message: "Invalid player data", error: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
   app.delete("/api/players/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
