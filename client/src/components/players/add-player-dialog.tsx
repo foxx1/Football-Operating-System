@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { insertPlayerSchema } from "@shared/schema";
+import { insertPlayerSchema, type Player } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useSettings } from "@/contexts/SettingsContext";
@@ -36,13 +36,14 @@ import { FileUpload } from "@/components/ui/file-upload";
 interface AddPlayerDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  editingPlayer?: Player | null;
 }
 
 const formSchema = insertPlayerSchema;
 
 type FormData = z.infer<typeof formSchema>;
 
-export default function AddPlayerDialog({ open, onOpenChange }: AddPlayerDialogProps) {
+export default function AddPlayerDialog({ open, onOpenChange, editingPlayer }: AddPlayerDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { currency } = useSettings();
@@ -86,7 +87,27 @@ export default function AddPlayerDialog({ open, onOpenChange }: AddPlayerDialogP
   
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
+    defaultValues: editingPlayer ? {
+      firstName: editingPlayer.firstName || "",
+      lastName: editingPlayer.lastName || "",
+      position: editingPlayer.position || "midfielder",
+      nationality: editingPlayer.nationality || "",
+      dateOfBirth: editingPlayer.dateOfBirth || "",
+      email: editingPlayer.email || "",
+      phoneNumber: editingPlayer.phoneNumber || "",
+      shirtNumber: editingPlayer.shirtNumber || undefined,
+      height: editingPlayer.height || undefined,
+      weight: editingPlayer.weight || undefined,
+      emergencyContact: editingPlayer.emergencyContact || "",
+      medicalNotes: editingPlayer.medicalNotes || "",
+      profilePicture: editingPlayer.profilePicture || "",
+      idDocument: editingPlayer.idDocument || "",
+      contractDocument: editingPlayer.contractDocument || "",
+      contractStartDate: editingPlayer.contractStartDate || "",
+      contractEndDate: editingPlayer.contractEndDate || "",
+      monthlySalary: editingPlayer.monthlySalary || "",
+      isActive: editingPlayer.isActive ?? true,
+    } : {
       firstName: "",
       lastName: "",
       position: "midfielder",
@@ -128,13 +149,20 @@ export default function AddPlayerDialog({ open, onOpenChange }: AddPlayerDialogP
         height: data.height || null,
         weight: data.weight || null,
       };
-      return apiRequest("POST", "/api/players", playerData);
+      
+      if (editingPlayer) {
+        return apiRequest("PATCH", `/api/players/${editingPlayer.id}`, playerData);
+      } else {
+        return apiRequest("POST", "/api/players", playerData);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/players"] });
       toast({
-        title: "Player added successfully",
-        description: "The new player has been added to your roster.",
+        title: editingPlayer ? "Player updated successfully" : "Player added successfully",
+        description: editingPlayer 
+          ? "The player information has been updated." 
+          : "The new player has been added to your roster.",
       });
       form.reset();
       onOpenChange(false);
@@ -142,7 +170,9 @@ export default function AddPlayerDialog({ open, onOpenChange }: AddPlayerDialogP
     onError: () => {
       toast({
         title: "Error",
-        description: "Failed to add player. Please try again.",
+        description: editingPlayer 
+          ? "Failed to update player. Please try again."
+          : "Failed to add player. Please try again.",
         variant: "destructive",
       });
     },
@@ -156,7 +186,7 @@ export default function AddPlayerDialog({ open, onOpenChange }: AddPlayerDialogP
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Add New Player</DialogTitle>
+          <DialogTitle>{editingPlayer ? "Edit Player" : "Add New Player"}</DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
@@ -518,7 +548,10 @@ export default function AddPlayerDialog({ open, onOpenChange }: AddPlayerDialogP
                 Cancel
               </Button>
               <Button type="submit" disabled={mutation.isPending}>
-                {mutation.isPending ? "Adding..." : "Add Player"}
+                {mutation.isPending 
+                  ? (editingPlayer ? "Updating..." : "Adding...") 
+                  : (editingPlayer ? "Update Player" : "Add Player")
+                }
               </Button>
             </div>
           </form>

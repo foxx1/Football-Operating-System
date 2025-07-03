@@ -194,7 +194,7 @@ export default function Players() {
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center space-x-3">
                   <Avatar className="w-12 h-12">
-                    <AvatarImage src={`https://images.unsplash.com/photo-150${player.id}0794778202-cad84cf45f1d?w=120&h=120&fit=crop&crop=face`} />
+                    <AvatarImage src={player.profilePicture || `https://images.unsplash.com/photo-150${player.id}0794778202-cad84cf45f1d?w=120&h=120&fit=crop&crop=face`} />
                     <AvatarFallback>
                       {player.firstName[0]}{player.lastName[0]}
                     </AvatarFallback>
@@ -275,24 +275,12 @@ export default function Players() {
         </Card>
       )}
 
-      {/* Edit Player Dialog - TODO: Implement edit functionality */}
-      <Dialog open={!!editingPlayer} onOpenChange={() => setEditingPlayer(null)}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Edit Player</DialogTitle>
-          </DialogHeader>
-          <div className="p-4 text-center text-muted-foreground">
-            <p>Edit functionality coming soon...</p>
-            <Button 
-              variant="outline" 
-              onClick={() => setEditingPlayer(null)}
-              className="mt-4"
-            >
-              Close
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Edit Player Dialog */}
+      <AddPlayerDialog 
+        open={!!editingPlayer} 
+        onOpenChange={() => setEditingPlayer(null)}
+        editingPlayer={editingPlayer}
+      />
     </div>
   );
 }
