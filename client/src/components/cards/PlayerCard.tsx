@@ -179,37 +179,13 @@ export default function PlayerCard({
             )}
           </div>
 
-          {/* Extended info on hover */}
-          <motion.div
-            className="mt-4 space-y-2"
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ 
-              opacity: isCardHovered ? 1 : 0, 
-              height: isCardHovered ? 'auto' : 0 
-            }}
-            transition={{ duration: 0.3 }}
-          >
-            {player.email && (
-              <div className="flex items-center text-sm text-muted-foreground">
-                <Mail className="w-4 h-4 mr-2" />
-                <span className="truncate">{player.email}</span>
-              </div>
-            )}
-            
-            {player.phoneNumber && (
-              <div className="flex items-center text-sm text-muted-foreground">
-                <Phone className="w-4 h-4 mr-2" />
-                <span>{player.phoneNumber}</span>
-              </div>
-            )}
-
-            {player.monthlySalary && (
-              <div className="flex items-center text-sm text-muted-foreground">
-                <Award className="w-4 h-4 mr-2" />
-                <span>Salary: ${parseFloat(player.monthlySalary).toLocaleString()}/month</span>
-              </div>
-            )}
-          </motion.div>
+          {/* Phone number - always visible */}
+          {player.phoneNumber && (
+            <div className="flex items-center text-sm text-muted-foreground mt-2">
+              <Phone className="w-4 h-4 mr-2" />
+              <span>{player.phoneNumber}</span>
+            </div>
+          )}
 
           {/* Action buttons */}
           <motion.div

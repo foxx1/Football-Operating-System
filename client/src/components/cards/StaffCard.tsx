@@ -156,18 +156,11 @@ export default function StaffCard({
             </motion.div>
           </div>
 
-          {/* Basic info */}
+          {/* Basic info only */}
           <div className="space-y-3">
             <div className="flex items-center text-sm text-gray-600">
               <Briefcase className="w-4 h-4 mr-2" />
               <span className="capitalize">{staff.department}</span>
-              <span className="mx-2">•</span>
-              <span className="capitalize">{staff.employmentType ? staff.employmentType.replace('_', ' ') : 'N/A'}</span>
-            </div>
-            
-            <div className="flex items-center text-sm text-gray-600">
-              <Mail className="w-4 h-4 mr-2" />
-              <span className="truncate">{staff.email}</span>
             </div>
             
             {staff.phoneNumber && (
@@ -178,80 +171,7 @@ export default function StaffCard({
             )}
           </div>
 
-          {/* Extended info on hover */}
-          <motion.div
-            className="mt-4 space-y-2"
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ 
-              opacity: isCardHovered ? 1 : 0, 
-              height: isCardHovered ? 'auto' : 0 
-            }}
-            transition={{ duration: 0.3 }}
-          >
-            {staff.idNumber && (
-              <div className="flex items-center text-sm text-muted-foreground">
-                <Building className="w-4 h-4 mr-2" />
-                <span>ID: {staff.idNumber}</span>
-              </div>
-            )}
 
-            {staff.qualifications && (
-              <div className="flex items-center text-sm text-muted-foreground">
-                <Award className="w-4 h-4 mr-2" />
-                <span className="truncate">{staff.qualifications}</span>
-              </div>
-            )}
-
-            {staff.emergencyContact && (
-              <div className="flex items-center text-sm text-muted-foreground">
-                <Phone className="w-4 h-4 mr-2" />
-                <span>Emergency: {staff.emergencyContact}</span>
-              </div>
-            )}
-
-            {staff.passportExpiryDate && (
-              <div className="flex items-center text-sm">
-                <Calendar className="w-4 h-4 mr-2" />
-                <span className={`
-                  ${(() => {
-                    const expiryDate = new Date(staff.passportExpiryDate);
-                    const today = new Date();
-                    const diffTime = expiryDate.getTime() - today.getTime();
-                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                    
-                    if (diffDays < 0) return 'text-red-600 font-medium';
-                    if (diffDays <= 90) return 'text-orange-600 font-medium';
-                    return 'text-green-600';
-                  })()}
-                `}>
-                  Passport: {(() => {
-                    const expiryDate = new Date(staff.passportExpiryDate);
-                    const today = new Date();
-                    const diffTime = expiryDate.getTime() - today.getTime();
-                    
-                    if (diffTime < 0) return '⚠️ Expired';
-                    
-                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                    const years = Math.floor(diffDays / 365);
-                    const months = Math.floor((diffDays % 365) / 30);
-                    
-                    if (diffDays <= 90) return `⚠️ ${years > 0 ? `${years}y ` : ''}${months}m`;
-                    return `✅ ${years > 0 ? `${years}y ` : ''}${months}m`;
-                  })()}
-                </span>
-              </div>
-            )}
-
-            {staff.salary && (
-              <div className="text-sm font-medium text-gray-900">
-                Monthly Salary: {formatCurrency(staff.salary.toString(), currency)}
-              </div>
-            )}
-
-            <div className="text-xs text-gray-500">
-              Started: {new Date(staff.startDate).toLocaleDateString()}
-            </div>
-          </motion.div>
 
           {/* Action buttons */}
           <motion.div
