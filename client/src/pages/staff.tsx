@@ -174,40 +174,22 @@ export default function StaffPage() {
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
                 <div className="flex items-center space-x-3">
-                  {(() => {
-                    console.log('Staff member:', member.firstName, member.lastName);
-                    console.log('Profile picture:', member.profilePicture);
-                    console.log('Has profile picture:', !!member.profilePicture);
-                    
-                    if (member.profilePicture) {
-                      const imageUrl = `http://localhost:5000${member.profilePicture}`;
-                      console.log('Image URL:', imageUrl);
-                      return (
-                        <img 
-                          src={imageUrl}
-                          alt={`${member.firstName} ${member.lastName}`}
-                          className="w-12 h-12 rounded-full object-cover border-2 border-gray-200"
-                          onError={(e) => {
-                            console.log('Staff image load error:', e);
-                            console.log('Failed image URL:', imageUrl);
-                          }}
-                          onLoad={() => {
-                            console.log('Staff image loaded successfully:', imageUrl);
-                          }}
-                        />
-                      );
-                    } else {
-                      console.log('No profile picture, showing fallback');
-                      return (
-                        <Avatar className="w-12 h-12">
-                          <AvatarImage src={`https://images.unsplash.com/photo-150${member.id}003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face`} />
-                          <AvatarFallback>
-                            {member.firstName[0]}{member.lastName[0]}
-                          </AvatarFallback>
-                        </Avatar>
-                      );
-                    }
-                  })()}
+                  <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-medium relative overflow-hidden">
+                    {member.profilePicture && (
+                      <img
+                        src={`http://localhost:5000${member.profilePicture}?v=${Date.now()}`}
+                        alt={`${member.firstName} ${member.lastName}`}
+                        className="absolute inset-0 w-full h-full object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                        }}
+                      />
+                    )}
+                    <span className={member.profilePicture ? 'z-0' : 'z-10'}>
+                      {member.firstName[0]}{member.lastName[0]}
+                    </span>
+                  </div>
                   <div>
                     <CardTitle className="text-lg">
                       {member.firstName} {member.lastName}

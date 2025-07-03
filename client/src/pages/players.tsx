@@ -193,40 +193,22 @@ export default function Players() {
             <CardContent className="p-6">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center space-x-3">
-                  {(() => {
-                    console.log('Player:', player.firstName, player.lastName);
-                    console.log('Profile picture:', player.profilePicture);
-                    console.log('Has profile picture:', !!player.profilePicture);
-                    
-                    if (player.profilePicture) {
-                      const imageUrl = `http://localhost:5000${player.profilePicture}`;
-                      console.log('Player image URL:', imageUrl);
-                      return (
-                        <img 
-                          src={imageUrl}
-                          alt={`${player.firstName} ${player.lastName}`}
-                          className="w-12 h-12 rounded-full object-cover border-2 border-gray-200"
-                          onError={(e) => {
-                            console.log('Player image load error:', e);
-                            console.log('Failed player image URL:', imageUrl);
-                          }}
-                          onLoad={() => {
-                            console.log('Player image loaded successfully:', imageUrl);
-                          }}
-                        />
-                      );
-                    } else {
-                      console.log('No profile picture, showing fallback');
-                      return (
-                        <Avatar className="w-12 h-12">
-                          <AvatarImage src={`https://images.unsplash.com/photo-150${player.id}0794778202-cad84cf45f1d?w=120&h=120&fit=crop&crop=face`} />
-                          <AvatarFallback>
-                            {player.firstName[0]}{player.lastName[0]}
-                          </AvatarFallback>
-                        </Avatar>
-                      );
-                    }
-                  })()}
+                  <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-medium relative overflow-hidden">
+                    {player.profilePicture && (
+                      <img
+                        src={`http://localhost:5000${player.profilePicture}?v=${Date.now()}`}
+                        alt={`${player.firstName} ${player.lastName}`}
+                        className="absolute inset-0 w-full h-full object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                        }}
+                      />
+                    )}
+                    <span className={player.profilePicture ? 'z-0' : 'z-10'}>
+                      {player.firstName[0]}{player.lastName[0]}
+                    </span>
+                  </div>
                   <div>
                     <h3 className="font-semibold text-foreground">
                       {player.firstName} {player.lastName}
