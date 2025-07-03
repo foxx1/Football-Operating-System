@@ -193,24 +193,40 @@ export default function Players() {
             <CardContent className="p-6">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center space-x-3">
-                  {player.profilePicture ? (
-                    <img 
-                      src={`http://localhost:5000${player.profilePicture}`}
-                      alt={`${player.firstName} ${player.lastName}`}
-                      className="w-12 h-12 rounded-full object-cover"
-                      onError={(e) => {
-                        console.log('Image load error:', e);
-                        console.log('Image URL:', `http://localhost:5000${player.profilePicture}`);
-                      }}
-                    />
-                  ) : (
-                    <Avatar className="w-12 h-12">
-                      <AvatarImage src={`https://images.unsplash.com/photo-150${player.id}0794778202-cad84cf45f1d?w=120&h=120&fit=crop&crop=face`} />
-                      <AvatarFallback>
-                        {player.firstName[0]}{player.lastName[0]}
-                      </AvatarFallback>
-                    </Avatar>
-                  )}
+                  {(() => {
+                    console.log('Player:', player.firstName, player.lastName);
+                    console.log('Profile picture:', player.profilePicture);
+                    console.log('Has profile picture:', !!player.profilePicture);
+                    
+                    if (player.profilePicture) {
+                      const imageUrl = `http://localhost:5000${player.profilePicture}`;
+                      console.log('Player image URL:', imageUrl);
+                      return (
+                        <img 
+                          src={imageUrl}
+                          alt={`${player.firstName} ${player.lastName}`}
+                          className="w-12 h-12 rounded-full object-cover border-2 border-gray-200"
+                          onError={(e) => {
+                            console.log('Player image load error:', e);
+                            console.log('Failed player image URL:', imageUrl);
+                          }}
+                          onLoad={() => {
+                            console.log('Player image loaded successfully:', imageUrl);
+                          }}
+                        />
+                      );
+                    } else {
+                      console.log('No profile picture, showing fallback');
+                      return (
+                        <Avatar className="w-12 h-12">
+                          <AvatarImage src={`https://images.unsplash.com/photo-150${player.id}0794778202-cad84cf45f1d?w=120&h=120&fit=crop&crop=face`} />
+                          <AvatarFallback>
+                            {player.firstName[0]}{player.lastName[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                      );
+                    }
+                  })()}
                   <div>
                     <h3 className="font-semibold text-foreground">
                       {player.firstName} {player.lastName}
