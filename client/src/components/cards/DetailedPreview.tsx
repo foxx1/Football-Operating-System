@@ -32,6 +32,7 @@ import { Player, Staff } from "@shared/schema";
 import { motion } from "framer-motion";
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { useSettings } from "@/contexts/SettingsContext";
 
 interface DetailedPreviewProps {
   isOpen: boolean;
@@ -62,48 +63,335 @@ export default function DetailedPreview({
 }: DetailedPreviewProps) {
   const [activeTab, setActiveTab] = useState("overview");
   const [isExporting, setIsExporting] = useState(false);
+  const { organizationName, logoUrl, currentSeason } = useSettings();
 
   if (!data) return null;
 
   const handlePrint = () => {
-    window.print();
+    // Create a new window for printing with all information
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const printContent = createPrintContent();
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    printWindow.print();
+  };
+
+  const createPrintContent = () => {
+    const currentDate = new Date().toLocaleDateString();
+    const isPlayer = type === 'player';
+    const person = data as Player | Staff;
+    
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>${person.firstName} ${person.lastName} - ${isPlayer ? 'Player' : 'Staff'} Profile</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { font-family: Arial, sans-serif; line-height: 1.4; color: #333; }
+          .print-container { max-width: 800px; margin: 0 auto; padding: 20px; }
+          .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 30px; border-bottom: 2px solid #e5e5e5; padding-bottom: 20px; }
+          .logo { max-height: 60px; max-width: 200px; }
+          .org-info { text-align: center; flex: 1; }
+          .org-name { font-size: 24px; font-weight: bold; color: #2563eb; }
+          .season { font-size: 14px; color: #6b7280; }
+          .print-date { text-align: right; font-size: 12px; color: #6b7280; }
+          .profile-section { display: flex; gap: 30px; margin-bottom: 30px; }
+          .profile-image { width: 150px; height: 150px; border-radius: 8px; object-fit: cover; border: 2px solid #e5e5e5; }
+          .profile-info { flex: 1; }
+          .profile-name { font-size: 28px; font-weight: bold; margin-bottom: 10px; }
+          .profile-role { display: inline-block; background: #3b82f6; color: white; padding: 4px 12px; border-radius: 20px; font-size: 14px; margin-bottom: 15px; }
+          .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px; }
+          .info-section { background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; }
+          .section-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #1e40af; border-bottom: 1px solid #cbd5e1; padding-bottom: 5px; }
+          .info-item { display: flex; justify-content: space-between; margin-bottom: 8px; }
+          .info-label { font-weight: 600; color: #4b5563; }
+          .info-value { color: #374151; }
+          .full-width { grid-column: 1 / -1; }
+          @media print {
+            body { print-color-adjust: exact; }
+            .print-container { max-width: none; margin: 0; padding: 15px; }
+            .header { page-break-inside: avoid; }
+            .profile-section { page-break-inside: avoid; }
+            .info-section { page-break-inside: avoid; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="print-container">
+          <div class="header">
+            ${logoUrl ? `<img src="${logoUrl}" alt="Organization Logo" class="logo">` : ''}
+            <div class="org-info">
+              <div class="org-name">${organizationName}</div>
+              <div class="season">Season ${currentSeason}</div>
+            </div>
+            <div class="print-date">
+              Generated: ${currentDate}
+            </div>
+          </div>
+          
+          <div class="profile-section">
+            <img src="${person.profilePicture || '/api/placeholder/150/150'}" alt="${person.firstName} ${person.lastName}" class="profile-image">
+            <div class="profile-info">
+              <div class="profile-name">${person.firstName} ${person.lastName}</div>
+              <div class="profile-role">${isPlayer ? (person as Player).position : formatRole?.((person as Staff).role) || (person as Staff).role}</div>
+              <div class="info-item">
+                <span class="info-label">Email:</span>
+                <span class="info-value">${person.email}</span>
+              </div>
+              ${person.phoneNumber ? `
+                <div class="info-item">
+                  <span class="info-label">Phone:</span>
+                  <span class="info-value">${person.phoneNumber}</span>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+          
+          <div class="info-grid">
+            ${generateInfoSections(person, isPlayer)}
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+  };
+
+  const generateInfoSections = (person: Player | Staff, isPlayer: boolean) => {
+    if (isPlayer) {
+      const player = person as Player;
+      return `
+        <div class="info-section">
+          <div class="section-title">Basic Information</div>
+          <div class="info-item">
+            <span class="info-label">Date of Birth:</span>
+            <span class="info-value">${player.dateOfBirth ? new Date(player.dateOfBirth).toLocaleDateString() : 'N/A'}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Nationality:</span>
+            <span class="info-value">${player.nationality || 'N/A'}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Height:</span>
+            <span class="info-value">${player.height || 'N/A'}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Weight:</span>
+            <span class="info-value">${player.weight || 'N/A'}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Jersey Number:</span>
+            <span class="info-value">${player.shirtNumber || 'N/A'}</span>
+          </div>
+        </div>
+        
+        <div class="info-section">
+          <div class="section-title">Contract Details</div>
+          <div class="info-item">
+            <span class="info-label">Contract Start:</span>
+            <span class="info-value">${player.contractStartDate ? new Date(player.contractStartDate).toLocaleDateString() : 'N/A'}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Contract End:</span>
+            <span class="info-value">${player.contractEndDate ? new Date(player.contractEndDate).toLocaleDateString() : 'N/A'}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Monthly Salary:</span>
+            <span class="info-value">${player.monthlySalary && formatCurrency ? formatCurrency(player.monthlySalary.toString(), currency || 'USD') : 'N/A'}</span>
+          </div>
+        </div>
+        
+        <div class="info-section">
+          <div class="section-title">Medical Information</div>
+          <div class="info-item">
+            <span class="info-label">Medical Notes:</span>
+            <span class="info-value">${player.medicalNotes || 'None'}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Emergency Contact:</span>
+            <span class="info-value">${player.emergencyContact || 'N/A'}</span>
+          </div>
+        </div>
+      `;
+    } else {
+      const staff = person as Staff;
+      return `
+        <div class="info-section">
+          <div class="section-title">Role & Department</div>
+          <div class="info-item">
+            <span class="info-label">Role:</span>
+            <span class="info-value">${formatRole?.(staff.role) || staff.role}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Department:</span>
+            <span class="info-value">${staff.department}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Employment Type:</span>
+            <span class="info-value">${staff.employmentType.replace('_', ' ')}</span>
+          </div>
+        </div>
+        
+        <div class="info-section">
+          <div class="section-title">Employment Details</div>
+          <div class="info-item">
+            <span class="info-label">Start Date:</span>
+            <span class="info-value">${new Date(staff.startDate).toLocaleDateString()}</span>
+          </div>
+          ${staff.contractEndDate ? `
+            <div class="info-item">
+              <span class="info-label">Contract End:</span>
+              <span class="info-value">${new Date(staff.contractEndDate).toLocaleDateString()}</span>
+            </div>
+          ` : ''}
+          ${staff.salary ? `
+            <div class="info-item">
+              <span class="info-label">Monthly Salary:</span>
+              <span class="info-value">${formatCurrency?.(staff.salary.toString(), currency || 'USD') || staff.salary}</span>
+            </div>
+          ` : ''}
+        </div>
+        
+        <div class="info-section">
+          <div class="section-title">Additional Information</div>
+          ${staff.qualifications ? `
+            <div class="info-item">
+              <span class="info-label">Qualifications:</span>
+              <span class="info-value">${staff.qualifications}</span>
+            </div>
+          ` : ''}
+          ${staff.emergencyContact ? `
+            <div class="info-item">
+              <span class="info-label">Emergency Contact:</span>
+              <span class="info-value">${staff.emergencyContact}</span>
+            </div>
+          ` : ''}
+          ${staff.idNumber ? `
+            <div class="info-item">
+              <span class="info-label">ID Number:</span>
+              <span class="info-value">${staff.idNumber}</span>
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }
   };
 
   const handleExportPDF = async () => {
     setIsExporting(true);
     try {
-      const element = document.getElementById('preview-content');
-      if (!element) return;
-
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        logging: false,
-        useCORS: true,
-      });
-
-      const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('p', 'mm', 'a4');
+      const currentDate = new Date().toLocaleDateString();
+      const isPlayer = type === 'player';
+      const person = data as Player | Staff;
       
-      const imgWidth = 210;
-      const pageHeight = 295;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
-      let position = 0;
-
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
+      // Add organization header
+      pdf.setFontSize(20);
+      pdf.setTextColor(37, 99, 235);
+      pdf.text(organizationName, 105, 20, { align: 'center' });
+      
+      pdf.setFontSize(12);
+      pdf.setTextColor(107, 114, 128);
+      pdf.text(`Season ${currentSeason}`, 105, 30, { align: 'center' });
+      pdf.text(`Generated: ${currentDate}`, 105, 40, { align: 'center' });
+      
+      // Add profile section
+      pdf.setFontSize(24);
+      pdf.setTextColor(0, 0, 0);
+      pdf.text(`${person.firstName} ${person.lastName}`, 20, 65);
+      
+      pdf.setFontSize(14);
+      pdf.setTextColor(59, 130, 246);
+      const roleText = isPlayer ? (person as Player).position : formatRole?.((person as Staff).role) || (person as Staff).role;
+      pdf.text(roleText, 20, 75);
+      
+      // Add basic info
+      let yPos = 90;
+      pdf.setFontSize(12);
+      pdf.setTextColor(0, 0, 0);
+      
+      const addInfoLine = (label: string, value: string) => {
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(`${label}:`, 20, yPos);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(value, 80, yPos);
+        yPos += 8;
+      };
+      
+      addInfoLine('Email', person.email);
+      if (person.phoneNumber) addInfoLine('Phone', person.phoneNumber);
+      
+      if (isPlayer) {
+        const player = person as Player;
+        yPos += 5;
+        pdf.setFontSize(16);
+        pdf.setTextColor(30, 64, 175);
+        pdf.text('Player Information', 20, yPos);
+        yPos += 10;
+        pdf.setFontSize(12);
+        pdf.setTextColor(0, 0, 0);
+        
+        if (player.dateOfBirth) addInfoLine('Date of Birth', new Date(player.dateOfBirth).toLocaleDateString());
+        if (player.nationality) addInfoLine('Nationality', player.nationality);
+        if (player.height) addInfoLine('Height', player.height.toString());
+        if (player.weight) addInfoLine('Weight', player.weight.toString());
+        if (player.shirtNumber) addInfoLine('Jersey Number', player.shirtNumber.toString());
+        
+        yPos += 5;
+        pdf.setFontSize(16);
+        pdf.setTextColor(30, 64, 175);
+        pdf.text('Contract Details', 20, yPos);
+        yPos += 10;
+        pdf.setFontSize(12);
+        pdf.setTextColor(0, 0, 0);
+        
+        if (player.contractStartDate) addInfoLine('Contract Start', new Date(player.contractStartDate).toLocaleDateString());
+        if (player.contractEndDate) addInfoLine('Contract End', new Date(player.contractEndDate).toLocaleDateString());
+        if (player.monthlySalary && formatCurrency) addInfoLine('Monthly Salary', formatCurrency(player.monthlySalary.toString(), currency || 'USD'));
+        
+        if (player.medicalNotes || player.emergencyContact) {
+          yPos += 5;
+          pdf.setFontSize(16);
+          pdf.setTextColor(30, 64, 175);
+          pdf.text('Medical Information', 20, yPos);
+          yPos += 10;
+          pdf.setFontSize(12);
+          pdf.setTextColor(0, 0, 0);
+          
+          if (player.medicalNotes) addInfoLine('Medical Notes', player.medicalNotes);
+          if (player.emergencyContact) addInfoLine('Emergency Contact', player.emergencyContact);
+        }
+      } else {
+        const staff = person as Staff;
+        yPos += 5;
+        pdf.setFontSize(16);
+        pdf.setTextColor(30, 64, 175);
+        pdf.text('Staff Information', 20, yPos);
+        yPos += 10;
+        pdf.setFontSize(12);
+        pdf.setTextColor(0, 0, 0);
+        
+        addInfoLine('Role', formatRole?.(staff.role) || staff.role);
+        addInfoLine('Department', staff.department);
+        addInfoLine('Employment Type', staff.employmentType.replace('_', ' '));
+        addInfoLine('Start Date', new Date(staff.startDate).toLocaleDateString());
+        
+        if (staff.contractEndDate) addInfoLine('Contract End', new Date(staff.contractEndDate).toLocaleDateString());
+        if (staff.salary && formatCurrency) addInfoLine('Monthly Salary', formatCurrency(staff.salary.toString(), currency || 'USD'));
+        if (staff.qualifications) addInfoLine('Qualifications', staff.qualifications);
+        if (staff.emergencyContact) addInfoLine('Emergency Contact', staff.emergencyContact);
+        if (staff.idNumber) addInfoLine('ID Number', staff.idNumber);
       }
-
-      const fileName = type === 'player' 
-        ? `player_${(data as Player).firstName}_${(data as Player).lastName}.pdf`
-        : `staff_${(data as Staff).firstName}_${(data as Staff).lastName}.pdf`;
       
+      // Add footer
+      pdf.setFontSize(10);
+      pdf.setTextColor(107, 114, 128);
+      pdf.text('ProCoach - Professional Football Management System', 105, 280, { align: 'center' });
+      pdf.text(`© ${new Date().getFullYear()} ${organizationName}`, 105, 290, { align: 'center' });
+      
+      const fileName = `${isPlayer ? 'player' : 'staff'}_${person.firstName}_${person.lastName}.pdf`;
       pdf.save(fileName);
     } catch (error) {
       console.error('Error exporting PDF:', error);
