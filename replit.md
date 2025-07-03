@@ -121,6 +121,15 @@ The system uses PostgreSQL with the following core entities:
 
 ## Recent Changes
 
+### July 3, 2025 - Added ID and Passport Number Fields to Player Management
+✓ Enhanced player database schema with National ID Number and Passport Number fields
+✓ Added ID Information section to player form with dedicated fields for both IDs
+✓ Updated print layout to display ID and Passport numbers in Basic Information section
+✓ Enhanced PDF export to include ID fields in player information
+✓ Successfully applied database schema changes with proper field types
+✓ Player forms now support comprehensive identification documentation
+✓ Print and export functions include all identification information for complete records
+
 ### July 3, 2025 - Enhanced Staff Page with Professional Card Interface and Print Functionality
 ✓ Updated staff page to use enhanced StaffCard components with complex hover and selection behaviors
 ✓ Implemented detailed preview functionality with print and export options for staff profiles
@@ -131,6 +140,8 @@ The system uses PostgreSQL with the following core entities:
 ✓ Created comprehensive print templates displaying all information in organized sections
 ✓ Updated PDF export to include organization header and professional formatting
 ✓ Staff cards now have same professional interface as player cards with full export capabilities
+✓ Removed spaces between labels and values in print formatting (Email:email@domain.com)
+✓ Aligned information sections vertically in single column layout for better readability
 
 ### July 3, 2025 - Player and Staff Card Image Display and Edit Functionality  
 ✓ Fixed player and staff profile image display issues with proper URL formatting

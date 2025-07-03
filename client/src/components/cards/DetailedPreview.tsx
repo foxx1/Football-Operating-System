@@ -179,6 +179,16 @@ export default function DetailedPreview({
           <div class="info-item">
             <span class="info-label">Jersey Number:</span><span class="info-value">${player.shirtNumber || 'N/A'}</span>
           </div>
+          ${player.idNumber ? `
+            <div class="info-item">
+              <span class="info-label">National ID:</span><span class="info-value">${player.idNumber}</span>
+            </div>
+          ` : ''}
+          ${player.passportNumber ? `
+            <div class="info-item">
+              <span class="info-label">Passport Number:</span><span class="info-value">${player.passportNumber}</span>
+            </div>
+          ` : ''}
         </div>
         
         <div class="info-section">
@@ -318,6 +328,8 @@ export default function DetailedPreview({
         if (player.height) addInfoLine('Height', player.height.toString());
         if (player.weight) addInfoLine('Weight', player.weight.toString());
         if (player.shirtNumber) addInfoLine('Jersey Number', player.shirtNumber.toString());
+        if (player.idNumber) addInfoLine('National ID', player.idNumber);
+        if (player.passportNumber) addInfoLine('Passport Number', player.passportNumber);
         
         yPos += 5;
         pdf.setFontSize(16);
