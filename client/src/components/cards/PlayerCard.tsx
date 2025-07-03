@@ -116,47 +116,7 @@ export default function PlayerCard({
               </div>
             </div>
 
-            {/* Quick actions */}
-            <motion.div
-              className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity"
-              initial={{ opacity: 0, x: 10 }}
-              animate={{ opacity: isCardHovered ? 1 : 0, x: isCardHovered ? 0 : 10 }}
-              transition={{ duration: 0.2 }}
-            >
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onPreview(player);
-                }}
-                className="h-8 w-8 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/20"
-              >
-                <Eye className="w-4 h-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEdit(player);
-                }}
-                className="h-8 w-8 p-0 hover:bg-green-100 dark:hover:bg-green-900/20"
-              >
-                <Edit className="w-4 h-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete(player.id);
-                }}
-                className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-100 dark:hover:bg-red-900/20"
-              >
-                <Trash2 className="w-4 h-4" />
-              </Button>
-            </motion.div>
+
           </div>
 
           {/* Basic info */}
