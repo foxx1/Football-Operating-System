@@ -178,6 +178,7 @@ export default function StaffPage() {
                     <AvatarImage 
                       src={member.profilePicture || undefined}
                       alt={`${member.firstName} ${member.lastName}`}
+                      className="object-cover object-center"
                     />
                     <AvatarFallback className="bg-muted text-muted-foreground">
                       {member.firstName[0]}{member.lastName[0]}

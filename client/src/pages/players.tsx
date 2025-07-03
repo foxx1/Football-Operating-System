@@ -197,6 +197,7 @@ export default function Players() {
                     <AvatarImage 
                       src={player.profilePicture || undefined}
                       alt={`${player.firstName} ${player.lastName}`}
+                      className="object-cover object-center"
                     />
                     <AvatarFallback className="bg-muted text-muted-foreground">
                       {player.firstName[0]}{player.lastName[0]}
