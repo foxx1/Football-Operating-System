@@ -194,7 +194,7 @@ export default function Players() {
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center space-x-3">
                   <Avatar className="w-12 h-12">
-                    <AvatarImage src={player.profilePicture || `https://images.unsplash.com/photo-150${player.id}0794778202-cad84cf45f1d?w=120&h=120&fit=crop&crop=face`} />
+                    <AvatarImage src={player.profilePicture ? `http://localhost:5000${player.profilePicture}` : `https://images.unsplash.com/photo-150${player.id}0794778202-cad84cf45f1d?w=120&h=120&fit=crop&crop=face`} />
                     <AvatarFallback>
                       {player.firstName[0]}{player.lastName[0]}
                     </AvatarFallback>
