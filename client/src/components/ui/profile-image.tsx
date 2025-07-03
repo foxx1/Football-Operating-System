@@ -37,24 +37,28 @@ export function ProfileImage({
         ? imageUrl 
         : `http://localhost:5000${imageUrl}?v=${Date.now()}`;
       
+      console.log('ProfileImage: Loading image for', firstName, lastName, 'URL:', fullUrl);
       setImageSrc(fullUrl);
       
       // Preload image to check if it exists
       const img = new Image();
       img.onload = () => {
+        console.log('ProfileImage: Successfully loaded image for', firstName, lastName);
         setImageLoaded(true);
         setImageError(false);
       };
-      img.onerror = () => {
+      img.onerror = (error) => {
+        console.error('ProfileImage: Failed to load image for', firstName, lastName, 'Error:', error);
         setImageError(true);
         setImageLoaded(false);
         onImageError?.();
       };
       img.src = fullUrl;
     } else {
+      console.log('ProfileImage: No image URL for', firstName, lastName);
       setImageSrc(null);
     }
-  }, [imageUrl, onImageError]);
+  }, [imageUrl, onImageError, firstName, lastName]);
 
   const initials = `${firstName[0] || ''}${lastName[0] || ''}`;
 
