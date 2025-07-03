@@ -194,15 +194,9 @@ export default function AddPlayerDialog({ open, onOpenChange, editingPlayer }: A
       };
 
       if (editingPlayer) {
-        return apiRequest(`/api/players/${editingPlayer.id}`, {
-          method: "PATCH",
-          body: JSON.stringify(playerData),
-        });
+        return apiRequest("PATCH", `/api/players/${editingPlayer.id}`, playerData);
       } else {
-        return apiRequest("/api/players", {
-          method: "POST",
-          body: JSON.stringify(playerData),
-        });
+        return apiRequest("POST", "/api/players", playerData);
       }
     },
     onSuccess: () => {
@@ -467,7 +461,15 @@ export default function AddPlayerDialog({ open, onOpenChange, editingPlayer }: A
                   <FormItem>
                     <FormLabel>Shirt Number</FormLabel>
                     <FormControl>
-                      <Input type="number" min="1" max="99" placeholder="Number" {...field} onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)} />
+                      <Input 
+                        type="number" 
+                        min="1" 
+                        max="99" 
+                        placeholder="Number" 
+                        {...field} 
+                        value={field.value || ''} 
+                        onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)} 
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -480,7 +482,13 @@ export default function AddPlayerDialog({ open, onOpenChange, editingPlayer }: A
                   <FormItem>
                     <FormLabel>Height (cm)</FormLabel>
                     <FormControl>
-                      <Input type="number" placeholder="Height" {...field} onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)} />
+                      <Input 
+                        type="number" 
+                        placeholder="Height" 
+                        {...field} 
+                        value={field.value || ''} 
+                        onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)} 
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -493,7 +501,13 @@ export default function AddPlayerDialog({ open, onOpenChange, editingPlayer }: A
                   <FormItem>
                     <FormLabel>Weight (kg)</FormLabel>
                     <FormControl>
-                      <Input type="number" placeholder="Weight" {...field} onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)} />
+                      <Input 
+                        type="number" 
+                        placeholder="Weight" 
+                        {...field} 
+                        value={field.value || ''} 
+                        onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)} 
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -581,7 +595,7 @@ export default function AddPlayerDialog({ open, onOpenChange, editingPlayer }: A
                 <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                   <h4 className="font-medium text-green-900 mb-2">Contract Summary</h4>
                   <div className="text-sm text-green-700">
-                    Total Contract Value: <span className="font-medium">{getCurrencySymbol(currency)}{calculateContractTotal(form.watch("contractStartDate"), form.watch("contractEndDate"), parseFloat(form.watch("monthlySalary") || "0")).toLocaleString()}</span>
+                    Total Contract Value: <span className="font-medium">{getCurrencySymbol(currency)}{calculateContractTotal(form.watch("contractStartDate") || "", form.watch("contractEndDate") || "", parseFloat(form.watch("monthlySalary") || "0")).toLocaleString()}</span>
                   </div>
                 </div>
               )}
@@ -599,7 +613,8 @@ export default function AddPlayerDialog({ open, onOpenChange, editingPlayer }: A
                       <FormLabel>Profile Picture</FormLabel>
                       <FormControl>
                         <FileUpload
-                          value={field.value}
+                          label="Profile Picture"
+                          value={field.value || undefined}
                           onChange={field.onChange}
                           accept="image/*"
                           description="Upload profile photo"
@@ -617,7 +632,8 @@ export default function AddPlayerDialog({ open, onOpenChange, editingPlayer }: A
                       <FormLabel>ID Document</FormLabel>
                       <FormControl>
                         <FileUpload
-                          value={field.value}
+                          label="ID Document"
+                          value={field.value || undefined}
                           onChange={field.onChange}
                           accept="image/*,.pdf"
                           description="Upload ID copy"
@@ -635,7 +651,8 @@ export default function AddPlayerDialog({ open, onOpenChange, editingPlayer }: A
                       <FormLabel>Contract Document</FormLabel>
                       <FormControl>
                         <FileUpload
-                          value={field.value}
+                          label="Contract Document"
+                          value={field.value || undefined}
                           onChange={field.onChange}
                           accept=".pdf,.doc,.docx"
                           description="Upload signed contract"
