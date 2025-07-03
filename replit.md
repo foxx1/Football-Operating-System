@@ -121,14 +121,16 @@ The system uses PostgreSQL with the following core entities:
 
 ## Recent Changes
 
-### July 3, 2025 - Added ID and Passport Number Fields to Player Management
-✓ Enhanced player database schema with National ID Number and Passport Number fields
-✓ Added ID Information section to player form with dedicated fields for both IDs
-✓ Updated print layout to display ID and Passport numbers in Basic Information section
-✓ Enhanced PDF export to include ID fields in player information
-✓ Successfully applied database schema changes with proper field types
-✓ Player forms now support comprehensive identification documentation
-✓ Print and export functions include all identification information for complete records
+### July 3, 2025 - Complete Passport Management System with Expiry Tracking
+✓ Enhanced database schema with passport issue and expiry date fields for both players and staff
+✓ Added passport date fields to player and staff forms with real-time validation
+✓ Implemented passport validity calculation showing remaining years, months, and days until expiry
+✓ Added visual alerts for expired passports and renewal warnings (90 days before expiry)
+✓ Enhanced print and PDF export to include passport dates and validity status
+✓ Created professional passport validity indicators with color-coded status messages
+✓ Comprehensive ID management: National ID, Passport Number, Issue Date, Expiry Date
+✓ Real-time expiry calculations with user-friendly time remaining display
+✓ Database migration completed successfully with new passport date fields
 
 ### July 3, 2025 - Enhanced Staff Page with Professional Card Interface and Print Functionality
 ✓ Updated staff page to use enhanced StaffCard components with complex hover and selection behaviors

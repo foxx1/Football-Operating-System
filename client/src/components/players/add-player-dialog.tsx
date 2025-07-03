@@ -99,6 +99,10 @@ export default function AddPlayerDialog({ open, onOpenChange, editingPlayer }: A
       height: editingPlayer.height || undefined,
       weight: editingPlayer.weight || undefined,
       emergencyContact: editingPlayer.emergencyContact || "",
+      idNumber: editingPlayer.idNumber || "",
+      passportNumber: editingPlayer.passportNumber || "",
+      passportIssueDate: editingPlayer.passportIssueDate || "",
+      passportExpiryDate: editingPlayer.passportExpiryDate || "",
       medicalNotes: editingPlayer.medicalNotes || "",
       profilePicture: editingPlayer.profilePicture || "",
       idDocument: editingPlayer.idDocument || "",
@@ -106,7 +110,7 @@ export default function AddPlayerDialog({ open, onOpenChange, editingPlayer }: A
       contractStartDate: editingPlayer.contractStartDate || "",
       contractEndDate: editingPlayer.contractEndDate || "",
       monthlySalary: editingPlayer.monthlySalary || "",
-      isActive: editingPlayer.isActive ?? true,
+      isActive: editingPlayer.isActive || true,
     } : {
       firstName: "",
       lastName: "",
@@ -119,6 +123,10 @@ export default function AddPlayerDialog({ open, onOpenChange, editingPlayer }: A
       height: undefined,
       weight: undefined,
       emergencyContact: "",
+      idNumber: "",
+      passportNumber: "",
+      passportIssueDate: "",
+      passportExpiryDate: "",
       medicalNotes: "",
       profilePicture: "",
       idDocument: "",
@@ -130,7 +138,7 @@ export default function AddPlayerDialog({ open, onOpenChange, editingPlayer }: A
     },
   });
 
-  // Reset form when editingPlayer changes
+  // Reset form when editing player changes
   useEffect(() => {
     if (editingPlayer) {
       form.reset({
@@ -145,6 +153,10 @@ export default function AddPlayerDialog({ open, onOpenChange, editingPlayer }: A
         height: editingPlayer.height || undefined,
         weight: editingPlayer.weight || undefined,
         emergencyContact: editingPlayer.emergencyContact || "",
+        idNumber: editingPlayer.idNumber || "",
+        passportNumber: editingPlayer.passportNumber || "",
+        passportIssueDate: editingPlayer.passportIssueDate || "",
+        passportExpiryDate: editingPlayer.passportExpiryDate || "",
         medicalNotes: editingPlayer.medicalNotes || "",
         profilePicture: editingPlayer.profilePicture || "",
         idDocument: editingPlayer.idDocument || "",
@@ -152,29 +164,7 @@ export default function AddPlayerDialog({ open, onOpenChange, editingPlayer }: A
         contractStartDate: editingPlayer.contractStartDate || "",
         contractEndDate: editingPlayer.contractEndDate || "",
         monthlySalary: editingPlayer.monthlySalary || "",
-        isActive: editingPlayer.isActive ?? true,
-      });
-    } else {
-      form.reset({
-        firstName: "",
-        lastName: "",
-        position: "midfielder",
-        nationality: "",
-        dateOfBirth: "",
-        email: "",
-        phoneNumber: "",
-        shirtNumber: undefined,
-        height: undefined,
-        weight: undefined,
-        emergencyContact: "",
-        medicalNotes: "",
-        profilePicture: "",
-        idDocument: "",
-        contractDocument: "",
-        contractStartDate: "",
-        contractEndDate: "",
-        monthlySalary: "",
-        isActive: true,
+        isActive: editingPlayer.isActive || true,
       });
     }
   }, [editingPlayer, form]);
@@ -187,6 +177,10 @@ export default function AddPlayerDialog({ open, onOpenChange, editingPlayer }: A
         email: data.email || null,
         phoneNumber: data.phoneNumber || null,
         emergencyContact: data.emergencyContact || null,
+        idNumber: data.idNumber || null,
+        passportNumber: data.passportNumber || null,
+        passportIssueDate: data.passportIssueDate || null,
+        passportExpiryDate: data.passportExpiryDate || null,
         medicalNotes: data.medicalNotes || null,
         profilePicture: data.profilePicture || null,
         idDocument: data.idDocument || null,
@@ -198,30 +192,32 @@ export default function AddPlayerDialog({ open, onOpenChange, editingPlayer }: A
         height: data.height || null,
         weight: data.weight || null,
       };
-      
+
       if (editingPlayer) {
-        return apiRequest("PATCH", `/api/players/${editingPlayer.id}`, playerData);
+        return apiRequest(`/api/players/${editingPlayer.id}`, {
+          method: "PATCH",
+          body: JSON.stringify(playerData),
+        });
       } else {
-        return apiRequest("POST", "/api/players", playerData);
+        return apiRequest("/api/players", {
+          method: "POST",
+          body: JSON.stringify(playerData),
+        });
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/players"] });
       toast({
-        title: editingPlayer ? "Player updated successfully" : "Player added successfully",
-        description: editingPlayer 
-          ? "The player information has been updated." 
-          : "The new player has been added to your roster.",
+        title: editingPlayer ? "Player updated" : "Player added",
+        description: editingPlayer ? "Player has been updated successfully." : "New player has been added to the team.",
       });
-      form.reset();
       onOpenChange(false);
+      form.reset();
     },
-    onError: () => {
+    onError: (error) => {
       toast({
         title: "Error",
-        description: editingPlayer 
-          ? "Failed to update player. Please try again."
-          : "Failed to add player. Please try again.",
+        description: "Something went wrong. Please try again.",
         variant: "destructive",
       });
     },
@@ -271,7 +267,7 @@ export default function AddPlayerDialog({ open, onOpenChange, editingPlayer }: A
             </div>
 
             {/* Contact Information */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="email"
@@ -279,7 +275,7 @@ export default function AddPlayerDialog({ open, onOpenChange, editingPlayer }: A
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input type="email" placeholder="Enter email" {...field} />
+                      <Input type="email" placeholder="Enter email address" {...field} value={field.value || ""} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -290,9 +286,9 @@ export default function AddPlayerDialog({ open, onOpenChange, editingPlayer }: A
                 name="phoneNumber"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Phone</FormLabel>
+                    <FormLabel>Phone Number</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter phone number" {...field} />
+                      <Input placeholder="Enter phone number" {...field} value={field.value || ""} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -301,33 +297,103 @@ export default function AddPlayerDialog({ open, onOpenChange, editingPlayer }: A
             </div>
 
             {/* ID Information */}
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="idNumber"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>National ID Number</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter ID number" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="passportNumber"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Passport Number</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter passport number" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">ID Information</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="idNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>National ID Number</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter ID number" {...field} value={field.value || ""} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="passportNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Passport Number</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter passport number" {...field} value={field.value || ""} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Passport Dates */}
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="passportIssueDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Passport Issue Date</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} value={field.value || ""} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="passportExpiryDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Passport Expiry Date</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} value={field.value || ""} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              {/* Passport Expiry Calculation */}
+              {form.watch("passportExpiryDate") && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h4 className="font-medium text-blue-900 mb-2">Passport Validity</h4>
+                  <div className="text-sm text-blue-700">
+                    {(() => {
+                      const expiryDateString = form.watch("passportExpiryDate");
+                      if (!expiryDateString) return null;
+                      
+                      const expiryDate = new Date(expiryDateString);
+                      const today = new Date();
+                      const diffTime = expiryDate.getTime() - today.getTime();
+                      
+                      if (diffTime < 0) {
+                        return <span className="text-red-600 font-medium">⚠️ Passport has expired!</span>;
+                      }
+                      
+                      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                      const years = Math.floor(diffDays / 365);
+                      const months = Math.floor((diffDays % 365) / 30);
+                      const days = diffDays % 30;
+                      
+                      let timeRemaining = "";
+                      if (years > 0) timeRemaining += `${years} year${years > 1 ? 's' : ''} `;
+                      if (months > 0) timeRemaining += `${months} month${months > 1 ? 's' : ''} `;
+                      if (days > 0) timeRemaining += `${days} day${days > 1 ? 's' : ''}`;
+                      
+                      if (diffDays <= 90) {
+                        return <span className="text-orange-600 font-medium">⚠️ Expires in {timeRemaining} - Renewal needed soon!</span>;
+                      }
+                      
+                      return <span className="text-green-600 font-medium">✅ Valid for {timeRemaining}</span>;
+                    })()}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Player Details */}
@@ -357,28 +423,17 @@ export default function AddPlayerDialog({ open, onOpenChange, editingPlayer }: A
               />
               <FormField
                 control={form.control}
-                name="shirtNumber"
+                name="nationality"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Jersey Number</FormLabel>
+                    <FormLabel>Nationality</FormLabel>
                     <FormControl>
-                      <Input 
-                        type="number" 
-                        placeholder="Enter number" 
-                        {...field}
-                        value={field.value || ""}
-                        onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
-                      />
+                      <Input placeholder="Enter nationality" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-
-            </div>
-
-            {/* Physical Stats */}
-            <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="dateOfBirth"
@@ -392,24 +447,32 @@ export default function AddPlayerDialog({ open, onOpenChange, editingPlayer }: A
                   </FormItem>
                 )}
               />
-              {/* Age Display */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                  Age
-                </label>
-                <div className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background">
-                  {form.watch("dateOfBirth") ? (
-                    <span className="text-foreground">
-                      {calculateAge(form.watch("dateOfBirth"))} years old
-                    </span>
-                  ) : (
-                    <span className="text-muted-foreground">Enter date of birth to calculate age</span>
-                  )}
-                </div>
-              </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            {/* Age Display */}
+            {form.watch("dateOfBirth") && (
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                <span className="text-sm text-gray-600">
+                  Current Age: <span className="font-medium">{calculateAge(form.watch("dateOfBirth"))} years old</span>
+                </span>
+              </div>
+            )}
+
+            {/* Physical Stats */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <FormField
+                control={form.control}
+                name="shirtNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Shirt Number</FormLabel>
+                    <FormControl>
+                      <Input type="number" min="1" max="99" placeholder="Number" {...field} onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={form.control}
                 name="height"
@@ -417,13 +480,7 @@ export default function AddPlayerDialog({ open, onOpenChange, editingPlayer }: A
                   <FormItem>
                     <FormLabel>Height (cm)</FormLabel>
                     <FormControl>
-                      <Input 
-                        type="number" 
-                        placeholder="170" 
-                        {...field}
-                        value={field.value || ""}
-                        onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
-                      />
+                      <Input type="number" placeholder="Height" {...field} onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -436,13 +493,7 @@ export default function AddPlayerDialog({ open, onOpenChange, editingPlayer }: A
                   <FormItem>
                     <FormLabel>Weight (kg)</FormLabel>
                     <FormControl>
-                      <Input 
-                        type="number" 
-                        placeholder="70" 
-                        {...field}
-                        value={field.value || ""}
-                        onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
-                      />
+                      <Input type="number" placeholder="Weight" {...field} onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -450,41 +501,40 @@ export default function AddPlayerDialog({ open, onOpenChange, editingPlayer }: A
               />
             </div>
 
-            <FormField
-              control={form.control}
-              name="nationality"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nationality</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter nationality" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="medicalNotes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Notes</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="Any additional notes about the player..." 
-                      {...field} 
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* Additional Information */}
+            <div className="space-y-4">
+              <FormField
+                control={form.control}
+                name="emergencyContact"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Emergency Contact</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Emergency contact details" {...field} value={field.value || ""} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="medicalNotes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Medical Notes</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Any medical conditions, allergies, or notes" {...field} value={field.value || ""} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             {/* Contract Information */}
-            <div className="col-span-2 space-y-6 border-t pt-6">
-              <h3 className="text-lg font-semibold">Contract Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">Contract Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="contractStartDate"
@@ -492,7 +542,7 @@ export default function AddPlayerDialog({ open, onOpenChange, editingPlayer }: A
                     <FormItem>
                       <FormLabel>Contract Start Date</FormLabel>
                       <FormControl>
-                        <Input type="date" {...field} />
+                        <Input type="date" {...field} value={field.value || ""} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -505,112 +555,92 @@ export default function AddPlayerDialog({ open, onOpenChange, editingPlayer }: A
                     <FormItem>
                       <FormLabel>Contract End Date</FormLabel>
                       <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="monthlySalary"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Monthly Salary ({getCurrencySymbol(currency)})</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <Input 
-                            type="number" 
-                            step="0.01" 
-                            placeholder="0.00" 
-                            {...field}
-                            className="pl-8"
-                          />
-                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
-                            {getCurrencySymbol(currency)}
-                          </span>
-                        </div>
+                        <Input type="date" {...field} value={field.value || ""} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
-              
+              <FormField
+                control={form.control}
+                name="monthlySalary"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Monthly Salary ({getCurrencySymbol(currency)})</FormLabel>
+                    <FormControl>
+                      <Input className="max-w-xs" type="number" step="0.01" placeholder="0.00" {...field} value={field.value || ""} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               {/* Contract Total Calculation */}
               {form.watch("contractStartDate") && form.watch("contractEndDate") && form.watch("monthlySalary") && (
-                <div className="mt-4 p-4 bg-muted/50 rounded-lg">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">Total Contract Value:</span>
-                    <span className="text-lg font-bold text-primary">
-                      {getCurrencySymbol(currency)}{calculateContractTotal(
-                        form.watch("contractStartDate") || "",
-                        form.watch("contractEndDate") || "",
-                        parseFloat(form.watch("monthlySalary") || "0")
-                      ).toLocaleString()}
-                    </span>
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <h4 className="font-medium text-green-900 mb-2">Contract Summary</h4>
+                  <div className="text-sm text-green-700">
+                    Total Contract Value: <span className="font-medium">{getCurrencySymbol(currency)}{calculateContractTotal(form.watch("contractStartDate"), form.watch("contractEndDate"), parseFloat(form.watch("monthlySalary") || "0")).toLocaleString()}</span>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Calculated based on contract duration and monthly salary
-                  </p>
                 </div>
               )}
             </div>
 
-            {/* File Upload Section */}
-            <div className="col-span-2 space-y-6 border-t pt-6">
-              <h3 className="text-lg font-semibold">Documents & Photos</h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Profile Picture */}
+            {/* Document Uploads */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">Documents</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <FormField
                   control={form.control}
                   name="profilePicture"
                   render={({ field }) => (
                     <FormItem>
-                      <FileUpload
-                        label="Profile Picture"
-                        accept="image/*"
-                        value={field.value || ""}
-                        onChange={field.onChange}
-                        description="Upload player profile photo (JPG, PNG)"
-                      />
+                      <FormLabel>Profile Picture</FormLabel>
+                      <FormControl>
+                        <FileUpload
+                          value={field.value}
+                          onChange={field.onChange}
+                          accept="image/*"
+                          description="Upload profile photo"
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-
-                {/* ID Document */}
                 <FormField
                   control={form.control}
                   name="idDocument"
                   render={({ field }) => (
                     <FormItem>
-                      <FileUpload
-                        label="ID/Passport Copy"
-                        accept="image/*,.pdf"
-                        value={field.value || ""}
-                        onChange={field.onChange}
-                        description="Upload ID or passport copy"
-                      />
+                      <FormLabel>ID Document</FormLabel>
+                      <FormControl>
+                        <FileUpload
+                          value={field.value}
+                          onChange={field.onChange}
+                          accept="image/*,.pdf"
+                          description="Upload ID copy"
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-
-                {/* Contract Document */}
                 <FormField
                   control={form.control}
                   name="contractDocument"
                   render={({ field }) => (
                     <FormItem>
-                      <FileUpload
-                        label="Contract"
-                        accept=".pdf,image/*"
-                        value={field.value || ""}
-                        onChange={field.onChange}
-                        description="Upload signed contract"
-                      />
+                      <FormLabel>Contract Document</FormLabel>
+                      <FormControl>
+                        <FileUpload
+                          value={field.value}
+                          onChange={field.onChange}
+                          accept=".pdf,.doc,.docx"
+                          description="Upload signed contract"
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}

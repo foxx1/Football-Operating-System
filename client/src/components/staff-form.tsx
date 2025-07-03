@@ -182,14 +182,97 @@ export default function StaffForm({ staff, onSuccess }: StaffFormProps) {
             name="idNumber"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Official ID / Passport Number</FormLabel>
+                <FormLabel>National ID Number</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter ID or passport number" {...field} />
+                  <Input placeholder="Enter ID number" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
+          <FormField
+            control={form.control}
+            name="passportNumber"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Passport Number</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter passport number" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        {/* Passport Dates */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="passportIssueDate"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Passport Issue Date</FormLabel>
+                <FormControl>
+                  <Input type="date" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="passportExpiryDate"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Passport Expiry Date</FormLabel>
+                <FormControl>
+                  <Input type="date" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        
+        {/* Passport Expiry Calculation */}
+        {form.watch("passportExpiryDate") && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h4 className="font-medium text-blue-900 mb-2">Passport Validity</h4>
+            <div className="text-sm text-blue-700">
+              {(() => {
+                const expiryDateString = form.watch("passportExpiryDate");
+                if (!expiryDateString) return null;
+                
+                const expiryDate = new Date(expiryDateString);
+                const today = new Date();
+                const diffTime = expiryDate.getTime() - today.getTime();
+                
+                if (diffTime < 0) {
+                  return <span className="text-red-600 font-medium">⚠️ Passport has expired!</span>;
+                }
+                
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                const years = Math.floor(diffDays / 365);
+                const months = Math.floor((diffDays % 365) / 30);
+                const days = diffDays % 30;
+                
+                let timeRemaining = "";
+                if (years > 0) timeRemaining += `${years} year${years > 1 ? 's' : ''} `;
+                if (months > 0) timeRemaining += `${months} month${months > 1 ? 's' : ''} `;
+                if (days > 0) timeRemaining += `${days} day${days > 1 ? 's' : ''}`;
+                
+                if (diffDays <= 90) {
+                  return <span className="text-orange-600 font-medium">⚠️ Expires in {timeRemaining} - Renewal needed soon!</span>;
+                }
+                
+                return <span className="text-green-600 font-medium">✅ Valid for {timeRemaining}</span>;
+              })()}
+            </div>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
             control={form.control}
             name="emergencyContact"

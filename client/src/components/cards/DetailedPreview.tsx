@@ -189,6 +189,43 @@ export default function DetailedPreview({
               <span class="info-label">Passport Number:</span><span class="info-value">${player.passportNumber}</span>
             </div>
           ` : ''}
+          ${player.passportIssueDate ? `
+            <div class="info-item">
+              <span class="info-label">Passport Issue Date:</span><span class="info-value">${new Date(player.passportIssueDate).toLocaleDateString()}</span>
+            </div>
+          ` : ''}
+          ${player.passportExpiryDate ? `
+            <div class="info-item">
+              <span class="info-label">Passport Expiry Date:</span><span class="info-value">${new Date(player.passportExpiryDate).toLocaleDateString()}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Passport Validity:</span><span class="info-value">${(() => {
+                const expiryDate = new Date(player.passportExpiryDate);
+                const today = new Date();
+                const diffTime = expiryDate.getTime() - today.getTime();
+                
+                if (diffTime < 0) {
+                  return '⚠️ EXPIRED';
+                }
+                
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                const years = Math.floor(diffDays / 365);
+                const months = Math.floor((diffDays % 365) / 30);
+                const days = diffDays % 30;
+                
+                let timeRemaining = "";
+                if (years > 0) timeRemaining += `${years}y `;
+                if (months > 0) timeRemaining += `${months}m `;
+                if (days > 0) timeRemaining += `${days}d`;
+                
+                if (diffDays <= 90) {
+                  return `⚠️ ${timeRemaining} (renewal needed)`;
+                }
+                
+                return `✅ ${timeRemaining}`;
+              })()}</span>
+            </div>
+          ` : ''}
         </div>
         
         <div class="info-section">
@@ -261,7 +298,49 @@ export default function DetailedPreview({
           ` : ''}
           ${staff.idNumber ? `
             <div class="info-item">
-              <span class="info-label">ID Number:</span><span class="info-value">${staff.idNumber}</span>
+              <span class="info-label">National ID:</span><span class="info-value">${staff.idNumber}</span>
+            </div>
+          ` : ''}
+          ${staff.passportNumber ? `
+            <div class="info-item">
+              <span class="info-label">Passport Number:</span><span class="info-value">${staff.passportNumber}</span>
+            </div>
+          ` : ''}
+          ${staff.passportIssueDate ? `
+            <div class="info-item">
+              <span class="info-label">Passport Issue Date:</span><span class="info-value">${new Date(staff.passportIssueDate).toLocaleDateString()}</span>
+            </div>
+          ` : ''}
+          ${staff.passportExpiryDate ? `
+            <div class="info-item">
+              <span class="info-label">Passport Expiry Date:</span><span class="info-value">${new Date(staff.passportExpiryDate).toLocaleDateString()}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Passport Validity:</span><span class="info-value">${(() => {
+                const expiryDate = new Date(staff.passportExpiryDate);
+                const today = new Date();
+                const diffTime = expiryDate.getTime() - today.getTime();
+                
+                if (diffTime < 0) {
+                  return '⚠️ EXPIRED';
+                }
+                
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                const years = Math.floor(diffDays / 365);
+                const months = Math.floor((diffDays % 365) / 30);
+                const days = diffDays % 30;
+                
+                let timeRemaining = "";
+                if (years > 0) timeRemaining += `${years}y `;
+                if (months > 0) timeRemaining += `${months}m `;
+                if (days > 0) timeRemaining += `${days}d`;
+                
+                if (diffDays <= 90) {
+                  return `⚠️ ${timeRemaining} (renewal needed)`;
+                }
+                
+                return `✅ ${timeRemaining}`;
+              })()}</span>
             </div>
           ` : ''}
         </div>
@@ -310,8 +389,12 @@ export default function DetailedPreview({
         yPos += 8;
       };
       
-      addInfoLine('Email', person.email);
+      addInfoLine('Email', person.email || 'Not provided');
       if (person.phoneNumber) addInfoLine('Phone', person.phoneNumber);
+      if (person.idNumber) addInfoLine('National ID', person.idNumber);
+      if (person.passportNumber) addInfoLine('Passport', person.passportNumber);
+      if (person.passportIssueDate) addInfoLine('Passport Issue', new Date(person.passportIssueDate).toLocaleDateString());
+      if (person.passportExpiryDate) addInfoLine('Passport Expiry', new Date(person.passportExpiryDate).toLocaleDateString());
       
       if (isPlayer) {
         const player = person as Player;

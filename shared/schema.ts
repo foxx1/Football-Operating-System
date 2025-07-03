@@ -28,6 +28,8 @@ export const players = pgTable("players", {
   emergencyContact: text("emergency_contact"),
   idNumber: text("id_number"), // National ID or Passport number
   passportNumber: text("passport_number"), // Passport number if different from ID
+  passportIssueDate: date("passport_issue_date"), // Passport issue date
+  passportExpiryDate: date("passport_expiry_date"), // Passport expiry date
   medicalNotes: text("medical_notes"),
   profilePicture: text("profile_picture"), // file path for profile photo
   idDocument: text("id_document"), // file path for ID/Passport copy
@@ -123,6 +125,9 @@ export const staff = pgTable("staff", {
   qualifications: text("qualifications"),
   emergencyContact: text("emergency_contact"),
   idNumber: text("id_number"), // official ID or passport number
+  passportNumber: text("passport_number"), // Passport number if different from ID
+  passportIssueDate: date("passport_issue_date"), // Passport issue date
+  passportExpiryDate: date("passport_expiry_date"), // Passport expiry date
   profilePicture: text("profile_picture"), // file path to profile photo
   idDocument: text("id_document"), // file path to ID/passport copy
   contractDocument: text("contract_document"), // file path to signed contract
