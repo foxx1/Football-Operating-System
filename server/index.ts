@@ -41,6 +41,14 @@ const upload = multer({
   }
 });
 
+// Add CORS headers for uploads
+app.use('/uploads', (req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  next();
+});
+
 // Serve uploaded files with proper headers
 app.use('/uploads', express.static(uploadsDir, {
   setHeaders: (res, path) => {

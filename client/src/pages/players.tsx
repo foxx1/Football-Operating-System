@@ -195,7 +195,7 @@ export default function Players() {
                 <div className="flex items-center space-x-3">
                   <Avatar className="h-12 w-12">
                     <AvatarImage 
-                      src={player.profilePicture ? `http://localhost:5000${player.profilePicture}` : undefined}
+                      src={player.profilePicture || undefined}
                       alt={`${player.firstName} ${player.lastName}`}
                     />
                     <AvatarFallback className="bg-muted text-muted-foreground">

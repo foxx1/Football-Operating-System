@@ -176,7 +176,7 @@ export default function StaffPage() {
                 <div className="flex items-center space-x-3">
                   <Avatar className="h-12 w-12">
                     <AvatarImage 
-                      src={member.profilePicture ? `http://localhost:5000${member.profilePicture}` : undefined}
+                      src={member.profilePicture || undefined}
                       alt={`${member.firstName} ${member.lastName}`}
                     />
                     <AvatarFallback className="bg-muted text-muted-foreground">
