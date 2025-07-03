@@ -84,10 +84,10 @@ export function FileUpload({
             onChange={handleFileSelect}
             disabled={uploading}
             className="hidden"
-            id={`file-upload-${label.replace(/\s+/g, '-').toLowerCase()}`}
+            id={`file-upload-${(label || 'default').replace(/\s+/g, '-').toLowerCase()}`}
           />
           <Label
-            htmlFor={`file-upload-${label.replace(/\s+/g, '-').toLowerCase()}`}
+            htmlFor={`file-upload-${(label || 'default').replace(/\s+/g, '-').toLowerCase()}`}
             className="cursor-pointer"
           >
             <div className="flex flex-col items-center space-y-2">
