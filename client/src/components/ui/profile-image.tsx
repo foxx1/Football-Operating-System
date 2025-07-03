@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 
 interface ProfileImageProps {
   imageUrl?: string | null;
@@ -6,82 +6,44 @@ interface ProfileImageProps {
   lastName: string;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
-  onImageError?: () => void;
 }
 
-const sizeClasses = {
-  sm: 'w-8 h-8 text-xs',
-  md: 'w-12 h-12 text-sm',
-  lg: 'w-16 h-16 text-base'
-};
+export const ProfileImage: React.FC<ProfileImageProps> = ({
+  imageUrl,
+  firstName,
+  lastName,
+  size = 'md',
+  className = ''
+}) => {
+  const sizeClasses = {
+    sm: 'w-8 h-8 text-xs',
+    md: 'w-12 h-12 text-sm',
+    lg: 'w-16 h-16 text-base'
+  };
 
-export function ProfileImage({ 
-  imageUrl, 
-  firstName, 
-  lastName, 
-  size = 'md', 
-  className = '',
-  onImageError
-}: ProfileImageProps) {
-  const [imageLoaded, setImageLoaded] = useState(false);
-  const [imageError, setImageError] = useState(false);
-  const [imageSrc, setImageSrc] = useState<string | null>(null);
-
-  useEffect(() => {
-    setImageLoaded(false);
-    setImageError(false);
-    
-    if (imageUrl) {
-      // Construct full URL if it's a relative path
-      const fullUrl = imageUrl.startsWith('http') 
-        ? imageUrl 
-        : `http://localhost:5000${imageUrl}?v=${Date.now()}`;
-      
-      console.log('ProfileImage: Loading image for', firstName, lastName, 'URL:', fullUrl);
-      setImageSrc(fullUrl);
-      
-      // Preload image to check if it exists
-      const img = new Image();
-      img.onload = () => {
-        console.log('ProfileImage: Successfully loaded image for', firstName, lastName);
-        setImageLoaded(true);
-        setImageError(false);
-      };
-      img.onerror = (error) => {
-        console.error('ProfileImage: Failed to load image for', firstName, lastName, 'Error:', error);
-        setImageError(true);
-        setImageLoaded(false);
-        onImageError?.();
-      };
-      img.src = fullUrl;
-    } else {
-      console.log('ProfileImage: No image URL for', firstName, lastName);
-      setImageSrc(null);
-    }
-  }, [imageUrl, onImageError, firstName, lastName]);
-
-  const initials = `${firstName[0] || ''}${lastName[0] || ''}`;
+  const initials = `${firstName[0]}${lastName[0]}`.toUpperCase();
+  
+  // Construct the image URL
+  const imageSource = imageUrl && imageUrl.startsWith('/uploads/') 
+    ? `http://localhost:5000${imageUrl}`
+    : imageUrl;
 
   return (
     <div className={`${sizeClasses[size]} rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-medium relative overflow-hidden ${className}`}>
-      {imageSrc && !imageError && (
+      {imageSource ? (
         <img
-          src={imageSrc}
+          src={imageSource}
           alt={`${firstName} ${lastName}`}
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
-            imageLoaded ? 'opacity-100' : 'opacity-0'
-          }`}
-          onLoad={() => setImageLoaded(true)}
-          onError={() => {
-            setImageError(true);
-            setImageLoaded(false);
-            onImageError?.();
+          className="w-full h-full object-cover rounded-full"
+          onError={(e) => {
+            // Hide the image and show initials on error
+            e.currentTarget.style.display = 'none';
           }}
         />
-      )}
-      <span className={`${imageLoaded && !imageError ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`}>
+      ) : null}
+      <span className={`${imageSource ? 'absolute' : ''} font-medium text-gray-600`}>
         {initials}
       </span>
     </div>
   );
-}
+};
