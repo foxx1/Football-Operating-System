@@ -193,12 +193,24 @@ export default function Players() {
             <CardContent className="p-6">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center space-x-3">
-                  <Avatar className="w-12 h-12">
-                    <AvatarImage src={player.profilePicture ? `http://localhost:5000${player.profilePicture}` : `https://images.unsplash.com/photo-150${player.id}0794778202-cad84cf45f1d?w=120&h=120&fit=crop&crop=face`} />
-                    <AvatarFallback>
-                      {player.firstName[0]}{player.lastName[0]}
-                    </AvatarFallback>
-                  </Avatar>
+                  {player.profilePicture ? (
+                    <img 
+                      src={`http://localhost:5000${player.profilePicture}`}
+                      alt={`${player.firstName} ${player.lastName}`}
+                      className="w-12 h-12 rounded-full object-cover"
+                      onError={(e) => {
+                        console.log('Image load error:', e);
+                        console.log('Image URL:', `http://localhost:5000${player.profilePicture}`);
+                      }}
+                    />
+                  ) : (
+                    <Avatar className="w-12 h-12">
+                      <AvatarImage src={`https://images.unsplash.com/photo-150${player.id}0794778202-cad84cf45f1d?w=120&h=120&fit=crop&crop=face`} />
+                      <AvatarFallback>
+                        {player.firstName[0]}{player.lastName[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                  )}
                   <div>
                     <h3 className="font-semibold text-foreground">
                       {player.firstName} {player.lastName}

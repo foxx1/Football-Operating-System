@@ -174,12 +174,24 @@ export default function StaffPage() {
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
                 <div className="flex items-center space-x-3">
-                  <Avatar className="w-12 h-12">
-                    <AvatarImage src={member.profilePicture ? `http://localhost:5000${member.profilePicture}` : `https://images.unsplash.com/photo-150${member.id}003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face`} />
-                    <AvatarFallback>
-                      {member.firstName[0]}{member.lastName[0]}
-                    </AvatarFallback>
-                  </Avatar>
+                  {member.profilePicture ? (
+                    <img 
+                      src={`http://localhost:5000${member.profilePicture}`}
+                      alt={`${member.firstName} ${member.lastName}`}
+                      className="w-12 h-12 rounded-full object-cover"
+                      onError={(e) => {
+                        console.log('Staff image load error:', e);
+                        console.log('Staff image URL:', `http://localhost:5000${member.profilePicture}`);
+                      }}
+                    />
+                  ) : (
+                    <Avatar className="w-12 h-12">
+                      <AvatarImage src={`https://images.unsplash.com/photo-150${member.id}003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face`} />
+                      <AvatarFallback>
+                        {member.firstName[0]}{member.lastName[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                  )}
                   <div>
                     <CardTitle className="text-lg">
                       {member.firstName} {member.lastName}
