@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ProfileImage } from "@/components/ui/profile-image";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useSettings, formatCurrency } from "@/contexts/SettingsContext";
@@ -174,27 +175,12 @@ export default function StaffPage() {
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
                 <div className="flex items-center space-x-3">
-                  <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-medium relative overflow-hidden">
-                    {member.profilePicture ? (
-                      <img
-                        src={`http://localhost:5000${member.profilePicture}?v=${Math.random()}`}
-                        alt={`${member.firstName} ${member.lastName}`}
-                        className="absolute inset-0 w-full h-full object-cover rounded-full"
-                        onLoad={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.style.opacity = '1';
-                        }}
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.style.display = 'none';
-                        }}
-                        style={{ opacity: '0', transition: 'opacity 0.3s' }}
-                      />
-                    ) : null}
-                    <span className={`${member.profilePicture ? 'absolute' : ''} z-10`}>
-                      {member.firstName[0]}{member.lastName[0]}
-                    </span>
-                  </div>
+                  <ProfileImage
+                    imageUrl={member.profilePicture}
+                    firstName={member.firstName}
+                    lastName={member.lastName}
+                    size="md"
+                  />
                   <div>
                     <CardTitle className="text-lg">
                       {member.firstName} {member.lastName}
