@@ -177,7 +177,7 @@ export default function StaffPage() {
                   <div 
                     className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-medium"
                     style={{
-                      backgroundImage: member.profilePicture ? `url(http://localhost:5000${member.profilePicture})` : 'none',
+                      backgroundImage: member.profilePicture ? `url(http://localhost:5000${member.profilePicture}?t=${Date.now()})` : 'none',
                       backgroundSize: 'cover',
                       backgroundPosition: 'center',
                       color: member.profilePicture ? 'transparent' : '#6b7280'

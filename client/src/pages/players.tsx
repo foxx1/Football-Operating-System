@@ -196,7 +196,7 @@ export default function Players() {
                   <div 
                     className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-medium"
                     style={{
-                      backgroundImage: player.profilePicture ? `url(http://localhost:5000${player.profilePicture})` : 'none',
+                      backgroundImage: player.profilePicture ? `url(http://localhost:5000${player.profilePicture}?t=${Date.now()})` : 'none',
                       backgroundSize: 'cover',
                       backgroundPosition: 'center',
                       color: player.profilePicture ? 'transparent' : '#6b7280'
