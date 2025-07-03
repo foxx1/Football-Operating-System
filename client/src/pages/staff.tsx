@@ -12,12 +12,17 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useSettings, formatCurrency } from "@/contexts/SettingsContext";
 import type { Staff } from "@shared/schema";
 import StaffForm from "@/components/staff-form";
+import StaffCard from "@/components/cards/StaffCard";
+import DetailedPreview from "@/components/cards/DetailedPreview";
 
 export default function StaffPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDepartment, setSelectedDepartment] = useState<string>("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<Staff | undefined>();
+  const [selectedStaff, setSelectedStaff] = useState<Set<number>>(new Set());
+  const [previewStaff, setPreviewStaff] = useState<Staff | null>(null);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const { toast } = useToast();
   const { currency } = useSettings();
 
@@ -104,6 +109,28 @@ export default function StaffPage() {
     ).join(' ');
   };
 
+  const handleStaffSelect = (staff: Staff) => {
+    setSelectedStaff(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(staff.id)) {
+        newSet.delete(staff.id);
+      } else {
+        newSet.add(staff.id);
+      }
+      return newSet;
+    });
+  };
+
+  const handleStaffPreview = (staff: Staff) => {
+    setPreviewStaff(staff);
+    setIsPreviewOpen(true);
+  };
+
+  const handleStaffEdit = (staff: Staff) => {
+    setEditingStaff(staff);
+    setDialogOpen(true);
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -170,80 +197,20 @@ export default function StaffPage() {
       {/* Staff Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredStaff.map((member: Staff) => (
-          <Card key={member.id} className={`hover:shadow-lg transition-shadow ${getDepartmentColor(member.department)}`}>
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center space-x-3">
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage 
-                      src={member.profilePicture || undefined}
-                      alt={`${member.firstName} ${member.lastName}`}
-                      className="object-cover object-center"
-                    />
-                    <AvatarFallback className="bg-muted text-muted-foreground">
-                      {member.firstName[0]}{member.lastName[0]}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <CardTitle className="text-lg">
-                      {member.firstName} {member.lastName}
-                    </CardTitle>
-                    <Badge className={`text-xs ${getRoleColor(member.role)}`}>
-                      {formatRole(member.role)}
-                    </Badge>
-                  </div>
-                </div>
-                <div className="flex space-x-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleEditStaff(member)}
-                    className="h-8 w-8 p-0"
-                  >
-                    <Edit className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDeleteStaff(member.id)}
-                    className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center text-sm text-gray-600">
-                <Briefcase className="w-4 h-4 mr-2" />
-                <span className="capitalize">{member.department}</span>
-                <span className="mx-2">•</span>
-                <span className="capitalize">{member.employmentType.replace('_', ' ')}</span>
-              </div>
-              
-              <div className="flex items-center text-sm text-gray-600">
-                <Mail className="w-4 h-4 mr-2" />
-                <span className="truncate">{member.email}</span>
-              </div>
-              
-              {member.phoneNumber && (
-                <div className="flex items-center text-sm text-gray-600">
-                  <Phone className="w-4 h-4 mr-2" />
-                  <span>{member.phoneNumber}</span>
-                </div>
-              )}
-
-              {member.salary && (
-                <div className="text-sm font-medium text-gray-900">
-                  Monthly Salary: {formatCurrency(member.salary, currency)}
-                </div>
-              )}
-
-              <div className="text-xs text-gray-500">
-                Started: {new Date(member.startDate).toLocaleDateString()}
-              </div>
-            </CardContent>
-          </Card>
+          <StaffCard
+            key={member.id}
+            staff={member}
+            isSelected={selectedStaff.has(member.id)}
+            onEdit={handleStaffEdit}
+            onDelete={handleDeleteStaff}
+            onPreview={handleStaffPreview}
+            onSelect={handleStaffSelect}
+            getDepartmentColor={getDepartmentColor}
+            getRoleColor={getRoleColor}
+            formatRole={formatRole}
+            formatCurrency={(amount: string, currency: string) => formatCurrency(Number(amount) || 0, currency)}
+            currency={currency}
+          />
         ))}
       </div>
 
@@ -267,6 +234,20 @@ export default function StaffPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Staff Preview Dialog */}
+      <DetailedPreview
+        isOpen={isPreviewOpen}
+        onClose={() => setIsPreviewOpen(false)}
+        data={previewStaff}
+        type="staff"
+        onEdit={handleStaffEdit}
+        getDepartmentColor={getDepartmentColor}
+        getRoleColor={getRoleColor}
+        formatRole={formatRole}
+        formatCurrency={(amount: string, currency: string) => formatCurrency(Number(amount) || 0, currency)}
+        currency={currency}
+      />
     </div>
   );
 }

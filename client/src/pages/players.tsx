@@ -9,12 +9,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Plus, Search, Filter, MoreHorizontal, Edit, Trash2, User } from "lucide-react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import AddPlayerDialog from "@/components/players/add-player-dialog";
+import PlayerCard from "@/components/cards/PlayerCard";
+import DetailedPreview from "@/components/cards/DetailedPreview";
 import type { Player } from "@shared/schema";
 
 export default function Players() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddPlayerOpen, setIsAddPlayerOpen] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
+  const [selectedPlayers, setSelectedPlayers] = useState<Set<number>>(new Set());
+  const [previewPlayer, setPreviewPlayer] = useState<Player | null>(null);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   const { data: players = [], isLoading } = useQuery<Player[]>({
     queryKey: ["/api/players"],
@@ -59,6 +64,27 @@ export default function Players() {
     if (confirm("Are you sure you want to delete this player?")) {
       deletePlayerMutation.mutate(playerId);
     }
+  };
+
+  const handlePlayerSelect = (player: Player) => {
+    setSelectedPlayers(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(player.id)) {
+        newSet.delete(player.id);
+      } else {
+        newSet.add(player.id);
+      }
+      return newSet;
+    });
+  };
+
+  const handlePlayerPreview = (player: Player) => {
+    setPreviewPlayer(player);
+    setIsPreviewOpen(true);
+  };
+
+  const handlePlayerEdit = (player: Player) => {
+    setEditingPlayer(player);
   };
 
   if (isLoading) {
@@ -189,73 +215,16 @@ export default function Players() {
           }
           
           return (
-          <Card key={player.id} className="stats-card hover:shadow-lg transition-shadow">
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center space-x-3">
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage 
-                      src={player.profilePicture || undefined}
-                      alt={`${player.firstName} ${player.lastName}`}
-                      className="object-cover object-center"
-                    />
-                    <AvatarFallback className="bg-muted text-muted-foreground">
-                      {player.firstName[0]}{player.lastName[0]}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <h3 className="font-semibold text-foreground">
-                      {player.firstName} {player.lastName}
-                    </h3>
-                    {player.shirtNumber && (
-                      <p className="text-sm text-muted-foreground">#{player.shirtNumber}</p>
-                    )}
-                  </div>
-                </div>
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => setEditingPlayer(player)}
-                >
-                  <MoreHorizontal className="w-4 h-4" />
-                </Button>
-              </div>
-              
-              <div className="space-y-2">
-                <Badge className={getPositionColor(player.position)}>
-                  {player.position}
-                </Badge>
-                
-                <div className="text-sm text-muted-foreground space-y-1">
-                  <p>Age: {new Date().getFullYear() - new Date(player.dateOfBirth).getFullYear()}</p>
-                  <p>Nationality: {player.nationality}</p>
-                  {player.height && player.weight && (
-                    <p>{player.height}cm • {player.weight}kg</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex space-x-2 mt-4">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1"
-                  onClick={() => setEditingPlayer(player)}
-                >
-                  <Edit className="w-3 h-3 mr-1" />
-                  Edit
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                  onClick={() => handleDeletePlayer(player.id)}
-                >
-                  <Trash2 className="w-3 h-3" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+            <PlayerCard
+              key={player.id}
+              player={player}
+              isSelected={selectedPlayers.has(player.id)}
+              onEdit={handlePlayerEdit}
+              onDelete={handleDeletePlayer}
+              onPreview={handlePlayerPreview}
+              onSelect={handlePlayerSelect}
+              getPositionColor={getPositionColor}
+            />
           );
         })}
       </div>
@@ -284,6 +253,16 @@ export default function Players() {
         open={!!editingPlayer} 
         onOpenChange={() => setEditingPlayer(null)}
         editingPlayer={editingPlayer}
+      />
+
+      {/* Player Preview Dialog */}
+      <DetailedPreview
+        isOpen={isPreviewOpen}
+        onClose={() => setIsPreviewOpen(false)}
+        data={previewPlayer}
+        type="player"
+        onEdit={handlePlayerEdit}
+        getPositionColor={getPositionColor}
       />
     </div>
   );
