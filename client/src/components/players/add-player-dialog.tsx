@@ -657,7 +657,7 @@ export default function AddPlayerDialog({ open, onOpenChange, editingPlayer }: A
                         <FormLabel className="text-sm font-medium">Profile Picture</FormLabel>
                         <FormControl>
                           <FileUpload
-                            label="Profile Picture"
+                            label=""
                             value={field.value || undefined}
                             onChange={field.onChange}
                             accept="image/*"
@@ -680,7 +680,7 @@ export default function AddPlayerDialog({ open, onOpenChange, editingPlayer }: A
                         <FormLabel className="text-sm font-medium">ID Document</FormLabel>
                         <FormControl>
                           <FileUpload
-                            label="ID Document"
+                            label=""
                             value={field.value || undefined}
                             onChange={field.onChange}
                             accept="image/*,.pdf"
@@ -703,7 +703,7 @@ export default function AddPlayerDialog({ open, onOpenChange, editingPlayer }: A
                         <FormLabel className="text-sm font-medium">Contract Document</FormLabel>
                         <FormControl>
                           <FileUpload
-                            label="Contract Document"
+                            label=""
                             value={field.value || undefined}
                             onChange={field.onChange}
                             accept=".pdf,.doc,.docx"

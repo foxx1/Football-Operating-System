@@ -99,13 +99,24 @@ export default function StaffForm({ staff, onSuccess }: StaffFormProps) {
       }
     },
     onSuccess: async (newStaff) => {
-      // If creating new staff and a team is selected, handle team assignment here if needed
-      // Note: Staff usually aren't assigned to specific teams like players are
-      if (!staff && selectedTeam) {
-        toast({
-          title: "Staff member created successfully",
-          description: `Staff member added and associated with selected team.`,
-        });
+      // Handle team assignment for staff members
+      if (selectedTeam && newStaff?.id) {
+        try {
+          await apiRequest("POST", "/api/staff-teams", {
+            teamId: selectedTeam,
+            staffId: (newStaff as any).id,
+          });
+          toast({
+            title: staff ? "Staff member updated" : "Staff member created",
+            description: `Staff member ${staff ? "updated" : "added"} and assigned to team successfully.`,
+          });
+        } catch (error) {
+          toast({
+            title: "Warning",
+            description: "Staff member saved but team assignment failed.",
+            variant: "destructive",
+          });
+        }
       } else {
         toast({
           title: "Staff member saved successfully",
@@ -114,7 +125,10 @@ export default function StaffForm({ staff, onSuccess }: StaffFormProps) {
       }
       
       queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/staff-teams"] });
       form.reset();
+      setSelectedTeam(null);
       onSuccess();
     },
     onError: () => {
@@ -163,25 +177,26 @@ export default function StaffForm({ staff, onSuccess }: StaffFormProps) {
           />
         </div>
 
-        {/* Team Assignment Section - Only show when creating new staff */}
-        {!isEditing && (
-          <div className="form-field">
-            <FormLabel>Assign to Team (Optional)</FormLabel>
-            <Select onValueChange={(value) => setSelectedTeam(value === "none" ? null : parseInt(value))}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select team to assign staff member" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">No team assignment</SelectItem>
-                {teams.map((team) => (
+        {/* Team Assignment Section - Available for both creation and editing */}
+        <div className="form-field">
+          <FormLabel>Assign to Team (Optional)</FormLabel>
+          <Select 
+            value={selectedTeam ? selectedTeam.toString() : "none"} 
+            onValueChange={(value) => setSelectedTeam(value === "none" ? null : parseInt(value))}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select team to assign staff member" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">No team assignment</SelectItem>
+              {teams.map((team) => (
                   <SelectItem key={team.id} value={team.id.toString()}>
                     {team.name} ({team.category})
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-          </div>
-        )}
+        </div>
 
         {/* Contact Information */}
         <div className="grid grid-cols-2 gap-4">
