@@ -8,11 +8,14 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Plus, Users, Edit, Trash2, UserPlus, Shield } from "lucide-react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import TeamForm from "@/components/team-form";
+import TeamPlayerManagement from "@/components/team-player-management";
 import type { Team } from "@shared/schema";
 
 export default function Teams() {
   const [isAddTeamOpen, setIsAddTeamOpen] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
+  const [isManagePlayersOpen, setIsManagePlayersOpen] = useState(false);
+  const [selectedTeamForManagement, setSelectedTeamForManagement] = useState<Team | null>(null);
 
   const { data: teams = [], isLoading: teamsLoading } = useQuery<Team[]>({
     queryKey: ["/api/teams"],
@@ -172,7 +175,15 @@ export default function Teams() {
                   <Users className="w-4 h-4" />
                   <span>View Squad</span>
                 </div>
-                <Button variant="outline" size="sm">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedTeamForManagement(team);
+                    setIsManagePlayersOpen(true);
+                  }}
+                >
                   <Edit className="w-3 h-3 mr-1" />
                   Manage
                 </Button>
@@ -288,6 +299,18 @@ export default function Teams() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Team Player Management Dialog */}
+      {selectedTeamForManagement && (
+        <TeamPlayerManagement
+          team={selectedTeamForManagement}
+          isOpen={isManagePlayersOpen}
+          onClose={() => {
+            setIsManagePlayersOpen(false);
+            setSelectedTeamForManagement(null);
+          }}
+        />
+      )}
     </div>
   );
 }
