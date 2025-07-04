@@ -1,12 +1,14 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Users, UserPlus } from "lucide-react";
+import { Plus, Users, UserPlus, X } from "lucide-react";
 import PlayerForm from "@/components/player-form";
+import { useToast } from "@/hooks/use-toast";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { Team, Player } from "@shared/schema";
 
 interface TeamPlayerManagementProps {
@@ -24,6 +26,7 @@ const needsFullContract = (category: string) => {
 export default function TeamPlayerManagement({ team, isOpen, onClose }: TeamPlayerManagementProps) {
   const [isAddPlayerOpen, setIsAddPlayerOpen] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
+  const { toast } = useToast();
 
   const { data: teamPlayers = [], isLoading: playersLoading } = useQuery<Player[]>({
     queryKey: ["/api/teams", team.id, "players"],
@@ -38,6 +41,46 @@ export default function TeamPlayerManagement({ team, isOpen, onClose }: TeamPlay
   const unassignedPlayers = allPlayers.filter(
     player => !teamPlayers.some(tp => tp.id === player.id)
   );
+
+  const addPlayerToSquadMutation = useMutation({
+    mutationFn: (playerId: number) => 
+      apiRequest("POST", `/api/teams/${team.id}/players/${playerId}`, {}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/teams", team.id, "players"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/players"] });
+      toast({
+        title: "Success",
+        description: "Player added to squad successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to add player to squad",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const removePlayerFromSquadMutation = useMutation({
+    mutationFn: (playerId: number) => 
+      apiRequest("DELETE", `/api/teams/${team.id}/players/${playerId}`, {}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/teams", team.id, "players"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/players"] });
+      toast({
+        title: "Success",
+        description: "Player removed from squad successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to remove player from squad",
+        variant: "destructive",
+      });
+    },
+  });
 
   const formatCategoryName = (category: string) => {
     switch (category.toLowerCase()) {
@@ -121,20 +164,31 @@ export default function TeamPlayerManagement({ team, isOpen, onClose }: TeamPlay
                   {teamPlayers.map((player) => (
                     <Card key={player.id} className="hover:shadow-md transition-shadow">
                       <CardContent className="p-4">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                            <span className="text-sm font-bold">
-                              {player.shirtNumber || '?'}
-                            </span>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                              <span className="text-sm font-bold">
+                                {player.shirtNumber || '?'}
+                              </span>
+                            </div>
+                            <div className="flex-1">
+                              <h4 className="font-medium">
+                                {player.firstName} {player.lastName}
+                              </h4>
+                              <p className="text-sm text-muted-foreground">
+                                {player.position}
+                              </p>
+                            </div>
                           </div>
-                          <div className="flex-1">
-                            <h4 className="font-medium">
-                              {player.firstName} {player.lastName}
-                            </h4>
-                            <p className="text-sm text-muted-foreground">
-                              {player.position}
-                            </p>
-                          </div>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => removePlayerFromSquadMutation.mutate(player.id)}
+                            disabled={removePlayerFromSquadMutation.isPending}
+                          >
+                            <X className="w-4 h-4 mr-1" />
+                            Remove
+                          </Button>
                         </div>
                       </CardContent>
                     </Card>
@@ -180,9 +234,14 @@ export default function TeamPlayerManagement({ team, isOpen, onClose }: TeamPlay
                               </p>
                             </div>
                           </div>
-                          <Button size="sm" variant="outline">
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => addPlayerToSquadMutation.mutate(player.id)}
+                            disabled={addPlayerToSquadMutation.isPending}
+                          >
                             <Plus className="w-4 h-4 mr-1" />
-                            Add
+                            {addPlayerToSquadMutation.isPending ? 'Adding...' : 'Add to Squad'}
                           </Button>
                         </div>
                       </CardContent>
