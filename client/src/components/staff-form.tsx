@@ -167,12 +167,12 @@ export default function StaffForm({ staff, onSuccess }: StaffFormProps) {
         {!isEditing && (
           <div className="form-field">
             <FormLabel>Assign to Team (Optional)</FormLabel>
-            <Select onValueChange={(value) => setSelectedTeam(value ? parseInt(value) : null)}>
+            <Select onValueChange={(value) => setSelectedTeam(value === "none" ? null : parseInt(value))}>
               <SelectTrigger>
                 <SelectValue placeholder="Select team to assign staff member" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">No team assignment</SelectItem>
+                <SelectItem value="none">No team assignment</SelectItem>
                 {teams.map((team) => (
                   <SelectItem key={team.id} value={team.id.toString()}>
                     {team.name} ({team.category})
