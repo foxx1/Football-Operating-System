@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { insertPlayerSchema, type Player } from "@shared/schema";
+import { insertPlayerSchema, type Player, type Team } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useSettings } from "@/contexts/SettingsContext";
@@ -47,6 +47,13 @@ export default function AddPlayerDialog({ open, onOpenChange, editingPlayer }: A
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { currency } = useSettings();
+  const [selectedTeam, setSelectedTeam] = useState<number | null>(null);
+  const isEditing = !!editingPlayer;
+
+  // Fetch available teams for assignment
+  const { data: teams = [] } = useQuery<Team[]>({
+    queryKey: ["/api/teams"],
+  });
 
   // Helper function to get currency symbol
   const getCurrencySymbol = (currency: string) => {
@@ -193,20 +200,37 @@ export default function AddPlayerDialog({ open, onOpenChange, editingPlayer }: A
         weight: data.weight || null,
       };
 
+      let createdPlayer;
       if (editingPlayer) {
-        return apiRequest("PATCH", `/api/players/${editingPlayer.id}`, playerData);
+        createdPlayer = await apiRequest("PATCH", `/api/players/${editingPlayer.id}`, playerData);
       } else {
-        return apiRequest("POST", "/api/players", playerData);
+        createdPlayer = await apiRequest("POST", "/api/players", playerData);
       }
+
+      // If team assignment is selected, add player to team
+      if (selectedTeam && createdPlayer?.id) {
+        await apiRequest("POST", "/api/team-players", {
+          teamId: selectedTeam,
+          playerId: (createdPlayer as any).id,
+          isStarter: false,
+        });
+      }
+
+      return createdPlayer;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/players"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/team-players"] });
       toast({
         title: editingPlayer ? "Player updated" : "Player added",
-        description: editingPlayer ? "Player has been updated successfully." : "New player has been added to the team.",
+        description: editingPlayer 
+          ? "Player has been updated successfully." 
+          : `New player has been added${selectedTeam ? " and assigned to team" : ""}.`,
       });
       onOpenChange(false);
       form.reset();
+      setSelectedTeam(null);
     },
     onError: (error) => {
       toast({
@@ -601,70 +625,96 @@ export default function AddPlayerDialog({ open, onOpenChange, editingPlayer }: A
               )}
             </div>
 
-            {/* Document Uploads */}
+            {/* Team Assignment */}
             <div className="space-y-4">
-              <h3 className="text-lg font-medium">Documents</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <FormField
-                  key="profilePicture"
-                  control={form.control}
-                  name="profilePicture"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Profile Picture</FormLabel>
-                      <FormControl>
-                        <FileUpload
-                          label="Profile Picture"
-                          value={field.value || undefined}
-                          onChange={field.onChange}
-                          accept="image/*"
-                          description="Upload profile photo"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  key="idDocument"
-                  control={form.control}
-                  name="idDocument"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>ID Document</FormLabel>
-                      <FormControl>
-                        <FileUpload
-                          label="ID Document"
-                          value={field.value || undefined}
-                          onChange={field.onChange}
-                          accept="image/*,.pdf"
-                          description="Upload ID copy"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  key="contractDocument"
-                  control={form.control}
-                  name="contractDocument"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Contract Document</FormLabel>
-                      <FormControl>
-                        <FileUpload
-                          label="Contract Document"
-                          value={field.value || undefined}
-                          onChange={field.onChange}
-                          accept=".pdf,.doc,.docx"
-                          description="Upload signed contract"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <h3 className="text-lg font-medium">Team Assignment (Optional)</h3>
+              <Select value={selectedTeam ? selectedTeam.toString() : "none"} onValueChange={(value) => setSelectedTeam(value === "none" ? null : parseInt(value))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a team to assign player" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No team assignment</SelectItem>
+                  {teams.map((team) => (
+                    <SelectItem key={team.id} value={team.id.toString()}>
+                      {team.name} ({team.category})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Document Uploads Section */}
+            <div className="space-y-4 border-t pt-4">
+              <h3 className="text-lg font-medium text-gray-900">Documents</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Profile Picture Upload */}
+                <div className="space-y-2">
+                  <FormField
+                    control={form.control}
+                    name="profilePicture"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium">Profile Picture</FormLabel>
+                        <FormControl>
+                          <FileUpload
+                            label="Profile Picture"
+                            value={field.value || undefined}
+                            onChange={field.onChange}
+                            accept="image/*"
+                            description="Upload profile photo"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                {/* ID Document Upload */}
+                <div className="space-y-2">
+                  <FormField
+                    control={form.control}
+                    name="idDocument"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium">ID Document</FormLabel>
+                        <FormControl>
+                          <FileUpload
+                            label="ID Document"
+                            value={field.value || undefined}
+                            onChange={field.onChange}
+                            accept="image/*,.pdf"
+                            description="Upload ID copy"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                {/* Contract Document Upload */}
+                <div className="space-y-2">
+                  <FormField
+                    control={form.control}
+                    name="contractDocument"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium">Contract Document</FormLabel>
+                        <FormControl>
+                          <FileUpload
+                            label="Contract Document"
+                            value={field.value || undefined}
+                            onChange={field.onChange}
+                            accept=".pdf,.doc,.docx"
+                            description="Upload signed contract"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
               </div>
             </div>
 
