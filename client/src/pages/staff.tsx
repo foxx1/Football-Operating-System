@@ -70,9 +70,7 @@ export default function StaffPage() {
   };
 
   const handleDeleteStaff = (id: number) => {
-    if (confirm("Are you sure you want to delete this staff member?")) {
-      deleteStaffMutation.mutate(id);
-    }
+    deleteStaffMutation.mutate(id);
   };
 
   const handleFormSuccess = () => {

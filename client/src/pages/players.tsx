@@ -61,9 +61,7 @@ export default function Players() {
   };
 
   const handleDeletePlayer = (playerId: number) => {
-    if (confirm("Are you sure you want to delete this player?")) {
-      deletePlayerMutation.mutate(playerId);
-    }
+    deletePlayerMutation.mutate(playerId);
   };
 
   const handlePlayerSelect = (player: Player) => {
