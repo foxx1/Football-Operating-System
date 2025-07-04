@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Plus, Users, Edit, Trash2, UserPlus, Shield } from "lucide-react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import TeamForm from "@/components/team-form";
@@ -117,6 +117,9 @@ export default function Teams() {
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Create New Team</DialogTitle>
+              <DialogDescription>
+                Create a new team with category selection and custom naming options.
+              </DialogDescription>
             </DialogHeader>
             <TeamForm
               onSuccess={() => setIsAddTeamOpen(false)}

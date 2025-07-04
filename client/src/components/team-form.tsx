@@ -19,6 +19,14 @@ const teamFormSchema = insertTeamSchema.extend({
   category: z.string().min(1, "Please select a team category"),
   customCategory: z.string().optional(),
   description: z.string().optional(),
+}).refine((data) => {
+  if (data.category === "custom" && !data.customCategory?.trim()) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Custom category name is required when using custom category",
+  path: ["customCategory"],
 });
 
 type TeamFormData = z.infer<typeof teamFormSchema>;
@@ -72,10 +80,17 @@ export default function TeamForm({ onSuccess, onCancel }: TeamFormProps) {
   });
 
   const onSubmit = (data: TeamFormData) => {
+    // Additional validation for custom category
     if (data.category === "custom" && !data.customCategory?.trim()) {
       form.setError("customCategory", { message: "Please enter a custom category name" });
       return;
     }
+    
+    // Clean up custom category name (trim whitespace, proper casing)
+    if (data.category === "custom" && data.customCategory) {
+      data.customCategory = data.customCategory.trim();
+    }
+    
     createTeamMutation.mutate(data);
   };
 
@@ -254,18 +269,49 @@ export default function TeamForm({ onSuccess, onCancel }: TeamFormProps) {
 
           {/* Custom Category Input */}
           {showCustomCategory && (
-            <div className="space-y-2">
-              <Label htmlFor="customCategory">Custom Category Name *</Label>
+            <div className="space-y-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="flex items-center space-x-2">
+                <Label htmlFor="customCategory" className="text-blue-800 font-medium">
+                  Custom Category Name *
+                </Label>
+                <Badge className="bg-blue-100 text-blue-800 border-blue-300">
+                  Custom
+                </Badge>
+              </div>
               <Input
                 id="customCategory"
-                placeholder="e.g., Under 13, Women's Team, Veterans"
+                placeholder="Type your custom category name here..."
                 {...form.register("customCategory")}
-                className={form.formState.errors.customCategory ? "border-red-500" : ""}
+                className={`${form.formState.errors.customCategory ? "border-red-500" : "border-blue-300"} bg-white`}
+                autoFocus
+                maxLength={50}
               />
               {form.formState.errors.customCategory && (
                 <p className="text-sm text-red-600">{form.formState.errors.customCategory.message}</p>
               )}
-              <p className="text-sm text-gray-500">Enter a custom category name for your team</p>
+              <div className="text-sm text-blue-700">
+                <p className="font-medium mb-2">💡 Quick select or type your own:</p>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {["Under 13", "Under 11", "Under 9", "Women's Team", "Veterans", "Futsal Team", "Development Squad"].map((category) => (
+                    <Button
+                      key={category}
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="text-xs h-7 text-blue-700 border-blue-300 hover:bg-blue-100"
+                      onClick={() => {
+                        form.setValue("customCategory", category);
+                        form.clearErrors("customCategory");
+                      }}
+                    >
+                      {category}
+                    </Button>
+                  ))}
+                </div>
+                <p className="text-xs text-blue-500">
+                  {form.watch("customCategory")?.length || 0}/50 characters
+                </p>
+              </div>
             </div>
           )}
 
