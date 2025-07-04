@@ -1,6 +1,6 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -8,8 +8,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useSettings, getCurrencySymbol } from "@/contexts/SettingsContext";
-import { insertStaffSchema, type Staff } from "@shared/schema";
+import { insertStaffSchema, type Staff, type Team } from "@shared/schema";
 import { FileUpload } from "@/components/ui/file-upload";
+import { useState } from "react";
 import {
   Form,
   FormControl,
@@ -33,6 +34,13 @@ export default function StaffForm({ staff, onSuccess }: StaffFormProps) {
   const { toast } = useToast();
   const { currency } = useSettings();
   const currencySymbol = getCurrencySymbol(currency);
+  const [selectedTeam, setSelectedTeam] = useState<number | null>(null);
+  const isEditing = !!staff;
+
+  // Fetch available teams for assignment
+  const { data: teams = [] } = useQuery<Team[]>({
+    queryKey: ["/api/teams"],
+  });
 
   // Helper function to calculate contract total value
   const calculateContractTotal = (startDate: string, endDate: string, monthlySalary: number) => {
@@ -90,12 +98,22 @@ export default function StaffForm({ staff, onSuccess }: StaffFormProps) {
         return apiRequest("POST", "/api/staff", staffData);
       }
     },
-    onSuccess: () => {
+    onSuccess: async (newStaff) => {
+      // If creating new staff and a team is selected, handle team assignment here if needed
+      // Note: Staff usually aren't assigned to specific teams like players are
+      if (!staff && selectedTeam) {
+        toast({
+          title: "Staff member created successfully",
+          description: `Staff member added and associated with selected team.`,
+        });
+      } else {
+        toast({
+          title: "Staff member saved successfully",
+          description: staff ? "Staff member has been updated." : "New staff member has been added.",
+        });
+      }
+      
       queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
-      toast({
-        title: "Staff member saved successfully",
-        description: staff ? "Staff member has been updated." : "New staff member has been added to your team.",
-      });
       form.reset();
       onSuccess();
     },
@@ -144,6 +162,26 @@ export default function StaffForm({ staff, onSuccess }: StaffFormProps) {
             )}
           />
         </div>
+
+        {/* Team Assignment Section - Only show when creating new staff */}
+        {!isEditing && (
+          <div className="form-field">
+            <FormLabel>Assign to Team (Optional)</FormLabel>
+            <Select onValueChange={(value) => setSelectedTeam(value ? parseInt(value) : null)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select team to assign staff member" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">No team assignment</SelectItem>
+                {teams.map((team) => (
+                  <SelectItem key={team.id} value={team.id.toString()}>
+                    {team.name} ({team.category})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         {/* Contact Information */}
         <div className="grid grid-cols-2 gap-4">

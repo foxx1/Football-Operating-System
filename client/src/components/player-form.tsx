@@ -1,15 +1,16 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { insertPlayerSchema, type Player } from "@shared/schema";
+import { insertPlayerSchema, type Player, type Team } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 
 interface PlayerFormProps {
   player?: Player;
@@ -19,6 +20,12 @@ interface PlayerFormProps {
 export default function PlayerForm({ player, onSuccess }: PlayerFormProps) {
   const { toast } = useToast();
   const isEditing = !!player;
+  const [selectedTeam, setSelectedTeam] = useState<number | null>(null);
+
+  // Fetch available teams for assignment
+  const { data: teams = [] } = useQuery<Team[]>({
+    queryKey: ["/api/teams"],
+  });
 
   const form = useForm({
     resolver: zodResolver(insertPlayerSchema),
@@ -42,12 +49,31 @@ export default function PlayerForm({ player, onSuccess }: PlayerFormProps) {
   const createPlayerMutation = useMutation({
     mutationFn: (data: any) => 
       apiRequest("POST", "/api/players", data),
-    onSuccess: () => {
+    onSuccess: async (newPlayer) => {
+      // If a team is selected, add the player to that team
+      if (selectedTeam) {
+        try {
+          await apiRequest("POST", `/api/teams/${selectedTeam}/players/${newPlayer.id}`, {});
+          queryClient.invalidateQueries({ queryKey: [`/api/teams/${selectedTeam}/players`] });
+          toast({
+            title: "Success",
+            description: "Player created and added to team successfully",
+          });
+        } catch (error) {
+          toast({
+            title: "Warning",
+            description: "Player created but failed to add to team",
+            variant: "destructive",
+          });
+        }
+      } else {
+        toast({
+          title: "Success",
+          description: "Player created successfully",
+        });
+      }
+      
       queryClient.invalidateQueries({ queryKey: ["/api/players"] });
-      toast({
-        title: "Success",
-        description: "Player created successfully",
-      });
       onSuccess();
     },
     onError: () => {
@@ -132,6 +158,26 @@ export default function PlayerForm({ player, onSuccess }: PlayerFormProps) {
             )}
           />
         </div>
+
+        {/* Team Assignment Section - Only show when creating new player */}
+        {!isEditing && (
+          <div className="form-field">
+            <FormLabel>Assign to Team (Optional)</FormLabel>
+            <Select onValueChange={(value) => setSelectedTeam(value ? parseInt(value) : null)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select team to assign player" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">No team assignment</SelectItem>
+                {teams.map((team) => (
+                  <SelectItem key={team.id} value={team.id.toString()}>
+                    {team.name} ({team.category})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-4">
           <FormField
