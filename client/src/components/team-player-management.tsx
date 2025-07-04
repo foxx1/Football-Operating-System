@@ -31,11 +31,13 @@ export default function TeamPlayerManagement({ team, isOpen, onClose }: TeamPlay
   const { data: teamPlayersData = [], isLoading: playersLoading } = useQuery<any[]>({
     queryKey: ["/api/teams", team.id, "players"],
     enabled: !!team.id && isOpen,
+    staleTime: 0, // Always refetch
   });
 
   const { data: allPlayers = [] } = useQuery<Player[]>({
     queryKey: ["/api/players"],
     enabled: isOpen,
+    staleTime: 0, // Always refetch
   });
 
   // Extract just the players from team-player relationships and remove duplicates

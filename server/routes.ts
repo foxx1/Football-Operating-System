@@ -181,10 +181,13 @@ export async function registerRoutes(app: Express, upload?: any): Promise<Server
     try {
       const teamId = parseInt(req.params.teamId);
       const playerId = parseInt(req.params.playerId);
+      console.log(`Adding player ${playerId} to team ${teamId}`);
       const teamPlayer = await storage.addPlayerToTeam({ teamId, playerId, isStarter: false });
       res.status(201).json(teamPlayer);
     } catch (error) {
-      res.status(400).json({ message: "Failed to add player to team" });
+      console.error("Error adding player to team:", error);
+      const message = error instanceof Error ? error.message : "Failed to add player to team";
+      res.status(400).json({ message });
     }
   });
 
