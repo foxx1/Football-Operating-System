@@ -18,6 +18,7 @@ import {
   Award
 } from "lucide-react";
 import { Player } from "@shared/schema";
+import DeleteConfirmationDialog from "@/components/ui/delete-confirmation-dialog";
 import { motion } from "framer-motion";
 
 interface PlayerCardProps {
@@ -42,6 +43,7 @@ export default function PlayerCard({
   getPositionColor
 }: PlayerCardProps) {
   const [isCardHovered, setIsCardHovered] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const age = new Date().getFullYear() - new Date(player.dateOfBirth).getFullYear();
 
@@ -187,9 +189,7 @@ export default function PlayerCard({
               className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
               onClick={(e) => {
                 e.stopPropagation();
-                if (window.confirm(`Are you sure you want to delete ${player.firstName} ${player.lastName}?`)) {
-                  onDelete(player.id);
-                }
+                setShowDeleteDialog(true);
               }}
             >
               <Trash2 className="w-3 h-3 mr-1" />
@@ -211,6 +211,18 @@ export default function PlayerCard({
           <Star className="w-5 h-5 text-yellow-500 fill-current" />
         </motion.div>
       </Card>
+
+      <DeleteConfirmationDialog
+        isOpen={showDeleteDialog}
+        onClose={() => setShowDeleteDialog(false)}
+        onConfirm={() => {
+          onDelete(player.id);
+          setShowDeleteDialog(false);
+        }}
+        title="Delete Player"
+        name={`${player.firstName} ${player.lastName}`}
+        type="player"
+      />
     </motion.div>
   );
 }

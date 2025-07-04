@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { Staff } from "@shared/schema";
 import { motion } from "framer-motion";
+import DeleteConfirmationDialog from "@/components/ui/delete-confirmation-dialog";
 
 interface StaffCardProps {
   staff: Staff;
@@ -48,6 +49,7 @@ export default function StaffCard({
   currency
 }: StaffCardProps) {
   const [isCardHovered, setIsCardHovered] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   return (
     <motion.div
@@ -173,9 +175,7 @@ export default function StaffCard({
               className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
               onClick={(e) => {
                 e.stopPropagation();
-                if (window.confirm(`Are you sure you want to delete ${staff.firstName} ${staff.lastName}?`)) {
-                  onDelete(staff.id);
-                }
+                setShowDeleteDialog(true);
               }}
             >
               <Trash2 className="w-3 h-3 mr-1" />
@@ -197,6 +197,18 @@ export default function StaffCard({
           <Star className="w-5 h-5 text-yellow-500 fill-current" />
         </motion.div>
       </Card>
+
+      <DeleteConfirmationDialog
+        isOpen={showDeleteDialog}
+        onClose={() => setShowDeleteDialog(false)}
+        onConfirm={() => {
+          onDelete(staff.id);
+          setShowDeleteDialog(false);
+        }}
+        title="Delete Staff Member"
+        name={`${staff.firstName} ${staff.lastName}`}
+        type="staff"
+      />
     </motion.div>
   );
 }
