@@ -606,6 +606,7 @@ export default function AddPlayerDialog({ open, onOpenChange, editingPlayer }: A
               <h3 className="text-lg font-medium">Documents</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <FormField
+                  key="profilePicture"
                   control={form.control}
                   name="profilePicture"
                   render={({ field }) => (
@@ -625,6 +626,7 @@ export default function AddPlayerDialog({ open, onOpenChange, editingPlayer }: A
                   )}
                 />
                 <FormField
+                  key="idDocument"
                   control={form.control}
                   name="idDocument"
                   render={({ field }) => (
@@ -644,6 +646,7 @@ export default function AddPlayerDialog({ open, onOpenChange, editingPlayer }: A
                   )}
                 />
                 <FormField
+                  key="contractDocument"
                   control={form.control}
                   name="contractDocument"
                   render={({ field }) => (
