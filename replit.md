@@ -121,17 +121,17 @@ The system uses PostgreSQL with the following core entities:
 
 ## Recent Changes
 
-### July 4, 2025 - Enhanced Team Creation with Youth Categories and Custom Categories
-✓ **Expanded Team Categories**: Added Under 21, Under 19, Under 17, Under 15, and Academy-Rootgrass categories
-✓ **Custom Category Option**: Users can now define their own team categories for specialized teams
-✓ **Professional Form Design**: Enhanced team creation form with color-coded category badges and descriptions
-✓ **Comprehensive Category Support**: Updated both form and display components to handle all new categories
-✓ **Dynamic Category Input**: Custom category field appears when "Custom Category" is selected
-✓ **Form Validation**: Added proper validation for custom category names when selected
-✓ **Visual Enhancements**: Color-coded badges for each category type with consistent styling
-✓ **Accessibility Improvements**: Fixed dialog accessibility warnings with proper titles and descriptions
-✓ **Category Display**: Updated team cards to properly display and format all new category types
-✓ **Database Integration**: Full backend support for storing and retrieving custom team categories
+### July 4, 2025 - Complete Team Player Management System with Squad Operations
+✓ **Enhanced Team Creation**: Added Under 21, Under 19, Under 17, Under 15, and Academy-Rootgrass categories with custom category option
+✓ **Professional Team Management Interface**: Added "Manage" button to all team cards for comprehensive player management
+✓ **Category-Based Forms**: Different form experiences based on team category (professional vs youth teams)
+✓ **Three-Tab Management System**: Current Squad, Available Players, and Add New Player tabs for complete team management
+✓ **Functional Squad Operations**: Activated "Add to Squad" and "Remove from Squad" buttons with real-time updates
+✓ **Team Card Integration**: Made "Add Player" buttons functional in View Squad dialog, linking to team management
+✓ **Real-Time Data Synchronization**: Player counts and availability update automatically after squad operations
+✓ **Professional Loading States**: Buttons show "Adding..." or "Removing..." during operations with proper error handling
+✓ **Success Notifications**: Toast messages confirm successful operations with comprehensive error handling
+✓ **Database Integration**: Full backend support for team-player relationships with proper CRUD operations
 
 ### July 3, 2025 - Complete Passport Management System with Expiry Tracking
 ✓ Enhanced database schema with passport issue and expiry date fields for both players and staff

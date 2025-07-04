@@ -239,7 +239,11 @@ export default function Teams() {
                 <p className="text-muted-foreground mb-4">
                   This team doesn't have any players assigned yet.
                 </p>
-                <Button>
+                <Button onClick={() => {
+                  setSelectedTeamForManagement(selectedTeam);
+                  setIsManagePlayersOpen(true);
+                  setSelectedTeam(null);
+                }}>
                   <UserPlus className="w-4 h-4 mr-2" />
                   Add Players
                 </Button>
@@ -248,7 +252,11 @@ export default function Teams() {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold">Squad Members ({teamPlayers?.length || 0})</h3>
-                  <Button size="sm">
+                  <Button size="sm" onClick={() => {
+                    setSelectedTeamForManagement(selectedTeam);
+                    setIsManagePlayersOpen(true);
+                    setSelectedTeam(null);
+                  }}>
                     <UserPlus className="w-4 h-4 mr-2" />
                     Add Player
                   </Button>
