@@ -43,6 +43,16 @@ export default function Teams() {
         return 'bg-primary/10 text-primary border-primary/20';
       case 'reserves':
         return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400';
+      case 'under_21':
+        return 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400';
+      case 'under_19':
+        return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/20 dark:text-indigo-400';
+      case 'under_17':
+        return 'bg-pink-100 text-pink-800 dark:bg-pink-900/20 dark:text-pink-400';
+      case 'under_15':
+        return 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400';
+      case 'academy_rootgrass':
+        return 'bg-teal-100 text-teal-800 dark:bg-teal-900/20 dark:text-teal-400';
       case 'youth':
         return 'bg-amber-100 text-amber-800 dark:bg-amber-900/20 dark:text-amber-400';
       default:
@@ -51,7 +61,26 @@ export default function Teams() {
   };
 
   const formatCategoryName = (category: string) => {
-    return category.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+    switch (category.toLowerCase()) {
+      case 'first_team':
+        return 'First Team';
+      case 'reserves':
+        return 'Reserves';
+      case 'under_21':
+        return 'Under 21';
+      case 'under_19':
+        return 'Under 19';
+      case 'under_17':
+        return 'Under 17';
+      case 'under_15':
+        return 'Under 15';
+      case 'academy_rootgrass':
+        return 'Academy - Rootgrass';
+      case 'youth':
+        return 'Youth Team';
+      default:
+        return category.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    }
   };
 
   if (teamsLoading) {
@@ -86,6 +115,9 @@ export default function Teams() {
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Create New Team</DialogTitle>
+            </DialogHeader>
             <TeamForm
               onSuccess={() => setIsAddTeamOpen(false)}
               onCancel={() => setIsAddTeamOpen(false)}
