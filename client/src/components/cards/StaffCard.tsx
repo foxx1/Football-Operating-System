@@ -15,11 +15,13 @@ import {
   Award,
   MapPin,
   Building,
-  Clock
+  Clock,
+  Users
 } from "lucide-react";
 import { Staff } from "@shared/schema";
 import { motion } from "framer-motion";
 import DeleteConfirmationDialog from "@/components/ui/delete-confirmation-dialog";
+import { StaffTeamAssignment } from "@/components/staff-team-assignment";
 
 interface StaffCardProps {
   staff: Staff;
@@ -181,6 +183,20 @@ export default function StaffCard({
               <Trash2 className="w-3 h-3 mr-1" />
               Delete
             </Button>
+          </motion.div>
+
+          {/* Team Assignment */}
+          <motion.div
+            className="mt-3"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ 
+              opacity: isCardHovered ? 1 : 0, 
+              y: isCardHovered ? 0 : 10 
+            }}
+            transition={{ duration: 0.2, delay: 0.2 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <StaffTeamAssignment staff={staff} />
           </motion.div>
         </CardContent>
 

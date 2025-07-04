@@ -1,10 +1,11 @@
 import {
-  users, players, teams, teamPlayers, trainingSessions, sessionAttendance, 
+  users, players, teams, teamPlayers, teamStaff, trainingSessions, sessionAttendance, 
   tacticalFormations, playerStats, staff, matches, matchSquads, analyticsReports, systemSettings,
   wearableDevices, wearableData, performanceMetrics, monthlyBudgets, expenses, playerContracts,
   performanceReactions,
   type User, type InsertUser, type Player, type InsertPlayer,
   type Team, type InsertTeam, type TeamPlayer, type InsertTeamPlayer,
+  type TeamStaff, type InsertTeamStaff,
   type TrainingSession, type InsertTrainingSession,
   type SessionAttendance, type InsertSessionAttendance,
   type TacticalFormation, type InsertTacticalFormation,
@@ -48,6 +49,11 @@ export interface IStorage {
   getTeamPlayers(teamId: number): Promise<(TeamPlayer & { player: Player })[]>;
   addPlayerToTeam(teamPlayer: InsertTeamPlayer): Promise<TeamPlayer>;
   removePlayerFromTeam(teamId: number, playerId: number): Promise<boolean>;
+
+  // Team Staff
+  getTeamStaff(teamId: number): Promise<(TeamStaff & { staff: Staff })[]>;
+  addStaffToTeam(teamStaff: InsertTeamStaff): Promise<TeamStaff>;
+  removeStaffFromTeam(teamId: number, staffId: number): Promise<boolean>;
 
   // Training Sessions
   getTrainingSessions(): Promise<TrainingSession[]>;
@@ -160,6 +166,7 @@ export class MemStorage implements IStorage {
   private players: Map<number, Player>;
   private teams: Map<number, Team>;
   private teamPlayers: Map<number, TeamPlayer>;
+  private teamStaff: Map<number, TeamStaff>;
   private trainingSessions: Map<number, TrainingSession>;
   private sessionAttendance: Map<number, SessionAttendance>;
   private tacticalFormations: Map<number, TacticalFormation>;
@@ -176,6 +183,7 @@ export class MemStorage implements IStorage {
     this.players = new Map();
     this.teams = new Map();
     this.teamPlayers = new Map();
+    this.teamStaff = new Map();
     this.trainingSessions = new Map();
     this.sessionAttendance = new Map();
     this.tacticalFormations = new Map();
@@ -190,6 +198,7 @@ export class MemStorage implements IStorage {
       players: 1,
       teams: 1,
       teamPlayers: 1,
+      teamStaff: 1,
       trainingSessions: 1,
       sessionAttendance: 1,
       tacticalFormations: 1,
@@ -409,6 +418,45 @@ export class MemStorage implements IStorage {
     if (!teamPlayer) return false;
     
     this.teamPlayers.delete(teamPlayer.id);
+    return true;
+  }
+
+  // Team Staff
+  async getTeamStaff(teamId: number): Promise<(TeamStaff & { staff: Staff })[]> {
+    return Array.from(this.teamStaff.values())
+      .filter(ts => ts.teamId === teamId)
+      .map(ts => {
+        const staff = this.staff.get(ts.staffId);
+        return { ...ts, staff: staff! };
+      }).filter(ts => ts.staff?.isActive);
+  }
+
+  async addStaffToTeam(insertTeamStaff: InsertTeamStaff): Promise<TeamStaff> {
+    // Check if staff is already on the team
+    const existingAssignment = Array.from(this.teamStaff.values())
+      .find(ts => ts.teamId === insertTeamStaff.teamId && ts.staffId === insertTeamStaff.staffId);
+    
+    if (existingAssignment) {
+      throw new Error("Staff member is already assigned to this team");
+    }
+    
+    const id = this.currentIds.teamStaff++;
+    const teamStaff: TeamStaff = { 
+      ...insertTeamStaff, 
+      id, 
+      createdAt: new Date() 
+    };
+    this.teamStaff.set(id, teamStaff);
+    return teamStaff;
+  }
+
+  async removeStaffFromTeam(teamId: number, staffId: number): Promise<boolean> {
+    const teamStaff = Array.from(this.teamStaff.values())
+      .find(ts => ts.teamId === teamId && ts.staffId === staffId);
+    
+    if (!teamStaff) return false;
+    
+    this.teamStaff.delete(teamStaff.id);
     return true;
   }
 
@@ -816,6 +864,43 @@ export class DatabaseStorage implements IStorage {
     const result = await db
       .delete(teamPlayers)
       .where(and(eq(teamPlayers.teamId, teamId), eq(teamPlayers.playerId, playerId)));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async getTeamStaff(teamId: number): Promise<(TeamStaff & { staff: Staff })[]> {
+    const results = await db
+      .select()
+      .from(teamStaff)
+      .innerJoin(staff, eq(teamStaff.staffId, staff.id))
+      .where(eq(teamStaff.teamId, teamId));
+    return results.map(row => ({ ...row.team_staff, staff: row.staff }));
+  }
+
+  async addStaffToTeam(insertTeamStaff: InsertTeamStaff): Promise<TeamStaff> {
+    // Check if staff is already on the team
+    const [existingAssignment] = await db
+      .select()
+      .from(teamStaff)
+      .where(and(
+        eq(teamStaff.teamId, insertTeamStaff.teamId),
+        eq(teamStaff.staffId, insertTeamStaff.staffId)
+      ));
+    
+    if (existingAssignment) {
+      throw new Error("Staff member is already assigned to this team");
+    }
+    
+    const [teamStaffRecord] = await db
+      .insert(teamStaff)
+      .values(insertTeamStaff)
+      .returning();
+    return teamStaffRecord;
+  }
+
+  async removeStaffFromTeam(teamId: number, staffId: number): Promise<boolean> {
+    const result = await db
+      .delete(teamStaff)
+      .where(and(eq(teamStaff.teamId, teamId), eq(teamStaff.staffId, staffId)));
     return (result.rowCount ?? 0) > 0;
   }
 

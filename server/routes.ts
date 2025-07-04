@@ -205,6 +205,45 @@ export async function registerRoutes(app: Express, upload?: any): Promise<Server
     }
   });
 
+  // Staff-Teams endpoints
+  app.post("/api/staff-teams", async (req, res) => {
+    try {
+      const { teamId, staffId } = req.body;
+      console.log(`Adding staff ${staffId} to team ${teamId}`);
+      const teamStaff = await storage.addStaffToTeam({ teamId, staffId });
+      res.status(201).json(teamStaff);
+    } catch (error) {
+      console.error("Error adding staff to team:", error);
+      const message = error instanceof Error ? error.message : "Failed to add staff to team";
+      res.status(400).json({ message });
+    }
+  });
+
+  app.delete("/api/teams/:teamId/staff/:staffId", async (req, res) => {
+    try {
+      const teamId = parseInt(req.params.teamId);
+      const staffId = parseInt(req.params.staffId);
+      const success = await storage.removeStaffFromTeam(teamId, staffId);
+      if (!success) {
+        return res.status(404).json({ message: "Staff not found in team" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to remove staff from team" });
+    }
+  });
+
+  app.get("/api/staff-teams/:staffId", async (req, res) => {
+    try {
+      const staffId = parseInt(req.params.staffId);
+      // For now, return empty array as we don't have the reverse query implemented
+      // This would need a new storage method to get teams by staff member
+      res.json([]);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get staff teams" });
+    }
+  });
+
   // Training Sessions
   app.get("/api/training-sessions", async (req, res) => {
     try {

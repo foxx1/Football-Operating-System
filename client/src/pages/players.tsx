@@ -6,12 +6,14 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Search, Filter, MoreHorizontal, Edit, Trash2, User } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Plus, Search, Filter, MoreHorizontal, Edit, Trash2, User, Users } from "lucide-react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import AddPlayerDialog from "@/components/players/add-player-dialog";
 import PlayerCard from "@/components/cards/PlayerCard";
 import DetailedPreview from "@/components/cards/DetailedPreview";
-import type { Player } from "@shared/schema";
+import type { Player, Team } from "@shared/schema";
 
 export default function Players() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -20,9 +22,16 @@ export default function Players() {
   const [selectedPlayers, setSelectedPlayers] = useState<Set<number>>(new Set());
   const [previewPlayer, setPreviewPlayer] = useState<Player | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [isTeamAssignOpen, setIsTeamAssignOpen] = useState(false);
+  const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
+  const { toast } = useToast();
 
   const { data: players = [], isLoading } = useQuery<Player[]>({
     queryKey: ["/api/players"],
+  });
+
+  const { data: teams = [] } = useQuery<Team[]>({
+    queryKey: ["/api/teams"],
   });
 
   const deletePlayerMutation = useMutation({
@@ -30,6 +39,34 @@ export default function Players() {
       apiRequest("DELETE", `/api/players/${playerId}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/players"] });
+    },
+  });
+
+  const assignPlayersToTeamMutation = useMutation({
+    mutationFn: async ({ playerIds, teamId }: { playerIds: number[], teamId: number }) => {
+      const promises = playerIds.map(playerId => 
+        apiRequest("POST", "/api/team-players", { teamId, playerId })
+      );
+      return Promise.all(promises);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/players"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/team-players"] });
+      setSelectedPlayers(new Set());
+      setIsTeamAssignOpen(false);
+      setSelectedTeamId(null);
+      toast({
+        title: "Success",
+        description: "Players assigned to team successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to assign players to team",
+        variant: "destructive",
+      });
     },
   });
 
@@ -139,6 +176,16 @@ export default function Players() {
           <Filter className="w-4 h-4 mr-2" />
           Filter
         </Button>
+        {selectedPlayers.size > 0 && (
+          <Button 
+            variant="default" 
+            className="action-button bg-blue-600 hover:bg-blue-700 text-white"
+            onClick={() => setIsTeamAssignOpen(true)}
+          >
+            <Users className="w-4 h-4 mr-2" />
+            Assign to Team ({selectedPlayers.size})
+          </Button>
+        )}
       </div>
 
       {/* Stats Summary */}
@@ -262,6 +309,59 @@ export default function Players() {
         onEdit={handlePlayerEdit}
         getPositionColor={getPositionColor}
       />
+
+      {/* Team Assignment Dialog */}
+      <Dialog open={isTeamAssignOpen} onOpenChange={setIsTeamAssignOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Assign Players to Team</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Assign {selectedPlayers.size} selected player{selectedPlayers.size !== 1 ? 's' : ''} to a team.
+            </p>
+            <div>
+              <label className="text-sm font-medium">Select Team</label>
+              <Select value={selectedTeamId?.toString() || ""} onValueChange={(value) => setSelectedTeamId(parseInt(value))}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Choose a team" />
+                </SelectTrigger>
+                <SelectContent>
+                  {teams.map((team) => (
+                    <SelectItem key={team.id} value={team.id.toString()}>
+                      {team.name} ({team.category})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setIsTeamAssignOpen(false);
+                  setSelectedTeamId(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={() => {
+                  if (selectedTeamId) {
+                    assignPlayersToTeamMutation.mutate({ 
+                      playerIds: Array.from(selectedPlayers), 
+                      teamId: selectedTeamId 
+                    });
+                  }
+                }}
+                disabled={!selectedTeamId || assignPlayersToTeamMutation.isPending}
+              >
+                {assignPlayersToTeamMutation.isPending ? "Assigning..." : "Assign to Team"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

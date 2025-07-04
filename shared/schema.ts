@@ -58,6 +58,13 @@ export const teamPlayers = pgTable("team_players", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const teamStaff = pgTable("team_staff", {
+  id: serial("id").primaryKey(),
+  teamId: integer("team_id").notNull(),
+  staffId: integer("staff_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const trainingSessions = pgTable("training_sessions", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
@@ -484,6 +491,11 @@ export const insertTeamPlayerSchema = createInsertSchema(teamPlayers).omit({
   createdAt: true,
 });
 
+export const insertTeamStaffSchema = createInsertSchema(teamStaff).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertTrainingSessionSchema = createInsertSchema(trainingSessions).omit({
   id: true,
   createdAt: true,
@@ -609,6 +621,9 @@ export type Team = typeof teams.$inferSelect;
 
 export type InsertTeamPlayer = z.infer<typeof insertTeamPlayerSchema>;
 export type TeamPlayer = typeof teamPlayers.$inferSelect;
+
+export type InsertTeamStaff = z.infer<typeof insertTeamStaffSchema>;
+export type TeamStaff = typeof teamStaff.$inferSelect;
 
 export type InsertTrainingSession = z.infer<typeof insertTrainingSessionSchema>;
 export type TrainingSession = typeof trainingSessions.$inferSelect;

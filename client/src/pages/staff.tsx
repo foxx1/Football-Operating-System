@@ -6,12 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useSettings, formatCurrency } from "@/contexts/SettingsContext";
-import type { Staff } from "@shared/schema";
+import type { Staff, Team } from "@shared/schema";
 import StaffForm from "@/components/staff-form";
+import { StaffTeamAssignment } from "@/components/staff-team-assignment";
 import StaffCard from "@/components/cards/StaffCard";
 import DetailedPreview from "@/components/cards/DetailedPreview";
 
@@ -23,11 +25,17 @@ export default function StaffPage() {
   const [selectedStaff, setSelectedStaff] = useState<Set<number>>(new Set());
   const [previewStaff, setPreviewStaff] = useState<Staff | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [isTeamAssignOpen, setIsTeamAssignOpen] = useState(false);
+  const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
   const { toast } = useToast();
   const { currency } = useSettings();
 
   const { data: staff = [], isLoading } = useQuery({
     queryKey: ["/api/staff"],
+  });
+
+  const { data: teams = [] } = useQuery<Team[]>({
+    queryKey: ["/api/teams"],
   });
 
   const deleteStaffMutation = useMutation({
@@ -43,6 +51,34 @@ export default function StaffPage() {
       toast({
         title: "Error",
         description: error.message || "Failed to delete staff member",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const assignStaffToTeamMutation = useMutation({
+    mutationFn: async ({ staffIds, teamId }: { staffIds: number[], teamId: number }) => {
+      const promises = staffIds.map(staffId => 
+        apiRequest("POST", "/api/staff-teams", { teamId, staffId })
+      );
+      return Promise.all(promises);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/staff-teams"] });
+      setSelectedStaff(new Set());
+      setIsTeamAssignOpen(false);
+      setSelectedTeamId(null);
+      toast({
+        title: "Success",
+        description: "Staff members assigned to team successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to assign staff to team",
         variant: "destructive",
       });
     },
@@ -190,6 +226,16 @@ export default function StaffPage() {
           <option value="analysis">Analysis</option>
           <option value="operations">Operations</option>
         </select>
+        {selectedStaff.size > 0 && (
+          <Button 
+            variant="default" 
+            className="action-button bg-blue-600 hover:bg-blue-700 text-white"
+            onClick={() => setIsTeamAssignOpen(true)}
+          >
+            <Users className="w-4 h-4 mr-2" />
+            Assign to Team ({selectedStaff.size})
+          </Button>
+        )}
       </div>
 
       {/* Staff Grid */}
@@ -246,6 +292,59 @@ export default function StaffPage() {
         formatCurrency={(amount: string, currency: string) => formatCurrency(Number(amount) || 0, currency)}
         currency={currency}
       />
+
+      {/* Team Assignment Dialog */}
+      <Dialog open={isTeamAssignOpen} onOpenChange={setIsTeamAssignOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Assign Staff to Team</DialogTitle>
+            <p className="text-sm text-gray-500 mt-2">
+              Select a team to assign {selectedStaff.size} staff member{selectedStaff.size !== 1 ? 's' : ''}
+            </p>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Team</label>
+              <Select value={selectedTeamId?.toString() || ""} onValueChange={(value) => setSelectedTeamId(Number(value))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a team..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {teams.map((team) => (
+                    <SelectItem key={team.id} value={team.id.toString()}>
+                      {team.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setIsTeamAssignOpen(false);
+                  setSelectedTeamId(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={() => {
+                  if (selectedTeamId) {
+                    assignStaffToTeamMutation.mutate({ 
+                      staffIds: Array.from(selectedStaff), 
+                      teamId: selectedTeamId 
+                    });
+                  }
+                }}
+                disabled={!selectedTeamId || assignStaffToTeamMutation.isPending}
+              >
+                {assignStaffToTeamMutation.isPending ? "Assigning..." : "Assign to Team"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
