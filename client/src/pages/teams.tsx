@@ -7,17 +7,18 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Plus, Users, Edit, Trash2, UserPlus, Shield } from "lucide-react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import TeamForm from "@/components/team-form";
 import type { Team } from "@shared/schema";
 
 export default function Teams() {
   const [isAddTeamOpen, setIsAddTeamOpen] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
 
-  const { data: teams, isLoading: teamsLoading } = useQuery({
+  const { data: teams = [], isLoading: teamsLoading } = useQuery<Team[]>({
     queryKey: ["/api/teams"],
   });
 
-  const { data: teamPlayers, isLoading: playersLoading } = useQuery({
+  const { data: teamPlayers = [], isLoading: playersLoading } = useQuery<any[]>({
     queryKey: ["/api/teams", selectedTeam?.id, "players"],
     enabled: !!selectedTeam,
   });
@@ -84,13 +85,11 @@ export default function Teams() {
               Create Team
             </Button>
           </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create New Team</DialogTitle>
-            </DialogHeader>
-            <div className="p-4">
-              <p className="text-muted-foreground">Team creation form would be implemented here.</p>
-            </div>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <TeamForm
+              onSuccess={() => setIsAddTeamOpen(false)}
+              onCancel={() => setIsAddTeamOpen(false)}
+            />
           </DialogContent>
         </Dialog>
       </div>
