@@ -29,7 +29,7 @@ export default function TeamPlayerManagement({ team, isOpen, onClose }: TeamPlay
   const { toast } = useToast();
 
   const { data: teamPlayersData = [], isLoading: playersLoading } = useQuery<any[]>({
-    queryKey: ["/api/teams", team.id, "players"],
+    queryKey: [`/api/teams/${team.id}/players`],
     enabled: !!team.id && isOpen,
     staleTime: 0, // Always refetch
   });
@@ -55,7 +55,7 @@ export default function TeamPlayerManagement({ team, isOpen, onClose }: TeamPlay
     mutationFn: (playerId: number) => 
       apiRequest("POST", `/api/teams/${team.id}/players/${playerId}`, {}),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/teams", team.id, "players"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/teams/${team.id}/players`] });
       queryClient.invalidateQueries({ queryKey: ["/api/players"] });
       toast({
         title: "Success",
@@ -78,7 +78,7 @@ export default function TeamPlayerManagement({ team, isOpen, onClose }: TeamPlay
     mutationFn: (playerId: number) => 
       apiRequest("DELETE", `/api/teams/${team.id}/players/${playerId}`, {}),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/teams", team.id, "players"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/teams/${team.id}/players`] });
       queryClient.invalidateQueries({ queryKey: ["/api/players"] });
       toast({
         title: "Success",
