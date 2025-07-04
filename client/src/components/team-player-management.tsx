@@ -28,7 +28,7 @@ export default function TeamPlayerManagement({ team, isOpen, onClose }: TeamPlay
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const { toast } = useToast();
 
-  const { data: teamPlayers = [], isLoading: playersLoading } = useQuery<Player[]>({
+  const { data: teamPlayersData = [], isLoading: playersLoading } = useQuery<any[]>({
     queryKey: ["/api/teams", team.id, "players"],
     enabled: !!team.id && isOpen,
   });
@@ -38,6 +38,9 @@ export default function TeamPlayerManagement({ team, isOpen, onClose }: TeamPlay
     enabled: isOpen,
   });
 
+  // Extract just the players from team-player relationships
+  const teamPlayers = teamPlayersData.map(tp => tp.player).filter(Boolean);
+  
   const unassignedPlayers = allPlayers.filter(
     player => !teamPlayers.some(tp => tp.id === player.id)
   );
