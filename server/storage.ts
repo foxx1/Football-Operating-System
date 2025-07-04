@@ -384,6 +384,14 @@ export class MemStorage implements IStorage {
   }
 
   async addPlayerToTeam(insertTeamPlayer: InsertTeamPlayer): Promise<TeamPlayer> {
+    // Check if player is already on the team
+    const existingAssignment = Array.from(this.teamPlayers.values())
+      .find(tp => tp.teamId === insertTeamPlayer.teamId && tp.playerId === insertTeamPlayer.playerId);
+    
+    if (existingAssignment) {
+      throw new Error("Player is already assigned to this team");
+    }
+    
     const id = this.currentIds.teamPlayers++;
     const teamPlayer: TeamPlayer = { 
       ...insertTeamPlayer, 
@@ -784,6 +792,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   async addPlayerToTeam(insertTeamPlayer: InsertTeamPlayer): Promise<TeamPlayer> {
+    // Check if player is already on the team
+    const [existingAssignment] = await db
+      .select()
+      .from(teamPlayers)
+      .where(and(
+        eq(teamPlayers.teamId, insertTeamPlayer.teamId),
+        eq(teamPlayers.playerId, insertTeamPlayer.playerId)
+      ));
+    
+    if (existingAssignment) {
+      throw new Error("Player is already assigned to this team");
+    }
+    
     const [teamPlayer] = await db
       .insert(teamPlayers)
       .values(insertTeamPlayer)

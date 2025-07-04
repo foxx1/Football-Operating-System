@@ -38,11 +38,15 @@ export default function TeamPlayerManagement({ team, isOpen, onClose }: TeamPlay
     enabled: isOpen,
   });
 
-  // Extract just the players from team-player relationships
-  const teamPlayers = teamPlayersData.map(tp => tp.player).filter(Boolean);
+  // Extract just the players from team-player relationships and remove duplicates
+  const teamPlayerIds = new Set(teamPlayersData.map(tp => tp.player?.id).filter(Boolean));
+  const teamPlayers = teamPlayersData
+    .map(tp => tp.player)
+    .filter(Boolean)
+    .filter((player, index, array) => array.findIndex(p => p.id === player.id) === index);
   
   const unassignedPlayers = allPlayers.filter(
-    player => !teamPlayers.some(tp => tp.id === player.id)
+    player => !teamPlayerIds.has(player.id)
   );
 
   const addPlayerToSquadMutation = useMutation({
@@ -56,10 +60,13 @@ export default function TeamPlayerManagement({ team, isOpen, onClose }: TeamPlay
         description: "Player added to squad successfully",
       });
     },
-    onError: () => {
+    onError: (error: any) => {
+      const isAlreadyAssigned = error?.message?.includes("already assigned");
       toast({
         title: "Error",
-        description: "Failed to add player to squad",
+        description: isAlreadyAssigned 
+          ? "Player is already on this team" 
+          : "Failed to add player to squad",
         variant: "destructive",
       });
     },
