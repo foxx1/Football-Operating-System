@@ -1566,6 +1566,62 @@ export async function registerRoutes(app: Express, upload?: any): Promise<Server
     }
   });
 
+  // Achievement System Routes
+  app.get("/api/achievements", async (req, res) => {
+    try {
+      const achievements = await storage.getAchievements();
+      res.json(achievements);
+    } catch (error) {
+      console.error("Error fetching achievements:", error);
+      res.status(500).json({ error: "Failed to fetch achievements" });
+    }
+  });
+
+  app.get("/api/achievements/:playerId", async (req, res) => {
+    try {
+      const playerId = parseInt(req.params.playerId);
+      const achievements = await storage.getPlayerAchievements(playerId);
+      res.json(achievements);
+    } catch (error) {
+      console.error("Error fetching player achievements:", error);
+      res.status(500).json({ error: "Failed to fetch player achievements" });
+    }
+  });
+
+  app.post("/api/achievements/:playerId/progress", async (req, res) => {
+    try {
+      const playerId = parseInt(req.params.playerId);
+      const { achievementTypeId, value, eventType, eventId } = req.body;
+      
+      const progress = await storage.updateAchievementProgress(playerId, achievementTypeId, value, eventType, eventId);
+      res.json(progress);
+    } catch (error) {
+      console.error("Error updating achievement progress:", error);
+      res.status(500).json({ error: "Failed to update achievement progress" });
+    }
+  });
+
+  app.get("/api/achievements/leaderboard", async (req, res) => {
+    try {
+      const leaderboard = await storage.getAchievementLeaderboard();
+      res.json(leaderboard);
+    } catch (error) {
+      console.error("Error fetching achievement leaderboard:", error);
+      res.status(500).json({ error: "Failed to fetch achievement leaderboard" });
+    }
+  });
+
+  // Initialize player achievements for all existing players
+  app.post("/api/achievements/initialize", async (req, res) => {
+    try {
+      const result = await storage.initializePlayerAchievements();
+      res.json(result);
+    } catch (error) {
+      console.error("Error initializing player achievements:", error);
+      res.status(500).json({ error: "Failed to initialize player achievements" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

@@ -19,7 +19,8 @@ import {
   Wallet,
   Smile,
   LayoutGrid,
-  MousePointer2
+  MousePointer2,
+  Award
 } from "lucide-react";
 
 // Custom Catapult Icon Component
@@ -57,6 +58,7 @@ const navigationItems = [
   { href: "/tactical-board", icon: LayoutGrid, label: "Simple Board", badge: null },
   { href: "/interactive-tactical-board", icon: Target, label: "Interactive Board", badge: "NEW" },
   { href: "/analytics", icon: BarChart3, label: "Analytics", badge: null },
+  { href: "/achievements", icon: Award, label: "Achievements", badge: "NEW" },
   { href: "/performance-reactions", icon: Smile, label: "Performance Reactions", badge: "NEW" },
   { href: "/wearables", icon: Activity, label: "Wearable Devices", badge: null },
   { href: "/catapult-openfield", icon: CatapultIcon, label: "CATAPULT-OpenField", badge: "NEW" },

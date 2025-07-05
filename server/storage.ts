@@ -159,6 +159,13 @@ export interface IStorage {
   getPlayerReactionsSummary(playerId: number): Promise<any>;
   createPerformanceReaction(reaction: InsertPerformanceReaction): Promise<PerformanceReaction>;
   deletePerformanceReaction(id: number): Promise<boolean>;
+
+  // Achievement System
+  getAchievements(): Promise<any[]>;
+  getPlayerAchievements(playerId: number): Promise<any[]>;
+  updateAchievementProgress(playerId: number, achievementTypeId: number, value: number, eventType: string, eventId?: number): Promise<any>;
+  getAchievementLeaderboard(): Promise<any[]>;
+  initializePlayerAchievements(): Promise<any>;
 }
 
 export class MemStorage implements IStorage {
@@ -1512,6 +1519,146 @@ export class DatabaseStorage implements IStorage {
   async deletePerformanceReaction(id: number): Promise<boolean> {
     const result = await db.delete(performanceReactions).where(eq(performanceReactions.id, id));
     return result.rowCount! > 0;
+  }
+
+  // Achievement System Implementation
+  async getAchievements(): Promise<any[]> {
+    const result = await db.execute(sql`
+      SELECT at.*, 
+             ac.criteria_type,
+             ac.threshold,
+             ac.timeframe,
+             ar.reward_type,
+             ar.reward_value,
+             ar.description as reward_description
+      FROM achievement_types at
+      LEFT JOIN achievement_criteria ac ON at.id = ac.achievement_type_id
+      LEFT JOIN achievement_rewards ar ON at.id = ar.achievement_type_id
+      WHERE at.is_active = true
+      ORDER BY at.rarity, at.points
+    `);
+    return result.rows;
+  }
+
+  async getPlayerAchievements(playerId: number): Promise<any[]> {
+    const result = await db.execute(sql`
+      SELECT at.*,
+             pa.progress,
+             pa.is_completed,
+             pa.completed_at,
+             pa.current_streak,
+             pa.best_streak,
+             ac.criteria_type,
+             ac.threshold,
+             ac.timeframe,
+             ar.reward_type,
+             ar.reward_value
+      FROM achievement_types at
+      LEFT JOIN player_achievements pa ON at.id = pa.achievement_type_id AND pa.player_id = ${playerId}
+      LEFT JOIN achievement_criteria ac ON at.id = ac.achievement_type_id
+      LEFT JOIN achievement_rewards ar ON at.id = ar.achievement_type_id
+      WHERE at.is_active = true
+      ORDER BY at.rarity, at.points
+    `);
+    return result.rows;
+  }
+
+  async updateAchievementProgress(playerId: number, achievementTypeId: number, value: number, eventType: string, eventId?: number): Promise<any> {
+    // Insert achievement progress record
+    await db.execute(sql`
+      INSERT INTO achievement_progress (player_id, achievement_type_id, date, value, event_type, event_id)
+      VALUES (${playerId}, ${achievementTypeId}, CURRENT_DATE, ${value}, ${eventType}, ${eventId || null})
+    `);
+
+    // Update or create player achievement record
+    const existingAchievement = await db.execute(sql`
+      SELECT * FROM player_achievements 
+      WHERE player_id = ${playerId} AND achievement_type_id = ${achievementTypeId}
+    `);
+
+    if (existingAchievement.rows.length > 0) {
+      // Update existing achievement
+      const currentProgress = Number(existingAchievement.rows[0].progress) + value;
+      
+      // Check if achievement should be completed
+      const criteria = await db.execute(sql`
+        SELECT threshold FROM achievement_criteria 
+        WHERE achievement_type_id = ${achievementTypeId}
+      `);
+      
+      const threshold = criteria.rows[0]?.threshold || 0;
+      const isCompleted = currentProgress >= threshold;
+      
+      await db.execute(sql`
+        UPDATE player_achievements 
+        SET progress = ${currentProgress},
+            is_completed = ${isCompleted},
+            completed_at = ${isCompleted ? sql`NOW()` : sql`NULL`},
+            updated_at = NOW()
+        WHERE player_id = ${playerId} AND achievement_type_id = ${achievementTypeId}
+      `);
+    } else {
+      // Create new achievement record
+      const criteria = await db.execute(sql`
+        SELECT threshold FROM achievement_criteria 
+        WHERE achievement_type_id = ${achievementTypeId}
+      `);
+      
+      const threshold = criteria.rows[0]?.threshold || 0;
+      const isCompleted = value >= threshold;
+      
+      await db.execute(sql`
+        INSERT INTO player_achievements (player_id, achievement_type_id, progress, is_completed, completed_at)
+        VALUES (${playerId}, ${achievementTypeId}, ${value}, ${isCompleted}, ${isCompleted ? sql`NOW()` : sql`NULL`})
+      `);
+    }
+
+    return { success: true, playerId, achievementTypeId, value };
+  }
+
+  async getAchievementLeaderboard(): Promise<any[]> {
+    const result = await db.execute(sql`
+      SELECT p.first_name, p.last_name, p.profile_picture,
+             COUNT(pa.is_completed) FILTER (WHERE pa.is_completed = true) as completed_achievements,
+             COALESCE(SUM(at.points) FILTER (WHERE pa.is_completed = true), 0) as total_points,
+             MAX(pa.completed_at) as last_achievement_date
+      FROM players p
+      LEFT JOIN player_achievements pa ON p.id = pa.player_id
+      LEFT JOIN achievement_types at ON pa.achievement_type_id = at.id
+      GROUP BY p.id, p.first_name, p.last_name, p.profile_picture
+      ORDER BY total_points DESC, completed_achievements DESC
+      LIMIT 20
+    `);
+    return result.rows;
+  }
+
+  async initializePlayerAchievements(): Promise<any> {
+    // Get all players and achievement types
+    const players = await db.select().from(players);
+    const achievements = await db.execute(sql`SELECT id FROM achievement_types WHERE is_active = true`);
+    
+    let initialized = 0;
+    
+    for (const player of players) {
+      for (const achievement of achievements.rows) {
+        // Check if player achievement already exists
+        const existing = await db.execute(sql`
+          SELECT id FROM player_achievements 
+          WHERE player_id = ${player.id} AND achievement_type_id = ${achievement.id}
+        `);
+        
+        if (existing.rows.length === 0) {
+          // Initialize with zero progress
+          await db.execute(sql`
+            INSERT INTO player_achievements (player_id, achievement_type_id, progress, is_completed)
+            VALUES (${player.id}, ${achievement.id}, 0, false)
+          `);
+          initialized++;
+        }
+      }
+    }
+    
+    return { message: `Initialized ${initialized} player achievements`, count: initialized };
   }
 }
 

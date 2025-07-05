@@ -471,6 +471,66 @@ export const tacticalBoards = pgTable("tactical_boards", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Achievement System - Gamified training milestone tracking
+export const achievementTypes = pgTable("achievement_types", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  category: text("category").notNull(), // training, fitness, skill, attendance, leadership, team_spirit
+  icon: text("icon").notNull(), // lucide icon name or emoji
+  color: text("color").notNull(), // badge color: gold, silver, bronze, blue, green, purple, red
+  rarity: text("rarity").notNull(), // common, uncommon, rare, epic, legendary
+  points: integer("points").default(0).notNull(), // achievement points value
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const achievementCriteria = pgTable("achievement_criteria", {
+  id: serial("id").primaryKey(),
+  achievementTypeId: integer("achievement_type_id").references(() => achievementTypes.id).notNull(),
+  criteriaType: text("criteria_type").notNull(), // sessions_completed, streak_days, performance_score, attendance_rate
+  threshold: decimal("threshold", { precision: 10, scale: 2 }).notNull(), // required value to unlock
+  timeframe: text("timeframe"), // daily, weekly, monthly, yearly, all_time
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const playerAchievements = pgTable("player_achievements", {
+  id: serial("id").primaryKey(),
+  playerId: integer("player_id").references(() => players.id).notNull(),
+  achievementTypeId: integer("achievement_type_id").references(() => achievementTypes.id).notNull(),
+  progress: decimal("progress", { precision: 10, scale: 2 }).default('0').notNull(), // current progress value
+  isCompleted: boolean("is_completed").default(false).notNull(),
+  completedAt: timestamp("completed_at"),
+  currentStreak: integer("current_streak").default(0).notNull(), // for streak-based achievements
+  bestStreak: integer("best_streak").default(0).notNull(),
+  metadata: json("metadata"), // additional tracking data
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const achievementRewards = pgTable("achievement_rewards", {
+  id: serial("id").primaryKey(),
+  achievementTypeId: integer("achievement_type_id").references(() => achievementTypes.id).notNull(),
+  rewardType: text("reward_type").notNull(), // badge, points, title, unlock_feature
+  rewardValue: text("reward_value").notNull(), // specific reward content
+  description: text("description").notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const achievementProgress = pgTable("achievement_progress", {
+  id: serial("id").primaryKey(),
+  playerId: integer("player_id").references(() => players.id).notNull(),
+  achievementTypeId: integer("achievement_type_id").references(() => achievementTypes.id).notNull(),
+  date: date("date").notNull(),
+  value: decimal("value", { precision: 10, scale: 2 }).notNull(), // progress value for that day
+  eventType: text("event_type").notNull(), // training_session, match, fitness_test, etc.
+  eventId: integer("event_id"), // reference to specific event
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -608,6 +668,32 @@ export const insertTacticalBoardSchema = createInsertSchema(tacticalBoards).omit
   id: true,
   createdAt: true,
   updatedAt: true,
+});
+
+export const insertAchievementTypeSchema = createInsertSchema(achievementTypes).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertAchievementCriteriaSchema = createInsertSchema(achievementCriteria).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPlayerAchievementSchema = createInsertSchema(playerAchievements).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertAchievementRewardSchema = createInsertSchema(achievementRewards).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertAchievementProgressSchema = createInsertSchema(achievementProgress).omit({
+  id: true,
+  createdAt: true,
 });
 
 // Types
@@ -751,3 +837,19 @@ export type TerraDailyData = typeof terraDailyData.$inferSelect;
 
 export type InsertTerraWebhookLog = z.infer<typeof insertTerraWebhookLogSchema>;
 export type TerraWebhookLog = typeof terraWebhookLogs.$inferSelect;
+
+// Achievement system types
+export type InsertAchievementType = z.infer<typeof insertAchievementTypeSchema>;
+export type AchievementType = typeof achievementTypes.$inferSelect;
+
+export type InsertAchievementCriteria = z.infer<typeof insertAchievementCriteriaSchema>;
+export type AchievementCriteria = typeof achievementCriteria.$inferSelect;
+
+export type InsertPlayerAchievement = z.infer<typeof insertPlayerAchievementSchema>;
+export type PlayerAchievement = typeof playerAchievements.$inferSelect;
+
+export type InsertAchievementReward = z.infer<typeof insertAchievementRewardSchema>;
+export type AchievementReward = typeof achievementRewards.$inferSelect;
+
+export type InsertAchievementProgress = z.infer<typeof insertAchievementProgressSchema>;
+export type AchievementProgress = typeof achievementProgress.$inferSelect;

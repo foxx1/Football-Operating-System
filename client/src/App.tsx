@@ -25,6 +25,7 @@ import TacticalBoardPage from "@/pages/tactical-board";
 import TacticalIconsDemo from "@/pages/tactical-icons-demo";
 import BubbleDesignPage from "@/pages/bubble-design";
 import InteractiveTacticalBoardPage from "@/pages/interactive-tactical-board";
+import AchievementsPage from "@/pages/achievements";
 import NotFound from "@/pages/not-found";
 
 function Layout({ children }: { children: React.ReactNode }) {
@@ -56,6 +57,7 @@ function Router() {
       <Route path="/tactical-icons-demo" component={TacticalIconsDemo} />
       <Route path="/bubble-design" component={BubbleDesignPage} />
       <Route path="/analytics" component={Analytics} />
+      <Route path="/achievements" component={AchievementsPage} />
       <Route path="/performance-reactions" component={PerformanceReactionsPage} />
       <Route path="/reports" component={Reports} />
       <Route path="/wearables" component={Wearables} />
