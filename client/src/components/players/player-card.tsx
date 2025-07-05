@@ -27,6 +27,9 @@ export default function PlayerCard({ player }: PlayerCardProps) {
   const nationalityCountry = player.nationality 
     ? countries.find(country => country.name === player.nationality)
     : null;
+  
+  // Debug: log nationality data
+  console.log('Player nationality:', player.nationality, 'Country found:', nationalityCountry);
 
   return (
     <Card className="content-card hover:shadow-lg transition-shadow duration-200">
