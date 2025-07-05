@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Users, UserPlus, X } from "lucide-react";
-import PlayerForm from "@/components/player-form";
+import AddPlayerDialog from "@/components/players/add-player-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { Team, Player } from "@shared/schema";
@@ -122,7 +122,8 @@ export default function TeamPlayerManagement({ team, isOpen, onClose }: TeamPlay
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <>
+      <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-3">
@@ -287,12 +288,14 @@ export default function TeamPlayerManagement({ team, isOpen, onClose }: TeamPlay
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <PlayerForm 
-                    onSuccess={() => {
-                      setIsAddPlayerOpen(false);
-                      // Will automatically refresh the player lists through React Query
-                    }}
-                  />
+                  <Button 
+                    onClick={() => setIsAddPlayerOpen(true)}
+                    className="w-full"
+                    size="lg"
+                  >
+                    <Plus className="w-5 h-5 mr-2" />
+                    Add New Player
+                  </Button>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -300,5 +303,11 @@ export default function TeamPlayerManagement({ team, isOpen, onClose }: TeamPlay
         </div>
       </DialogContent>
     </Dialog>
+
+      <AddPlayerDialog
+        open={isAddPlayerOpen}
+        onOpenChange={setIsAddPlayerOpen}
+      />
+    </>
   );
 }
