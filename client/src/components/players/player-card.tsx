@@ -93,7 +93,7 @@ export default function PlayerCard({ player }: PlayerCardProps) {
               </div>
             )}
             {nationalityCountry && (
-              <div className="flex items-center text-sm text-gray-600">
+              <div className="flex items-center justify-center space-x-2 text-sm text-muted-foreground">
                 <FlagIcon countryCode={nationalityCountry.code} size="sm" className="mr-2" />
                 <span>{nationalityCountry.code} - {player.nationality}</span>
               </div>
