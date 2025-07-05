@@ -41,7 +41,9 @@ export function NationalitySelect({ value = '', onChange, placeholder = 'Select 
           >
             {selectedCountry ? (
               <span className="flex items-center gap-3">
-                <span className="text-xl">{selectedCountry.flag}</span>
+                <span className="text-xl" role="img" aria-label={`${selectedCountry.name} flag`}>
+                  {selectedCountry.flag}
+                </span>
                 <span className="font-medium">{selectedCountry.name}</span>
               </span>
             ) : (
@@ -68,7 +70,9 @@ export function NationalitySelect({ value = '', onChange, placeholder = 'Select 
                         selectedCountry?.code === country.code ? 'opacity-100' : 'opacity-0'
                       )}
                     />
-                    <span className="text-xl mr-3">{country.flag}</span>
+                    <span className="text-xl mr-3" role="img" aria-label={`${country.name} flag`}>
+                      {country.flag}
+                    </span>
                     <span className="font-medium">{country.name}</span>
                   </CommandItem>
                 ))}
