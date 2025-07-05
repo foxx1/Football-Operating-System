@@ -22,8 +22,9 @@ export default function Teams() {
   });
 
   const { data: teamPlayers = [], isLoading: playersLoading } = useQuery<any[]>({
-    queryKey: ["/api/teams", selectedTeam?.id, "players"],
+    queryKey: [`/api/teams/${selectedTeam?.id}/players`],
     enabled: !!selectedTeam,
+    staleTime: 0, // Always refetch to get latest data
   });
 
   const deleteTeamMutation = useMutation({
