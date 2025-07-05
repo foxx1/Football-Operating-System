@@ -40,9 +40,9 @@ export function NationalitySelect({ value = '', onChange, placeholder = 'Select 
             disabled={disabled}
           >
             {selectedCountry ? (
-              <span className="flex items-center gap-2">
-                <span className="text-lg">{selectedCountry.flag}</span>
-                <span>{selectedCountry.name}</span>
+              <span className="flex items-center gap-3">
+                <span className="text-xl">{selectedCountry.flag}</span>
+                <span className="font-medium">{selectedCountry.name}</span>
               </span>
             ) : (
               <span className="text-muted-foreground">{placeholder}</span>
@@ -68,8 +68,8 @@ export function NationalitySelect({ value = '', onChange, placeholder = 'Select 
                         selectedCountry?.code === country.code ? 'opacity-100' : 'opacity-0'
                       )}
                     />
-                    <span className="text-lg mr-2">{country.flag}</span>
-                    <span>{country.name}</span>
+                    <span className="text-xl mr-3">{country.flag}</span>
+                    <span className="font-medium">{country.name}</span>
                   </CommandItem>
                 ))}
               </CommandGroup>

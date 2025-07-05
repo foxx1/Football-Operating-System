@@ -73,8 +73,8 @@ export function PhoneInput({ value = '', onChange, placeholder = 'Phone number',
             disabled={disabled}
           >
             <span className="flex items-center gap-2">
-              <span className="text-lg">{selectedCountry.flag}</span>
-              <span className="text-sm">{selectedCountry.phoneCode}</span>
+              <span className="text-xl">{selectedCountry.flag}</span>
+              <span className="text-sm font-medium">{selectedCountry.phoneCode}</span>
             </span>
             <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
           </Button>
@@ -97,9 +97,9 @@ export function PhoneInput({ value = '', onChange, placeholder = 'Phone number',
                         selectedCountry.code === country.code ? 'opacity-100' : 'opacity-0'
                       )}
                     />
-                    <span className="text-lg mr-2">{country.flag}</span>
-                    <span className="flex-1">{country.name}</span>
-                    <span className="text-sm text-muted-foreground">{country.phoneCode}</span>
+                    <span className="text-xl mr-3">{country.flag}</span>
+                    <span className="flex-1 font-medium">{country.name}</span>
+                    <span className="text-sm text-muted-foreground font-medium">{country.phoneCode}</span>
                   </CommandItem>
                 ))}
               </CommandGroup>
