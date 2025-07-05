@@ -43,7 +43,7 @@ export default function PlayerCard({ player, onEdit, onViewProfile }: PlayerCard
               </AvatarFallback>
             </Avatar>
             {player.shirtNumber && (
-              <Badge className="absolute -top-1 -right-1 w-6 h-6 p-0 rounded-full bg-primary text-primary-foreground">
+              <Badge className="absolute -top-1 -right-1 w-6 h-6 p-0 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
                 {player.shirtNumber}
               </Badge>
             )}
