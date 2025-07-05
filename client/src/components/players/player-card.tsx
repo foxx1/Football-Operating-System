@@ -92,6 +92,10 @@ export default function PlayerCard({ player }: PlayerCardProps) {
                 <span className="truncate">{player.email}</span>
               </div>
             )}
+            {/* Debug: Always show nationality info */}
+            <div className="flex items-center justify-center space-x-2 text-sm text-muted-foreground">
+              <span>Debug: {player.nationality} | Found: {nationalityCountry?.code || 'NOT FOUND'}</span>
+            </div>
             {nationalityCountry && (
               <div className="flex items-center justify-center space-x-2 text-sm text-muted-foreground">
                 <FlagIcon countryCode={nationalityCountry.code} size="sm" />
