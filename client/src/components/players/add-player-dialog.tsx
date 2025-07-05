@@ -4,6 +4,39 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { insertPlayerSchema, type Player, type Team } from "@shared/schema";
+
+// Create a custom form schema with shirt number validation
+const createFormSchema = (allPlayers: Player[], editingPlayer?: Player | null) => {
+  return insertPlayerSchema.extend({
+    shirtNumber: z.number().optional().refine((value) => {
+      if (!value) return true; // Allow empty values
+      
+      // Check if shirt number is already taken
+      const existingPlayer = allPlayers.find(player => 
+        player.shirtNumber === value && 
+        (!editingPlayer || player.id !== editingPlayer.id)
+      );
+      
+      return !existingPlayer;
+    }, (value) => {
+      if (!value) return { message: "Invalid shirt number" };
+      
+      // Find the player with this shirt number to show their name
+      const existingPlayer = allPlayers.find(player => 
+        player.shirtNumber === value && 
+        (!editingPlayer || player.id !== editingPlayer.id)
+      );
+      
+      if (existingPlayer) {
+        return { 
+          message: `Shirt Number ${value} is assigned to "${existingPlayer.firstName} ${existingPlayer.lastName}"` 
+        };
+      }
+      
+      return { message: "This shirt number is already assigned to another player" };
+    })
+  });
+};
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useSettings } from "@/contexts/SettingsContext";
@@ -55,6 +88,24 @@ export default function AddPlayerDialog({ open, onOpenChange, editingPlayer }: A
     queryKey: ["/api/teams"],
   });
 
+  // Fetch all players to check for duplicate shirt numbers
+  const { data: allPlayers = [] } = useQuery<Player[]>({
+    queryKey: ["/api/players"],
+  });
+
+  // Function to check if shirt number is already taken
+  const checkShirtNumberExists = (shirtNumber: number) => {
+    if (!shirtNumber) return null;
+    
+    // Find player with this shirt number (excluding current player if editing)
+    const existingPlayer = allPlayers.find(player => 
+      player.shirtNumber === shirtNumber && 
+      (!editingPlayer || player.id !== editingPlayer.id)
+    );
+    
+    return existingPlayer;
+  };
+
   // Helper function to get currency symbol
   const getCurrencySymbol = (currency: string) => {
     const symbols: { [key: string]: string } = {
@@ -93,7 +144,7 @@ export default function AddPlayerDialog({ open, onOpenChange, editingPlayer }: A
   };
   
   const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(insertPlayerSchema),
     defaultValues: editingPlayer ? {
       firstName: editingPlayer.firstName || "",
       lastName: editingPlayer.lastName || "",
@@ -178,6 +229,13 @@ export default function AddPlayerDialog({ open, onOpenChange, editingPlayer }: A
 
   const mutation = useMutation({
     mutationFn: async (data: FormData) => {
+      // Check for duplicate shirt number before submitting
+      if (data.shirtNumber) {
+        const existingPlayer = checkShirtNumberExists(data.shirtNumber);
+        if (existingPlayer) {
+          throw new Error(`Shirt Number ${data.shirtNumber} is assigned to "${existingPlayer.firstName} ${existingPlayer.lastName}"`);
+        }
+      }
       // Clean up the data to handle empty strings and null values
       const playerData = {
         ...data,
@@ -488,23 +546,48 @@ export default function AddPlayerDialog({ open, onOpenChange, editingPlayer }: A
               <FormField
                 control={form.control}
                 name="shirtNumber"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Shirt Number</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        min="1" 
-                        max="99" 
-                        placeholder="Number" 
-                        {...field} 
-                        value={field.value || ''} 
-                        onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)} 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => {
+                  const [customError, setCustomError] = useState<string>("");
+                  
+                  const handleShirtNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+                    const value = e.target.value ? parseInt(e.target.value) : undefined;
+                    field.onChange(value);
+                    
+                    // Check for existing shirt number
+                    if (value) {
+                      const existingPlayer = checkShirtNumberExists(value);
+                      if (existingPlayer) {
+                        setCustomError(`Shirt Number ${value} is assigned to "${existingPlayer.firstName} ${existingPlayer.lastName}"`);
+                      } else {
+                        setCustomError("");
+                      }
+                    } else {
+                      setCustomError("");
+                    }
+                  };
+                  
+                  return (
+                    <FormItem>
+                      <FormLabel>Shirt Number</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          min="1" 
+                          max="99" 
+                          placeholder="Number" 
+                          {...field} 
+                          value={field.value || ''} 
+                          onChange={handleShirtNumberChange}
+                          className={customError ? "border-red-500" : ""}
+                        />
+                      </FormControl>
+                      {customError && (
+                        <p className="text-sm text-red-500 mt-1">{customError}</p>
+                      )}
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
               <FormField
                 control={form.control}
