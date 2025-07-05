@@ -3,6 +3,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { FlagIcon } from "@/components/ui/flag-icon";
+import { countries } from "@/lib/countries";
 import { 
   Edit, 
   Trash2, 
@@ -52,6 +54,11 @@ export default function StaffCard({
 }: StaffCardProps) {
   const [isCardHovered, setIsCardHovered] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  
+  // Find the country for nationality display
+  const nationalityCountry = staff.nationality 
+    ? countries.find(country => country.name === staff.nationality)
+    : null;
 
   return (
     <motion.div
@@ -126,6 +133,13 @@ export default function StaffCard({
               <Briefcase className="w-4 h-4 mr-2" />
               <span className="capitalize">{staff.department}</span>
             </div>
+            
+            {nationalityCountry && (
+              <div className="flex items-center text-sm text-gray-600">
+                <FlagIcon countryCode={nationalityCountry.code} size="sm" className="mr-2" />
+                <span>{nationalityCountry.code} - {staff.nationality}</span>
+              </div>
+            )}
             
             {staff.phoneNumber && (
               <div className="flex items-center text-sm text-gray-600">

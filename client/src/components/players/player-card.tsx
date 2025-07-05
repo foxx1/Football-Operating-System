@@ -1,9 +1,11 @@
 import { format } from "date-fns";
-import { Mail, Phone, Calendar, Ruler, Weight } from "lucide-react";
+import { Mail, Phone, Calendar, Ruler, Weight, Flag } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { FlagIcon } from "@/components/ui/flag-icon";
+import { countries } from "@/lib/countries";
 import { Player } from "@shared/schema";
 
 interface PlayerCardProps {
@@ -20,6 +22,11 @@ const positionColors = {
 export default function PlayerCard({ player }: PlayerCardProps) {
   const positionColor = positionColors[player.position as keyof typeof positionColors] || positionColors.midfielder;
   const age = player.dateOfBirth ? new Date().getFullYear() - new Date(player.dateOfBirth).getFullYear() : null;
+  
+  // Find the country for nationality display
+  const nationalityCountry = player.nationality 
+    ? countries.find(country => country.name === player.nationality)
+    : null;
 
   return (
     <Card className="content-card hover:shadow-lg transition-shadow duration-200">
@@ -28,14 +35,14 @@ export default function PlayerCard({ player }: PlayerCardProps) {
           {/* Avatar and Jersey Number */}
           <div className="relative">
             <Avatar className="w-16 h-16 mx-auto">
-              <AvatarImage src={player.avatar || ""} alt={`${player.firstName} ${player.lastName}`} />
+              <AvatarImage src={player.profilePicture || ""} alt={`${player.firstName} ${player.lastName}`} />
               <AvatarFallback className="bg-primary text-primary-foreground text-lg">
                 {player.firstName[0]}{player.lastName[0]}
               </AvatarFallback>
             </Avatar>
-            {player.jerseyNumber && (
+            {player.shirtNumber && (
               <Badge className="absolute -top-1 -right-1 w-6 h-6 p-0 rounded-full bg-primary text-primary-foreground">
-                {player.jerseyNumber}
+                {player.shirtNumber}
               </Badge>
             )}
           </div>
@@ -70,9 +77,9 @@ export default function PlayerCard({ player }: PlayerCardProps) {
                 <span>{player.weight}kg</span>
               </div>
             )}
-            {player.preferredFoot && (
+            {player.foot && (
               <div className="text-muted-foreground">
-                <span className="font-medium">Foot:</span> {player.preferredFoot}
+                <span className="font-medium">Foot:</span> {player.foot}
               </div>
             )}
           </div>
@@ -85,10 +92,16 @@ export default function PlayerCard({ player }: PlayerCardProps) {
                 <span className="truncate">{player.email}</span>
               </div>
             )}
-            {player.phone && (
+            {nationalityCountry && (
+              <div className="flex items-center justify-center space-x-2 text-sm text-muted-foreground">
+                <FlagIcon countryCode={nationalityCountry.code} size="sm" />
+                <span>{nationalityCountry.code} - {player.nationality}</span>
+              </div>
+            )}
+            {player.phoneNumber && (
               <div className="flex items-center justify-center space-x-2 text-sm text-muted-foreground">
                 <Phone className="w-3 h-3" />
-                <span>{player.phone}</span>
+                <span>{player.phoneNumber}</span>
               </div>
             )}
           </div>

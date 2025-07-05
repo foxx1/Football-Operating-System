@@ -866,8 +866,7 @@ export default function DetailedPreview({
         </Card>
       </TabsContent>
     </Tabs>
-    );
-  };
+  );
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
