@@ -4,6 +4,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { insertPlayerSchema, type Player, type Team } from "@shared/schema";
+import { PhoneInput } from "@/components/ui/phone-input";
+import { NationalitySelect } from "@/components/ui/nationality-select";
 
 // Create a custom form schema with shirt number validation
 const createFormSchema = (allPlayers: Player[], editingPlayer?: Player | null) => {
@@ -371,7 +373,11 @@ export default function AddPlayerDialog({ open, onOpenChange, editingPlayer }: A
                   <FormItem>
                     <FormLabel>Phone Number</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter phone number" {...field} value={field.value || ""} />
+                      <PhoneInput
+                        value={field.value || ""}
+                        onChange={field.onChange}
+                        placeholder="Enter phone number"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -511,7 +517,11 @@ export default function AddPlayerDialog({ open, onOpenChange, editingPlayer }: A
                   <FormItem>
                     <FormLabel>Nationality</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter nationality" {...field} />
+                      <NationalitySelect
+                        value={field.value || ""}
+                        onChange={field.onChange}
+                        placeholder="Select nationality"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

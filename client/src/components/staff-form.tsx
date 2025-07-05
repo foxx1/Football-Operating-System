@@ -10,6 +10,8 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useSettings, getCurrencySymbol } from "@/contexts/SettingsContext";
 import { insertStaffSchema, type Staff, type Team } from "@shared/schema";
 import { FileUpload } from "@/components/ui/file-upload";
+import { PhoneInput } from "@/components/ui/phone-input";
+import { NationalitySelect } from "@/components/ui/nationality-select";
 import { useState } from "react";
 import {
   Form,
@@ -220,7 +222,11 @@ export default function StaffForm({ staff, onSuccess }: StaffFormProps) {
               <FormItem>
                 <FormLabel>Phone</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter phone number" {...field} />
+                  <PhoneInput
+                    value={field.value || ""}
+                    onChange={field.onChange}
+                    placeholder="Enter phone number"
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>

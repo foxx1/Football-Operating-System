@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { PhoneInput } from "@/components/ui/phone-input";
+import { NationalitySelect } from "@/components/ui/nationality-select";
 import { insertPlayerSchema, type Player, type Team } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -288,7 +290,11 @@ export default function PlayerForm({ player, onSuccess }: PlayerFormProps) {
             <FormItem className="form-field">
               <FormLabel>Nationality</FormLabel>
               <FormControl>
-                <Input {...field} className="form-input" />
+                <NationalitySelect
+                  value={field.value || ""}
+                  onChange={field.onChange}
+                  placeholder="Select nationality"
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -303,7 +309,11 @@ export default function PlayerForm({ player, onSuccess }: PlayerFormProps) {
               <FormItem className="form-field">
                 <FormLabel>Phone Number</FormLabel>
                 <FormControl>
-                  <Input {...field} type="tel" className="form-input" />
+                  <PhoneInput
+                    value={field.value || ""}
+                    onChange={field.onChange}
+                    placeholder="Enter phone number"
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
