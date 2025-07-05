@@ -92,18 +92,19 @@ export default function PlayerCard({ player }: PlayerCardProps) {
                 <span className="truncate">{player.email}</span>
               </div>
             )}
-            {/* Force show nationality section for debugging */}
-            <div className="flex items-center justify-center space-x-2 text-sm text-muted-foreground">
-              <span>Nationality: {player.nationality}</span>
-            </div>
-            {nationalityCountry ? (
+            {nationalityCountry && (
               <div className="flex items-center justify-center space-x-2 text-sm text-muted-foreground">
-                <FlagIcon countryCode={nationalityCountry.code} size="sm" className="mr-2" />
+                <img 
+                  src={`https://flagcdn.com/w20/${nationalityCountry.code.toLowerCase()}.png`}
+                  alt={`${nationalityCountry.code} flag`}
+                  className="w-4 h-3 rounded-sm border border-gray-200 object-cover"
+                  onError={(e) => {
+                    console.log('Flag image failed to load:', nationalityCountry.code);
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                  }}
+                />
                 <span>{nationalityCountry.code} - {player.nationality}</span>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center space-x-2 text-sm text-red-500">
-                <span>No country found for: {player.nationality}</span>
               </div>
             )}
             {player.phoneNumber && (
