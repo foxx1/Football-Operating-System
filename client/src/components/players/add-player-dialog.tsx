@@ -200,22 +200,25 @@ export default function AddPlayerDialog({ open, onOpenChange, editingPlayer }: A
         weight: data.weight || null,
       };
 
-      let createdPlayer;
+      let createdPlayerResponse;
       if (editingPlayer) {
-        createdPlayer = await apiRequest("PATCH", `/api/players/${editingPlayer.id}`, playerData);
+        createdPlayerResponse = await apiRequest("PATCH", `/api/players/${editingPlayer.id}`, playerData);
       } else {
-        createdPlayer = await apiRequest("POST", "/api/players", playerData);
+        createdPlayerResponse = await apiRequest("POST", "/api/players", playerData);
       }
+
+      // Extract the JSON data from the response
+      const createdPlayer = await createdPlayerResponse.json();
 
       // If team assignment is selected, add player to team
-      if (selectedTeam && createdPlayer) {
-        const player = createdPlayer as Player;
-        if (player.id) {
-          await apiRequest("POST", `/api/teams/${selectedTeam}/players/${player.id}`);
-        }
+      console.log('Selected team:', selectedTeam);
+      console.log('Created player:', createdPlayer);
+      if (selectedTeam && createdPlayer?.id) {
+        console.log(`Assigning player ${createdPlayer.id} to team ${selectedTeam}`);
+        await apiRequest("POST", `/api/teams/${selectedTeam}/players/${createdPlayer.id}`);
       }
 
-      return createdPlayer;
+      return createdPlayer as Player;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/players"] });
