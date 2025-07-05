@@ -263,6 +263,8 @@ export default function Players() {
             <PlayerCard
               key={player.id}
               player={player}
+              onEdit={handlePlayerEdit}
+              onViewProfile={handlePlayerPreview}
             />
           );
         })}

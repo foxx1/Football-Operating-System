@@ -10,6 +10,8 @@ import { Player } from "@shared/schema";
 
 interface PlayerCardProps {
   player: Player;
+  onEdit?: (player: Player) => void;
+  onViewProfile?: (player: Player) => void;
 }
 
 const positionColors = {
@@ -19,7 +21,7 @@ const positionColors = {
   forward: "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300",
 };
 
-export default function PlayerCard({ player }: PlayerCardProps) {
+export default function PlayerCard({ player, onEdit, onViewProfile }: PlayerCardProps) {
   const positionColor = positionColors[player.position as keyof typeof positionColors] || positionColors.midfielder;
   const age = player.dateOfBirth ? new Date().getFullYear() - new Date(player.dateOfBirth).getFullYear() : null;
   
@@ -108,10 +110,20 @@ export default function PlayerCard({ player }: PlayerCardProps) {
 
           {/* Actions */}
           <div className="flex space-x-2 pt-2">
-            <Button variant="outline" size="sm" className="flex-1">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="flex-1"
+              onClick={() => onViewProfile?.(player)}
+            >
               View Profile
             </Button>
-            <Button variant="default" size="sm" className="flex-1">
+            <Button 
+              variant="default" 
+              size="sm" 
+              className="flex-1"
+              onClick={() => onEdit?.(player)}
+            >
               Edit
             </Button>
           </div>
