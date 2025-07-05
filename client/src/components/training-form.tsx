@@ -19,7 +19,7 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
   const { toast } = useToast();
   const isEditing = !!session;
 
-  const { data: teams } = useQuery({
+  const { data: teams = [] } = useQuery({
     queryKey: ["/api/teams"],
   });
 
@@ -34,7 +34,7 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
       duration: session?.duration || 90,
       location: session?.location || "",
       teamId: session?.teamId || 1,
-      coachId: session?.coachId || 1, // In real app, get from auth context
+      coachId: session?.coachId || 1,
       maxParticipants: session?.maxParticipants || undefined,
       notes: session?.notes || "",
       status: session?.status || "scheduled",
@@ -82,7 +82,6 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
   });
 
   const onSubmit = (data: any) => {
-    // Convert empty strings to null for optional fields
     const cleanedData = {
       ...data,
       maxParticipants: data.maxParticipants || null,
@@ -102,108 +101,84 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <FormField
-          control={form.control}
-          name="title"
-          render={({ field }) => (
-            <FormItem className="form-field">
-              <FormLabel>Session Title</FormLabel>
-              <FormControl>
-                <Input {...field} className="form-input" placeholder="e.g., Technical Skills Training" />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="description"
-          render={({ field }) => (
-            <FormItem className="form-field">
-              <FormLabel>Description</FormLabel>
-              <FormControl>
-                <Textarea {...field} className="form-input" placeholder="Brief description of the training session..." />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <div className="grid grid-cols-2 gap-4">
+        {/* Basic Information Section */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold border-b pb-2">Basic Information</h3>
+          
           <FormField
             control={form.control}
-            name="sessionType"
+            name="title"
             render={({ field }) => (
               <FormItem className="form-field">
-                <FormLabel>Session Type</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select session type" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="technical">Technical Skills</SelectItem>
-                    <SelectItem value="fitness">Fitness & Conditioning</SelectItem>
-                    <SelectItem value="tactical">Tactical Training</SelectItem>
-                    <SelectItem value="match_prep">Match Preparation</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="teamId"
-            render={({ field }) => (
-              <FormItem className="form-field">
-                <FormLabel>Team</FormLabel>
-                <Select onValueChange={(value) => field.onChange(parseInt(value))} defaultValue={field.value?.toString()}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select team" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {teams?.map((team: any) => (
-                      <SelectItem key={team.id} value={team.id.toString()}>
-                        {team.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="date"
-            render={({ field }) => (
-              <FormItem className="form-field">
-                <FormLabel>Date</FormLabel>
+                <FormLabel>Session Title</FormLabel>
                 <FormControl>
-                  <Input {...field} type="date" className="form-input" />
+                  <Input {...field} className="form-input" placeholder="e.g., Technical Skills Training" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
 
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="sessionType"
+              render={({ field }) => (
+                <FormItem className="form-field">
+                  <FormLabel>Session Type</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select session type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="technical">Technical</SelectItem>
+                      <SelectItem value="fitness">Fitness</SelectItem>
+                      <SelectItem value="tactical">Tactical</SelectItem>
+                      <SelectItem value="match_prep">Match Preparation</SelectItem>
+                      <SelectItem value="recovery">Recovery</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {isEditing && (
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem className="form-field">
+                    <FormLabel>Status</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="scheduled">Scheduled</SelectItem>
+                        <SelectItem value="completed">Completed</SelectItem>
+                        <SelectItem value="cancelled">Cancelled</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+          </div>
+
           <FormField
             control={form.control}
-            name="startTime"
+            name="description"
             render={({ field }) => (
               <FormItem className="form-field">
-                <FormLabel>Start Time</FormLabel>
+                <FormLabel>Description</FormLabel>
                 <FormControl>
-                  <Input {...field} type="time" className="form-input" />
+                  <Textarea {...field} className="form-input" placeholder="Brief description of the training session..." />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -211,44 +186,62 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="duration"
-            render={({ field }) => (
-              <FormItem className="form-field">
-                <FormLabel>Duration (minutes)</FormLabel>
-                <FormControl>
-                  <Input 
-                    {...field} 
-                    type="number" 
-                    min={15} 
-                    max={300}
-                    onChange={(e) => field.onChange(parseInt(e.target.value) || 90)}
-                    className="form-input" 
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+        {/* Schedule & Location Section */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold border-b pb-2">Schedule & Location</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <FormField
+              control={form.control}
+              name="date"
+              render={({ field }) => (
+                <FormItem className="form-field">
+                  <FormLabel>Date</FormLabel>
+                  <FormControl>
+                    <Input {...field} type="date" className="form-input" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="startTime"
+              render={({ field }) => (
+                <FormItem className="form-field">
+                  <FormLabel>Start Time</FormLabel>
+                  <FormControl>
+                    <Input {...field} type="time" className="form-input" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="duration"
+              render={({ field }) => (
+                <FormItem className="form-field">
+                  <FormLabel>Duration (minutes)</FormLabel>
+                  <FormControl>
+                    <Input {...field} type="number" className="form-input" placeholder="90" min="30" step="15" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
 
           <FormField
             control={form.control}
-            name="maxParticipants"
+            name="location"
             render={({ field }) => (
               <FormItem className="form-field">
-                <FormLabel>Max Participants</FormLabel>
+                <FormLabel>Location</FormLabel>
                 <FormControl>
-                  <Input 
-                    {...field} 
-                    type="number" 
-                    min={1} 
-                    max={50}
-                    onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
-                    className="form-input" 
-                    placeholder="Optional"
-                  />
+                  <Input {...field} className="form-input" placeholder="e.g., Main Training Ground, Gym A" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -256,60 +249,81 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
           />
         </div>
 
-        <FormField
-          control={form.control}
-          name="location"
-          render={({ field }) => (
-            <FormItem className="form-field">
-              <FormLabel>Location</FormLabel>
-              <FormControl>
-                <Input {...field} className="form-input" placeholder="e.g., Main Pitch, Gym, Meeting Room" />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {/* Team & Participants Section */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold border-b pb-2">Team & Participants</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="teamId"
+              render={({ field }) => (
+                <FormItem className="form-field">
+                  <FormLabel>Team</FormLabel>
+                  <Select onValueChange={(value) => field.onChange(parseInt(value))} defaultValue={field.value?.toString()}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select team" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {teams.map((team: any) => (
+                        <SelectItem key={team.id} value={team.id.toString()}>
+                          {team.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-        {isEditing && (
+            <FormField
+              control={form.control}
+              name="maxParticipants"
+              render={({ field }) => (
+                <FormItem className="form-field">
+                  <FormLabel>Max Participants (optional)</FormLabel>
+                  <FormControl>
+                    <Input 
+                      {...field} 
+                      type="number" 
+                      min={1} 
+                      max={50}
+                      onChange={(e) => field.onChange(parseInt(e.target.value) || null)}
+                      className="form-input" 
+                      placeholder="e.g., 25"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        </div>
+
+        {/* Notes Section */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold border-b pb-2">Additional Notes</h3>
+          
           <FormField
             control={form.control}
-            name="status"
+            name="notes"
             render={({ field }) => (
               <FormItem className="form-field">
-                <FormLabel>Status</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="scheduled">Scheduled</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
-                  </SelectContent>
-                </Select>
+                <FormLabel>Notes</FormLabel>
+                <FormControl>
+                  <Textarea {...field} className="form-input" placeholder="Additional notes or instructions..." />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
-        )}
+        </div>
 
-        <FormField
-          control={form.control}
-          name="notes"
-          render={({ field }) => (
-            <FormItem className="form-field">
-              <FormLabel>Notes</FormLabel>
-              <FormControl>
-                <Textarea {...field} className="form-input" placeholder="Additional notes or instructions..." />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <div className="flex justify-end space-x-4">
+        {/* Submit Buttons */}
+        <div className="flex justify-end space-x-4 pt-6 border-t">
           <Button type="button" variant="outline" onClick={onSuccess}>
             Cancel
           </Button>
