@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Filter, MoreHorizontal, Edit, Trash2, User, Users } from "lucide-react";
+import { Plus, Search, Filter, MoreHorizontal, Edit, Trash2, User, Users, Grid3X3, List, LayoutGrid } from "lucide-react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import AddPlayerDialog from "@/components/players/add-player-dialog";
@@ -15,8 +15,11 @@ import PlayerCard from "@/components/players/player-card";
 import DetailedPreview from "@/components/cards/DetailedPreview";
 import type { Player, Team } from "@shared/schema";
 
+type ViewMode = 'grid' | 'list' | 'cards';
+
 export default function Players() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [viewMode, setViewMode] = useState<ViewMode>('cards');
   const [isAddPlayerOpen, setIsAddPlayerOpen] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
   const [selectedPlayers, setSelectedPlayers] = useState<Set<number>>(new Set());
@@ -176,6 +179,35 @@ export default function Players() {
           <Filter className="w-4 h-4 mr-2" />
           Filter
         </Button>
+        
+        {/* View Mode Controls */}
+        <div className="flex items-center space-x-1 border rounded-md p-1">
+          <Button
+            variant={viewMode === 'cards' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setViewMode('cards')}
+            className="h-8 px-2"
+          >
+            <LayoutGrid className="w-4 h-4" />
+          </Button>
+          <Button
+            variant={viewMode === 'grid' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setViewMode('grid')}
+            className="h-8 px-2"
+          >
+            <Grid3X3 className="w-4 h-4" />
+          </Button>
+          <Button
+            variant={viewMode === 'list' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setViewMode('list')}
+            className="h-8 px-2"
+          >
+            <List className="w-4 h-4" />
+          </Button>
+        </div>
+        
         {selectedPlayers.size > 0 && (
           <Button 
             variant="default" 
@@ -250,25 +282,156 @@ export default function Players() {
         </Card>
       </div>
 
-      {/* Players Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {filteredPlayers.map((player: Player) => {
-          // Ensure player and player.id exist before rendering
-          if (!player || !player.id) {
-            console.error('Invalid player in map:', player);
-            return null;
-          }
-          
-          return (
-            <PlayerCard
-              key={player.id}
-              player={player}
-              onEdit={handlePlayerEdit}
-              onViewProfile={handlePlayerPreview}
-            />
-          );
-        })}
-      </div>
+      {/* Players Display */}
+      {viewMode === 'cards' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {filteredPlayers.map((player: Player) => {
+            // Ensure player and player.id exist before rendering
+            if (!player || !player.id) {
+              console.error('Invalid player in map:', player);
+              return null;
+            }
+            
+            return (
+              <PlayerCard
+                key={player.id}
+                player={player}
+                onEdit={handlePlayerEdit}
+                onViewProfile={handlePlayerPreview}
+              />
+            );
+          })}
+        </div>
+      )}
+      
+      {viewMode === 'grid' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+          {filteredPlayers.map((player: Player) => {
+            if (!player || !player.id) {
+              return null;
+            }
+            
+            const age = player.dateOfBirth ? new Date().getFullYear() - new Date(player.dateOfBirth).getFullYear() : null;
+            
+            return (
+              <Card key={player.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => handlePlayerPreview(player)}>
+                <CardContent className="p-4">
+                  <div className="flex flex-col items-center space-y-2">
+                    <div className="relative">
+                      <Avatar className="w-12 h-12">
+                        <AvatarImage src={player.profilePicture || undefined} alt={`${player.firstName} ${player.lastName}`} />
+                        <AvatarFallback className="bg-primary text-primary-foreground">
+                          {player.firstName[0]}{player.lastName[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      {player.shirtNumber && (
+                        <Badge className="absolute -top-1 -right-1 w-5 h-5 p-0 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs">
+                          {player.shirtNumber}
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="text-center">
+                      <p className="font-semibold text-sm">{player.firstName} {player.lastName}</p>
+                      <p className="text-xs text-muted-foreground">{player.position}</p>
+                      {age && <p className="text-xs text-muted-foreground">{age} years</p>}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+      
+      {viewMode === 'list' && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Players List</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-muted/50">
+                  <tr>
+                    <th className="text-left p-4 font-medium">Player</th>
+                    <th className="text-left p-4 font-medium">Position</th>
+                    <th className="text-left p-4 font-medium">Jersey #</th>
+                    <th className="text-left p-4 font-medium">Age</th>
+                    <th className="text-left p-4 font-medium">Nationality</th>
+                    <th className="text-left p-4 font-medium">Phone</th>
+                    <th className="text-left p-4 font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredPlayers.map((player: Player) => {
+                    if (!player || !player.id) {
+                      return null;
+                    }
+                    
+                    const age = player.dateOfBirth ? new Date().getFullYear() - new Date(player.dateOfBirth).getFullYear() : null;
+                    
+                    return (
+                      <tr key={player.id} className="border-b hover:bg-muted/50 transition-colors">
+                        <td className="p-4">
+                          <div className="flex items-center space-x-3">
+                            <Avatar className="w-10 h-10">
+                              <AvatarImage src={player.profilePicture || undefined} alt={`${player.firstName} ${player.lastName}`} />
+                              <AvatarFallback className="bg-primary text-primary-foreground">
+                                {player.firstName[0]}{player.lastName[0]}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="font-semibold">{player.firstName} {player.lastName}</p>
+                              <p className="text-sm text-muted-foreground">{player.email || 'No email'}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <Badge className="capitalize">{player.position}</Badge>
+                        </td>
+                        <td className="p-4">
+                          {player.shirtNumber && (
+                            <Badge variant="outline" className="w-8 h-8 rounded-full flex items-center justify-center">
+                              {player.shirtNumber}
+                            </Badge>
+                          )}
+                        </td>
+                        <td className="p-4">
+                          {age && <span>{age} years</span>}
+                        </td>
+                        <td className="p-4">
+                          <span className="text-sm">{player.nationality}</span>
+                        </td>
+                        <td className="p-4">
+                          <span className="text-sm">{player.phoneNumber || 'N/A'}</span>
+                        </td>
+                        <td className="p-4">
+                          <div className="flex space-x-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => handlePlayerPreview(player)}
+                            >
+                              View
+                            </Button>
+                            <Button 
+                              variant="default" 
+                              size="sm"
+                              onClick={() => handlePlayerEdit(player)}
+                            >
+                              Edit
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Empty State */}
       {filteredPlayers.length === 0 && !isLoading && (

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Plus, Search, Users, UserCheck, Briefcase, Phone, Mail, Edit, Trash2 } from "lucide-react";
+import { Plus, Search, Users, UserCheck, Briefcase, Phone, Mail, Edit, Trash2, Grid3X3, List, LayoutGrid } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,9 +17,12 @@ import { StaffTeamAssignment } from "@/components/staff-team-assignment";
 import StaffCard from "@/components/cards/StaffCard";
 import DetailedPreview from "@/components/cards/DetailedPreview";
 
+type ViewMode = 'grid' | 'list' | 'cards';
+
 export default function StaffPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDepartment, setSelectedDepartment] = useState<string>("all");
+  const [viewMode, setViewMode] = useState<ViewMode>('cards');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<Staff | undefined>();
   const [selectedStaff, setSelectedStaff] = useState<Set<number>>(new Set());
@@ -226,6 +229,35 @@ export default function StaffPage() {
           <option value="analysis">Analysis</option>
           <option value="operations">Operations</option>
         </select>
+        
+        {/* View Mode Controls */}
+        <div className="flex items-center space-x-1 border rounded-md p-1">
+          <Button
+            variant={viewMode === 'cards' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setViewMode('cards')}
+            className="h-8 px-2"
+          >
+            <LayoutGrid className="w-4 h-4" />
+          </Button>
+          <Button
+            variant={viewMode === 'grid' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setViewMode('grid')}
+            className="h-8 px-2"
+          >
+            <Grid3X3 className="w-4 h-4" />
+          </Button>
+          <Button
+            variant={viewMode === 'list' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setViewMode('list')}
+            className="h-8 px-2"
+          >
+            <List className="w-4 h-4" />
+          </Button>
+        </div>
+        
         {selectedStaff.size > 0 && (
           <Button 
             variant="default" 
@@ -238,25 +270,131 @@ export default function StaffPage() {
         )}
       </div>
 
-      {/* Staff Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredStaff.map((member: Staff) => (
-          <StaffCard
-            key={member.id}
-            staff={member}
-            isSelected={selectedStaff.has(member.id)}
-            onEdit={handleStaffEdit}
-            onDelete={handleDeleteStaff}
-            onPreview={handleStaffPreview}
-            onSelect={handleStaffSelect}
-            getDepartmentColor={getDepartmentColor}
-            getRoleColor={getRoleColor}
-            formatRole={formatRole}
-            formatCurrency={(amount: string, currency: string) => formatCurrency(Number(amount) || 0, currency)}
-            currency={currency}
-          />
-        ))}
-      </div>
+      {/* Staff Display */}
+      {viewMode === 'cards' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredStaff.map((member: Staff) => (
+            <StaffCard
+              key={member.id}
+              staff={member}
+              isSelected={selectedStaff.has(member.id)}
+              onEdit={handleStaffEdit}
+              onDelete={handleDeleteStaff}
+              onPreview={handleStaffPreview}
+              onSelect={handleStaffSelect}
+              getDepartmentColor={getDepartmentColor}
+              getRoleColor={getRoleColor}
+              formatRole={formatRole}
+              formatCurrency={(amount: string, currency: string) => formatCurrency(Number(amount) || 0, currency)}
+              currency={currency}
+            />
+          ))}
+        </div>
+      )}
+      
+      {viewMode === 'grid' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+          {filteredStaff.map((member: Staff) => (
+            <Card key={member.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => handleStaffPreview(member)}>
+              <CardContent className="p-4">
+                <div className="flex flex-col items-center space-y-2">
+                  <div className="relative">
+                    <Avatar className="w-12 h-12">
+                      <AvatarImage src={member.profilePicture || undefined} alt={`${member.firstName} ${member.lastName}`} />
+                      <AvatarFallback className="bg-primary text-primary-foreground">
+                        {member.firstName[0]}{member.lastName[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                  </div>
+                  <div className="text-center">
+                    <p className="font-semibold text-sm">{member.firstName} {member.lastName}</p>
+                    <p className="text-xs text-muted-foreground">{formatRole(member.role)}</p>
+                    <p className="text-xs text-muted-foreground">{member.department}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+      
+      {viewMode === 'list' && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Staff List</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-muted/50">
+                  <tr>
+                    <th className="text-left p-4 font-medium">Staff Member</th>
+                    <th className="text-left p-4 font-medium">Role</th>
+                    <th className="text-left p-4 font-medium">Department</th>
+                    <th className="text-left p-4 font-medium">Email</th>
+                    <th className="text-left p-4 font-medium">Phone</th>
+                    <th className="text-left p-4 font-medium">Salary</th>
+                    <th className="text-left p-4 font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredStaff.map((member: Staff) => (
+                    <tr key={member.id} className="border-b hover:bg-muted/50 transition-colors">
+                      <td className="p-4">
+                        <div className="flex items-center space-x-3">
+                          <Avatar className="w-10 h-10">
+                            <AvatarImage src={member.profilePicture || undefined} alt={`${member.firstName} ${member.lastName}`} />
+                            <AvatarFallback className="bg-primary text-primary-foreground">
+                              {member.firstName[0]}{member.lastName[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-semibold">{member.firstName} {member.lastName}</p>
+                            <p className="text-sm text-muted-foreground">{member.nationality}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <Badge>{formatRole(member.role)}</Badge>
+                      </td>
+                      <td className="p-4">
+                        <Badge variant="outline">{member.department}</Badge>
+                      </td>
+                      <td className="p-4">
+                        <span className="text-sm">{member.email}</span>
+                      </td>
+                      <td className="p-4">
+                        <span className="text-sm">{member.phoneNumber || 'N/A'}</span>
+                      </td>
+                      <td className="p-4">
+                        <span className="text-sm">{formatCurrency(Number(member.monthlyContractValue || 0), currency)}</span>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex space-x-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleStaffPreview(member)}
+                          >
+                            View
+                          </Button>
+                          <Button 
+                            variant="default" 
+                            size="sm"
+                            onClick={() => handleStaffEdit(member)}
+                          >
+                            Edit
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {filteredStaff.length === 0 && (
         <Card className="text-center py-12">
