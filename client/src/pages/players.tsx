@@ -11,7 +11,7 @@ import { Plus, Search, Filter, MoreHorizontal, Edit, Trash2, User, Users } from 
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import AddPlayerDialog from "@/components/players/add-player-dialog";
-import PlayerCard from "@/components/cards/PlayerCard";
+import PlayerCardNew from "@/components/players/player-card-new";
 import DetailedPreview from "@/components/cards/DetailedPreview";
 import type { Player, Team } from "@shared/schema";
 
@@ -260,14 +260,9 @@ export default function Players() {
           }
           
           return (
-            <PlayerCard
+            <PlayerCardNew
               key={player.id}
               player={player}
-              isSelected={selectedPlayers.has(player.id)}
-              onEdit={handlePlayerEdit}
-              onDelete={handleDeletePlayer}
-              onPreview={handlePlayerPreview}
-              onSelect={handlePlayerSelect}
               getPositionColor={getPositionColor}
             />
           );
