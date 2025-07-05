@@ -8,6 +8,7 @@ import {
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Check, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { FlagIcon } from '@/components/ui/flag-icon';
 import { countries, type Country } from '@/lib/countries';
 
 interface NationalitySelectProps {
@@ -41,9 +42,7 @@ export function NationalitySelect({ value = '', onChange, placeholder = 'Select 
           >
             {selectedCountry ? (
               <span className="flex items-center gap-3">
-                <span className="text-xl" role="img" aria-label={`${selectedCountry.name} flag`}>
-                  {selectedCountry.flag}
-                </span>
+                <FlagIcon countryCode={selectedCountry.code} size="md" />
                 <span className="font-medium">{selectedCountry.name}</span>
               </span>
             ) : (
@@ -70,9 +69,7 @@ export function NationalitySelect({ value = '', onChange, placeholder = 'Select 
                         selectedCountry?.code === country.code ? 'opacity-100' : 'opacity-0'
                       )}
                     />
-                    <span className="text-xl mr-3" role="img" aria-label={`${country.name} flag`}>
-                      {country.flag}
-                    </span>
+                    <FlagIcon countryCode={country.code} size="md" className="mr-3" />
                     <span className="font-medium">{country.name}</span>
                   </CommandItem>
                 ))}

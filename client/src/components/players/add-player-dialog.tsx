@@ -6,7 +6,6 @@ import { z } from "zod";
 import { insertPlayerSchema, type Player, type Team } from "@shared/schema";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { NationalitySelect } from "@/components/ui/nationality-select";
-import { FlagTest } from "@/components/ui/flag-test";
 
 // Create a custom form schema with shirt number validation
 const createFormSchema = (allPlayers: Player[], editingPlayer?: Player | null) => {
@@ -322,9 +321,6 @@ export default function AddPlayerDialog({ open, onOpenChange, editingPlayer }: A
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {/* Flag Test - Temporary */}
-            <FlagTest />
-            
             {/* Basic Information */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
