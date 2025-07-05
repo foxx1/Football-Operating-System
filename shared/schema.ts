@@ -123,6 +123,7 @@ export const staff = pgTable("staff", {
   lastName: text("last_name").notNull(),
   email: text("email").notNull().unique(),
   phoneNumber: text("phone_number"),
+  nationality: text("nationality"),
   role: text("role").notNull(), // head_coach, assistant_coach, fitness_coach, goalkeeping_coach, physiotherapist, analyst, kit_manager
   department: text("department").notNull(), // coaching, medical, analysis, operations
   employmentType: text("employment_type").notNull(), // full_time, part_time, contract, volunteer

@@ -234,6 +234,28 @@ export default function StaffForm({ staff, onSuccess }: StaffFormProps) {
           />
         </div>
 
+        {/* Nationality */}
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="nationality"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Nationality</FormLabel>
+                <FormControl>
+                  <NationalitySelect
+                    value={field.value || ""}
+                    onChange={field.onChange}
+                    placeholder="Select nationality"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <div /> {/* Empty div to maintain grid layout */}
+        </div>
+
         {/* ID Information */}
         <div className="grid grid-cols-2 gap-4">
           <FormField
