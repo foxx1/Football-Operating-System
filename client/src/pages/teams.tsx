@@ -271,12 +271,21 @@ export default function Teams() {
                     return (
                       <Card key={teamPlayer.id} className="p-4">
                         <div className="flex items-center space-x-3">
-                          <Avatar className="w-10 h-10">
-                            <AvatarImage src={`https://images.unsplash.com/photo-150${teamPlayer.player.id || 1}0794778202-cad84cf45f1d?w=120&h=120&fit=crop&crop=face`} />
-                            <AvatarFallback>
-                              {teamPlayer.player.firstName?.[0] || 'P'}{teamPlayer.player.lastName?.[0] || 'L'}
-                            </AvatarFallback>
-                          </Avatar>
+                          <div className="relative">
+                            <Avatar className="w-10 h-10">
+                              <AvatarImage src={teamPlayer.player.profilePicture || `https://images.unsplash.com/photo-150${teamPlayer.player.id || 1}0794778202-cad84cf45f1d?w=120&h=120&fit=crop&crop=face`} />
+                              <AvatarFallback>
+                                {teamPlayer.player.firstName?.[0] || 'P'}{teamPlayer.player.lastName?.[0] || 'L'}
+                              </AvatarFallback>
+                            </Avatar>
+                            {teamPlayer.player.shirtNumber && (
+                              <div className="absolute -top-1 -right-1 w-5 h-5 bg-primary rounded-full flex items-center justify-center">
+                                <span className="text-xs font-bold text-primary-foreground">
+                                  {teamPlayer.player.shirtNumber}
+                                </span>
+                              </div>
+                            )}
+                          </div>
                           <div className="flex-1">
                             <h4 className="font-medium text-foreground">
                               {teamPlayer.player.firstName} {teamPlayer.player.lastName}
@@ -285,11 +294,6 @@ export default function Teams() {
                               <Badge variant="outline" className="text-xs">
                                 {teamPlayer.player.position}
                               </Badge>
-                              {teamPlayer.player.shirtNumber && (
-                                <span className="text-xs text-muted-foreground">
-                                  #{teamPlayer.player.shirtNumber}
-                                </span>
-                              )}
                               {teamPlayer.isStarter && (
                                 <Badge className="text-xs bg-primary/10 text-primary">
                                   Starter

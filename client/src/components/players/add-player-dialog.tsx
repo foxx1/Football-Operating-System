@@ -211,10 +211,7 @@ export default function AddPlayerDialog({ open, onOpenChange, editingPlayer }: A
       const createdPlayer = await createdPlayerResponse.json();
 
       // If team assignment is selected, add player to team
-      console.log('Selected team:', selectedTeam);
-      console.log('Created player:', createdPlayer);
       if (selectedTeam && createdPlayer?.id) {
-        console.log(`Assigning player ${createdPlayer.id} to team ${selectedTeam}`);
         await apiRequest("POST", `/api/teams/${selectedTeam}/players/${createdPlayer.id}`);
       }
 
