@@ -94,16 +94,9 @@ export default function PlayerCard({ player }: PlayerCardProps) {
             )}
             {nationalityCountry && (
               <div className="flex items-center justify-center space-x-2 text-sm text-muted-foreground">
-                <img 
-                  src={`https://flagcdn.com/w20/${nationalityCountry.code.toLowerCase()}.png`}
-                  alt={`${nationalityCountry.code} flag`}
-                  className="w-4 h-3 rounded-sm border border-gray-200 object-cover"
-                  onError={(e) => {
-                    console.log('Flag image failed to load:', nationalityCountry.code);
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                  }}
-                />
+                <div className="flex items-center justify-center w-5 h-4 rounded-sm border border-gray-300 bg-gradient-to-br from-blue-500 to-red-500 text-white text-xs font-bold">
+                  {nationalityCountry.code}
+                </div>
                 <span>{nationalityCountry.code} - {player.nationality}</span>
               </div>
             )}
