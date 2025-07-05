@@ -208,12 +208,11 @@ export default function AddPlayerDialog({ open, onOpenChange, editingPlayer }: A
       }
 
       // If team assignment is selected, add player to team
-      if (selectedTeam && createdPlayer?.id) {
-        await apiRequest("POST", "/api/team-players", {
-          teamId: selectedTeam,
-          playerId: (createdPlayer as any).id,
-          isStarter: false,
-        });
+      if (selectedTeam && createdPlayer) {
+        const player = createdPlayer as Player;
+        if (player.id) {
+          await apiRequest("POST", `/api/teams/${selectedTeam}/players/${player.id}`);
+        }
       }
 
       return createdPlayer;
@@ -221,7 +220,15 @@ export default function AddPlayerDialog({ open, onOpenChange, editingPlayer }: A
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/players"] });
       queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/team-players"] });
+      // Invalidate team-specific player queries for all teams to ensure updates reflect
+      if (selectedTeam) {
+        queryClient.invalidateQueries({ queryKey: [`/api/teams/${selectedTeam}/players`] });
+        queryClient.invalidateQueries({ queryKey: ["/api/teams", selectedTeam, "players"] });
+      }
+      // Also invalidate all team players queries to be safe
+      queryClient.invalidateQueries({ queryKey: ["/api/teams"], predicate: (query) => 
+        query.queryKey.includes("players")
+      });
       toast({
         title: editingPlayer ? "Player updated" : "Player added",
         description: editingPlayer 
