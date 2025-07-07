@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Calendar, Plus, Clock, MapPin, Users, Edit, Trash2, Target, Activity } from "lucide-react";
+import { Calendar, Plus, Clock, MapPin, Users, Edit, Trash2, Target, Activity, Eye, Heart, Shield, Star, Dumbbell } from "lucide-react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import TrainingForm from "@/components/training-form";
 import type { TrainingSession } from "@shared/schema";
@@ -13,6 +13,7 @@ import { format } from "date-fns";
 export default function Training() {
   const [isAddSessionOpen, setIsAddSessionOpen] = useState(false);
   const [editingSession, setEditingSession] = useState<TrainingSession | null>(null);
+  const [viewingSession, setViewingSession] = useState<TrainingSession | null>(null);
 
   const { data: sessions, isLoading } = useQuery({
     queryKey: ["/api/training-sessions"],
@@ -234,7 +235,16 @@ export default function Training() {
                           <Button 
                             variant="ghost" 
                             size="sm"
+                            onClick={() => setViewingSession(session)}
+                            title="View Details"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
                             onClick={() => setEditingSession(session)}
+                            title="Edit Session"
                           >
                             <Edit className="w-4 h-4" />
                           </Button>
@@ -242,6 +252,7 @@ export default function Training() {
                             variant="ghost" 
                             size="sm"
                             onClick={() => handleDeleteSession(session.id)}
+                            title="Delete Session"
                           >
                             <Trash2 className="w-4 h-4 text-destructive" />
                           </Button>
@@ -300,6 +311,140 @@ export default function Training() {
           </CardContent>
         </Card>
       )}
+
+      {/* View Session Dialog */}
+      <Dialog open={!!viewingSession} onOpenChange={() => setViewingSession(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="h-5 w-5" />
+              Training Session Details
+            </DialogTitle>
+          </DialogHeader>
+          
+          {viewingSession && (
+            <div className="space-y-6">
+              {/* Basic Information */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Calendar className="h-5 w-5" />
+                    Basic Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Title</label>
+                      <p className="text-lg font-medium">{viewingSession.title}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Session Type</label>
+                      <Badge className={getSessionTypeColor(viewingSession.sessionType)}>
+                        {formatSessionType(viewingSession.sessionType)}
+                      </Badge>
+                    </div>
+                  </div>
+                  
+                  {viewingSession.description && (
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Description</label>
+                      <p className="mt-1">{viewingSession.description}</p>
+                    </div>
+                  )}
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <span>{format(new Date(viewingSession.date), 'EEEE, MMMM d, yyyy')}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      <span>{formatTime(viewingSession.startTime)} • {viewingSession.duration} minutes</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                      <span>{viewingSession.location}</span>
+                    </div>
+                  </div>
+                  
+                  {viewingSession.maxParticipants && (
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4 text-muted-foreground" />
+                      <span>Maximum {viewingSession.maxParticipants} participants</span>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Training Details */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Training Structure</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {/* Show all filled training sections */}
+                    {(viewingSession.fitnessAerobic || viewingSession.fitnessStrength || viewingSession.fitnessEndurance) && (
+                      <div>
+                        <h4 className="font-semibold flex items-center gap-2 mb-2">
+                          <Heart className="h-4 w-4" />
+                          Fitness Training
+                        </h4>
+                        <div className="text-sm space-y-1 ml-6">
+                          {viewingSession.fitnessAerobic && <p><span className="font-medium">Aerobic:</span> {viewingSession.fitnessAerobic}</p>}
+                          {viewingSession.fitnessStrength && <p><span className="font-medium">Strength:</span> {viewingSession.fitnessStrength}</p>}
+                          {viewingSession.fitnessEndurance && <p><span className="font-medium">Endurance:</span> {viewingSession.fitnessEndurance}</p>}
+                        </div>
+                      </div>
+                    )}
+
+                    {(viewingSession.gkHandling || viewingSession.gkShotStopping || viewingSession.gkDistribution) && (
+                      <div>
+                        <h4 className="font-semibold flex items-center gap-2 mb-2">
+                          <Shield className="h-4 w-4" />
+                          Goalkeeper Training
+                        </h4>
+                        <div className="text-sm space-y-1 ml-6">
+                          {viewingSession.gkHandling && <p><span className="font-medium">Handling:</span> {viewingSession.gkHandling}</p>}
+                          {viewingSession.gkShotStopping && <p><span className="font-medium">Shot Stopping:</span> {viewingSession.gkShotStopping}</p>}
+                          {viewingSession.gkDistribution && <p><span className="font-medium">Distribution:</span> {viewingSession.gkDistribution}</p>}
+                        </div>
+                      </div>
+                    )}
+
+                    {(viewingSession.specificFinishing || viewingSession.specificDefending || viewingSession.specificPressing) && (
+                      <div>
+                        <h4 className="font-semibold flex items-center gap-2 mb-2">
+                          <Star className="h-4 w-4" />
+                          Specific Work
+                        </h4>
+                        <div className="text-sm space-y-1 ml-6">
+                          {viewingSession.specificFinishing && <p><span className="font-medium">Finishing:</span> {viewingSession.specificFinishing}</p>}
+                          {viewingSession.specificDefending && <p><span className="font-medium">Defending:</span> {viewingSession.specificDefending}</p>}
+                          {viewingSession.specificPressing && <p><span className="font-medium">Pressing:</span> {viewingSession.specificPressing}</p>}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Additional Notes */}
+              {viewingSession.notes && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Additional Notes</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-muted-foreground">{viewingSession.notes}</p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Session Dialog */}
       <Dialog open={!!editingSession} onOpenChange={() => setEditingSession(null)}>
