@@ -9,6 +9,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { insertTrainingSessionSchema, type TrainingSession } from "@shared/schema";
+import { z } from "zod";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import TrainingImageUpload from "./training-image-upload";
@@ -41,8 +42,29 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
     queryKey: ["/api/teams"],
   });
 
+  // Create a modified schema that converts maxParticipants string to number
+  const formSchema = insertTrainingSessionSchema.extend({
+    maxParticipants: z.union([
+      z.string().transform(val => val === "" ? undefined : parseInt(val, 10)),
+      z.number(),
+      z.undefined()
+    ]).optional(),
+    duration: z.union([
+      z.string().transform(val => parseInt(val, 10)),
+      z.number()
+    ]),
+    teamId: z.union([
+      z.string().transform(val => parseInt(val, 10)),
+      z.number()
+    ]),
+    coachId: z.union([
+      z.string().transform(val => parseInt(val, 10)),
+      z.number()
+    ])
+  });
+
   const form = useForm({
-    resolver: zodResolver(insertTrainingSessionSchema),
+    resolver: zodResolver(formSchema),
     defaultValues: {
       title: session?.title || "",
       description: session?.description || "",
