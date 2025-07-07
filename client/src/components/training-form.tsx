@@ -62,6 +62,12 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
       fitnessTests: session?.fitnessTests || "",
       fitnessRecovery: session?.fitnessRecovery || "",
       fitnessTapering: session?.fitnessTapering || "",
+      fitnessWarmUp: session?.fitnessWarmUp || "",
+      fitnessCoolDown: session?.fitnessCoolDown || "",
+      fitnessFlexibility: session?.fitnessFlexibility || "",
+      fitnessAgility: session?.fitnessAgility || "",
+      fitnessSpeed: session?.fitnessSpeed || "",
+      fitnessPower: session?.fitnessPower || "",
       fitnessOther: session?.fitnessOther || "",
       
       // Main Part Section
@@ -80,6 +86,12 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
       gkFootwork: session?.gkFootwork || "",
       gkCrossing: session?.gkCrossing || "",
       gkOneOnOne: session?.gkOneOnOne || "",
+      gkCommunication: session?.gkCommunication || "",
+      gkPositioning: session?.gkPositioning || "",
+      gkReactions: session?.gkReactions || "",
+      gkDiving: session?.gkDiving || "",
+      gkThrowing: session?.gkThrowing || "",
+      gkKicking: session?.gkKicking || "",
       
       // Specific Work Section
       specificIndividual: session?.specificIndividual || "",
@@ -88,6 +100,12 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
       specificRehab: session?.specificRehab || "",
       specificYouth: session?.specificYouth || "",
       specificCondition: session?.specificCondition || "",
+      specificFinishing: session?.specificFinishing || "",
+      specificCrossing: session?.specificCrossing || "",
+      specificDefending: session?.specificDefending || "",
+      specificPressing: session?.specificPressing || "",
+      specificCounterAttack: session?.specificCounterAttack || "",
+      specificMental: session?.specificMental || "",
       
       // Training Image
       trainingImageUrl: session?.trainingImageUrl || "",
@@ -477,6 +495,114 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                         </FormItem>
                       )}
                     />
+
+                    <FormField
+                      control={form.control}
+                      name="fitnessWarmUp"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Warm-Up</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Dynamic warm-up, activation exercises..."
+                              rows={3}
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="fitnessCoolDown"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Cool-Down</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Static stretching, cool-down routine..."
+                              rows={3}
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="fitnessFlexibility"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Flexibility</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Flexibility training, mobility work..."
+                              rows={3}
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="fitnessAgility"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Agility</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Agility ladders, cone drills, quick feet..."
+                              rows={3}
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="fitnessSpeed"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Speed</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Sprint work, acceleration drills..."
+                              rows={3}
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="fitnessPower"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Power</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Plyometric exercises, explosive movements..."
+                              rows={3}
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   </div>
 
                   <FormField
@@ -739,6 +865,114 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                         </FormItem>
                       )}
                     />
+
+                    <FormField
+                      control={form.control}
+                      name="gkCommunication"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Communication</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Vocal leadership, organizing defense, calling plays..."
+                              rows={3}
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="gkPositioning"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Positioning</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Goal line positioning, reading the game..."
+                              rows={3}
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="gkReactions"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Reactions</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Reaction time training, reflex exercises..."
+                              rows={3}
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="gkDiving"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Diving Techniques</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Diving form, low dives, high dives..."
+                              rows={3}
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="gkThrowing"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Throwing</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Overarm throws, underarm rolls, accuracy..."
+                              rows={3}
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="gkKicking"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Kicking</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Goal kicks, punts, drop kicks, accuracy..."
+                              rows={3}
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   </div>
                 </TabsContent>
 
@@ -844,6 +1078,114 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                           <FormControl>
                             <Textarea 
                               placeholder="Specialized conditioning, sport-specific fitness..."
+                              rows={3}
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="specificFinishing"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Finishing</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Finishing drills, clinical finishing, composure..."
+                              rows={3}
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="specificCrossing"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Crossing</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Crossing technique, delivery, timing..."
+                              rows={3}
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="specificDefending"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Defending</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Defensive shape, tackling, marking..."
+                              rows={3}
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="specificPressing"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Pressing</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="High press, coordinated pressing, triggers..."
+                              rows={3}
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="specificCounterAttack"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Counter Attack</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Quick transitions, fast breaks, counter-attacking..."
+                              rows={3}
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="specificMental"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Mental Training</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Concentration, decision making, pressure situations..."
                               rows={3}
                               {...field} 
                             />

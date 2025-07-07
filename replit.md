@@ -121,6 +121,18 @@ The system uses PostgreSQL with the following core entities:
 
 ## Recent Changes
 
+### July 7, 2025 - Enhanced Training Session System with Image Upload and Expanded Categories
+✓ **Comprehensive Training Image Upload System**: Added three-option image integration for training sessions
+✓ **Library Integration**: Choose from saved tactical board creations with SVG preview images
+✓ **PC Upload Support**: Upload training images directly from computer (JPG, PNG, GIF up to 5MB)
+✓ **Interactive Tactical Board Creation**: Direct link to create new tactical diagrams
+✓ **Enhanced Database Schema**: Added 18 new training-specific fields across all categories
+✓ **Expanded Fitness Section**: Added Warm-Up, Cool-Down, Flexibility, Agility, Speed, Power categories
+✓ **Enhanced Goalkeeper Training**: Added Communication, Positioning, Reactions, Diving, Throwing, Kicking
+✓ **Comprehensive Specific Work**: Added Finishing, Crossing, Defending, Pressing, Counter-Attack, Mental training
+✓ **Professional Image Management**: Fixed SVG image display with proper fallback handling
+✓ **Complete Training Structure**: Four main categories with 25+ detailed subsections for professional session planning
+
 ### July 5, 2025 - Complete Flag Implementation for Player and Staff Cards
 ✓ **Flag Display Issue Resolution**: Successfully implemented nationality flags on both player and staff cards
 ✓ **Database Nationality Standardization**: Fixed inconsistent country names in database to match countries list

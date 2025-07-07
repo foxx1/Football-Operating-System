@@ -30,16 +30,16 @@ export default function TrainingImageUpload({ onImageSelect, currentImage }: Tra
     {
       id: 1,
       name: "4-4-2 Formation Setup",
-      url: "/api/placeholder/400/300",
-      thumbnail: "/api/placeholder/150/100",
+      url: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDQwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMzAwIiBmaWxsPSIjMjJjNTVlIi8+CjxsaW5lIHgxPSIyMDAiIHkxPSIwIiB4Mj0iMjAwIiB5Mj0iMzAwIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiLz4KPGNpcmNsZSBjeD0iMjAwIiBjeT0iMTUwIiByPSI0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIi8+Cjx0ZXh0IHg9IjIwMCIgeT0iMTUwIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0Ij40LTQtMjwvdGV4dD4KPC9zdmc+",
+      thumbnail: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDQwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMzAwIiBmaWxsPSIjMjJjNTVlIi8+CjxsaW5lIHgxPSIyMDAiIHkxPSIwIiB4Mj0iMjAwIiB5Mj0iMzAwIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiLz4KPGNpcmNsZSBjeD0iMjAwIiBjeT0iMTUwIiByPSI0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIi8+Cjx0ZXh0IHg9IjIwMCIgeT0iMTUwIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0Ij40LTQtMjwvdGV4dD4KPC9zdmc+",
       type: "formation",
       description: "Basic 4-4-2 formation with player positions"
     },
     {
       id: 2,
       name: "Attacking Drill - Wing Play",
-      url: "/api/placeholder/400/300",
-      thumbnail: "/api/placeholder/150/100",
+      url: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDQwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMzAwIiBmaWxsPSIjMjJjNTVlIi8+CjxwYXRoIGQ9Ik01MCAyNTBMMTAwIDE1MEwxNTAgMjUwTDMwMCAxNTBMMzUwIDEwMCIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIzIiBmaWxsPSJub25lIiBzdHJva2UtZGFzaGFycmF5PSI1LDUiLz4KPGNpcmNsZSBjeD0iNTAiIGN5PSIyNTAiIHI9IjgiIGZpbGw9IiNlZjQ0NDQiLz4KPGNpcmNsZSBjeD0iMTAwIiBjeT0iMTUwIiByPSI4IiBmaWxsPSIjZWY0NDQ0Ii8+CjxjaXJjbGUgY3g9IjE1MCIgY3k9IjI1MCIgcj0iOCIgZmlsbD0iI2VmNDQ0NCIvPgo8Y2lyY2xlIGN4PSIzMDAiIGN5PSIxNTAiIHI9IjgiIGZpbGw9IiNlZjQ0NDQiLz4KPGNpcmNsZSBjeD0iMzUwIiBjeT0iMTAwIiByPSI4IiBmaWxsPSIjZWY0NDQ0Ii8+Cjx0ZXh0IHg9IjIwMCIgeT0iMjkwIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEyIj5XaW5nIEF0dGFjazwvdGV4dD4KPC9zdmc+",
+      thumbnail: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTUwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDQwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMzAwIiBmaWxsPSIjMjJjNTVlIi8+CjxwYXRoIGQ9Ik01MCAyNTBMMTAwIDE1MEwxNTAgMjUwTDMwMCAxNTBMMzUwIDEwMCIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIzIiBmaWxsPSJub25lIiBzdHJva2UtZGFzaGFycmF5PSI1LDUiLz4KPGNpcmNsZSBjeD0iNTAiIGN5PSIyNTAiIHI9IjgiIGZpbGw9IiNlZjQ0NDQiLz4KPGNpcmNsZSBjeD0iMTAwIiBjeT0iMTUwIiByPSI4IiBmaWxsPSIjZWY0NDQ0Ii8+CjxjaXJjbGUgY3g9IjE1MCIgY3k9IjI1MCIgcj0iOCIgZmlsbD0iI2VmNDQ0NCIvPgo8Y2lyY2xlIGN4PSIzMDAiIGN5PSIxNTAiIHI9IjgiIGZpbGw9IiNlZjQ0NDQiLz4KPGNpcmNsZSBjeD0iMzUwIiBjeT0iMTAwIiByPSI4IiBmaWxsPSIjZWY0NDQ0Ii8+Cjx0ZXh0IHg9IjIwMCIgeT0iMjkwIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEyIj5XaW5nIEF0dGFjazwvdGV4dD4KPC9zdmc+",
       type: "drill",
       description: "Wing play attacking drill with movement patterns"
     },
@@ -210,8 +210,20 @@ export default function TrainingImageUpload({ onImageSelect, currentImage }: Tra
                   {libraryImages.map((image) => (
                     <Card key={image.id} className="cursor-pointer hover:shadow-md transition-shadow">
                       <CardContent className="p-4">
-                        <div className="aspect-video bg-muted rounded-lg mb-3 flex items-center justify-center">
-                          <Image className="w-8 h-8 text-muted-foreground" />
+                        <div className="aspect-video bg-muted rounded-lg mb-3 overflow-hidden">
+                          <img 
+                            src={image.thumbnail} 
+                            alt={image.name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              // Fallback to icon if image fails to load
+                              e.currentTarget.style.display = 'none';
+                              e.currentTarget.nextSibling.style.display = 'flex';
+                            }}
+                          />
+                          <div className="hidden w-full h-full items-center justify-center">
+                            <Image className="w-8 h-8 text-muted-foreground" />
+                          </div>
                         </div>
                         <div className="space-y-2">
                           <div className="flex items-center justify-between">

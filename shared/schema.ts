@@ -85,6 +85,12 @@ export const trainingSessions = pgTable("training_sessions", {
   fitnessTests: text("fitness_tests"), // Fitness testing details
   fitnessRecovery: text("fitness_recovery"), // Recovery session details
   fitnessTapering: text("fitness_tapering"), // Tapering session details
+  fitnessWarmUp: text("fitness_warm_up"), // Warm-up routines
+  fitnessCoolDown: text("fitness_cool_down"), // Cool-down routines
+  fitnessFlexibility: text("fitness_flexibility"), // Flexibility training
+  fitnessAgility: text("fitness_agility"), // Agility training
+  fitnessSpeed: text("fitness_speed"), // Speed training
+  fitnessPower: text("fitness_power"), // Power training
   fitnessOther: text("fitness_other"), // Other fitness activities
   
   // Main Part Section
@@ -103,6 +109,12 @@ export const trainingSessions = pgTable("training_sessions", {
   gkFootwork: text("gk_footwork"), // Footwork and positioning
   gkCrossing: text("gk_crossing"), // Dealing with crosses
   gkOneOnOne: text("gk_one_on_one"), // 1v1 situations
+  gkCommunication: text("gk_communication"), // Communication training
+  gkPositioning: text("gk_positioning"), // Positioning training
+  gkReactions: text("gk_reactions"), // Reaction training
+  gkDiving: text("gk_diving"), // Diving techniques
+  gkThrowing: text("gk_throwing"), // Throwing techniques
+  gkKicking: text("gk_kicking"), // Kicking techniques
   
   // Specific Work Section
   specificIndividual: text("specific_individual"), // Individual player work
@@ -111,6 +123,12 @@ export const trainingSessions = pgTable("training_sessions", {
   specificRehab: text("specific_rehab"), // Rehabilitation work
   specificYouth: text("specific_youth"), // Youth player development
   specificCondition: text("specific_condition"), // Conditioning work
+  specificFinishing: text("specific_finishing"), // Finishing training
+  specificCrossing: text("specific_crossing"), // Crossing training
+  specificDefending: text("specific_defending"), // Defending training
+  specificPressing: text("specific_pressing"), // Pressing training
+  specificCounterAttack: text("specific_counter_attack"), // Counter-attack training
+  specificMental: text("specific_mental"), // Mental training
   
   // Training Image
   trainingImageUrl: text("training_image_url"),
