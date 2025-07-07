@@ -69,7 +69,7 @@ export const trainingSessions = pgTable("training_sessions", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
   description: text("description"),
-  sessionType: text("session_type").notNull(), // technical, fitness, tactical, match_prep
+  sessionType: text("session_type").notNull(), // fitness, technical, tactical, match_prep, recovery
   date: text("date").notNull(),
   startTime: text("start_time").notNull(),
   duration: integer("duration").notNull(), // in minutes
@@ -77,6 +77,41 @@ export const trainingSessions = pgTable("training_sessions", {
   teamId: integer("team_id").notNull(),
   coachId: integer("coach_id").notNull(),
   maxParticipants: integer("max_participants"),
+  
+  // Fitness Section (General Preparation)
+  fitnessAerobic: text("fitness_aerobic"), // Aerobic exercises and details
+  fitnessStrength: text("fitness_strength"), // Strength training details
+  fitnessEndurance: text("fitness_endurance"), // Endurance training details
+  fitnessTests: text("fitness_tests"), // Fitness testing details
+  fitnessRecovery: text("fitness_recovery"), // Recovery session details
+  fitnessTapering: text("fitness_tapering"), // Tapering session details
+  fitnessOther: text("fitness_other"), // Other fitness activities
+  
+  // Main Part Section
+  mainTechnical: text("main_technical"), // Technical training details
+  mainTactical: text("main_tactical"), // Tactical training details
+  mainMatchPrep: text("main_match_prep"), // Match preparation details
+  mainPossession: text("main_possession"), // Possession-based training
+  mainTransition: text("main_transition"), // Transition training
+  mainSetPieces: text("main_set_pieces"), // Set pieces training
+  mainFinishing: text("main_finishing"), // Finishing training
+  
+  // Goalkeeper Specific Section
+  gkHandling: text("gk_handling"), // Goalkeeper handling exercises
+  gkShotStopping: text("gk_shot_stopping"), // Shot stopping training
+  gkDistribution: text("gk_distribution"), // Distribution training
+  gkFootwork: text("gk_footwork"), // Footwork and positioning
+  gkCrossing: text("gk_crossing"), // Dealing with crosses
+  gkOneOnOne: text("gk_one_on_one"), // 1v1 situations
+  
+  // Specific Work Section
+  specificIndividual: text("specific_individual"), // Individual player work
+  specificPosition: text("specific_position"), // Position-specific training
+  specificInjuryPrev: text("specific_injury_prev"), // Injury prevention
+  specificRehab: text("specific_rehab"), // Rehabilitation work
+  specificYouth: text("specific_youth"), // Youth player development
+  specificCondition: text("specific_condition"), // Conditioning work
+  
   notes: text("notes"),
   status: text("status").default("scheduled").notNull(), // scheduled, completed, cancelled
   createdAt: timestamp("created_at").defaultNow().notNull(),

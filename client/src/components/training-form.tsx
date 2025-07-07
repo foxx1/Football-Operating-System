@@ -6,9 +6,26 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { insertTrainingSessionSchema, type TrainingSession } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { 
+  Calendar, 
+  Clock, 
+  MapPin, 
+  Users, 
+  Activity, 
+  Target, 
+  Shield, 
+  Zap,
+  Heart,
+  Dumbbell,
+  Timer,
+  TrendingUp,
+  Star
+} from "lucide-react";
 
 interface TrainingFormProps {
   session?: TrainingSession;
@@ -36,6 +53,41 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
       teamId: session?.teamId || 1,
       coachId: session?.coachId || 1,
       maxParticipants: session?.maxParticipants || undefined,
+      
+      // Fitness Section
+      fitnessAerobic: session?.fitnessAerobic || "",
+      fitnessStrength: session?.fitnessStrength || "",
+      fitnessEndurance: session?.fitnessEndurance || "",
+      fitnessTests: session?.fitnessTests || "",
+      fitnessRecovery: session?.fitnessRecovery || "",
+      fitnessTapering: session?.fitnessTapering || "",
+      fitnessOther: session?.fitnessOther || "",
+      
+      // Main Part Section
+      mainTechnical: session?.mainTechnical || "",
+      mainTactical: session?.mainTactical || "",
+      mainMatchPrep: session?.mainMatchPrep || "",
+      mainPossession: session?.mainPossession || "",
+      mainTransition: session?.mainTransition || "",
+      mainSetPieces: session?.mainSetPieces || "",
+      mainFinishing: session?.mainFinishing || "",
+      
+      // Goalkeeper Section
+      gkHandling: session?.gkHandling || "",
+      gkShotStopping: session?.gkShotStopping || "",
+      gkDistribution: session?.gkDistribution || "",
+      gkFootwork: session?.gkFootwork || "",
+      gkCrossing: session?.gkCrossing || "",
+      gkOneOnOne: session?.gkOneOnOne || "",
+      
+      // Specific Work Section
+      specificIndividual: session?.specificIndividual || "",
+      specificPosition: session?.specificPosition || "",
+      specificInjuryPrev: session?.specificInjuryPrev || "",
+      specificRehab: session?.specificRehab || "",
+      specificYouth: session?.specificYouth || "",
+      specificCondition: session?.specificCondition || "",
+      
       notes: session?.notes || "",
       status: session?.status || "scheduled",
     },
@@ -63,7 +115,7 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
 
   const updateSessionMutation = useMutation({
     mutationFn: (data: any) => 
-      apiRequest("PUT", `/api/training-sessions/${session!.id}`, data),
+      apiRequest("PUT", `/api/training-sessions/${session?.id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/training-sessions"] });
       toast({
@@ -82,256 +134,741 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
   });
 
   const onSubmit = (data: any) => {
-    const cleanedData = {
-      ...data,
-      maxParticipants: data.maxParticipants || null,
-      notes: data.notes || null,
-      description: data.description || null,
-    };
-
     if (isEditing) {
-      updateSessionMutation.mutate(cleanedData);
+      updateSessionMutation.mutate(data);
     } else {
-      createSessionMutation.mutate(cleanedData);
+      createSessionMutation.mutate(data);
     }
   };
 
-  const isPending = createSessionMutation.isPending || updateSessionMutation.isPending;
+  const isSubmitting = createSessionMutation.isPending || updateSessionMutation.isPending;
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        {/* Basic Information Section */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold border-b pb-2">Basic Information</h3>
-          
-          <FormField
-            control={form.control}
-            name="title"
-            render={({ field }) => (
-              <FormItem className="form-field">
-                <FormLabel>Session Title</FormLabel>
-                <FormControl>
-                  <Input {...field} className="form-input" placeholder="e.g., Technical Skills Training" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+    <div className="max-w-6xl mx-auto p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">
+            {isEditing ? "Edit Training Session" : "Create New Training Session"}
+          </h2>
+          <p className="text-muted-foreground">
+            Design a comprehensive training session with structured sections
+          </p>
+        </div>
+      </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="sessionType"
-              render={({ field }) => (
-                <FormItem className="form-field">
-                  <FormLabel>Session Type</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select session type" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="technical">Technical</SelectItem>
-                      <SelectItem value="fitness">Fitness</SelectItem>
-                      <SelectItem value="tactical">Tactical</SelectItem>
-                      <SelectItem value="match_prep">Match Preparation</SelectItem>
-                      <SelectItem value="recovery">Recovery</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          {/* Basic Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="h-5 w-5" />
+                Basic Information
+              </CardTitle>
+              <CardDescription>
+                Set the fundamental details for your training session
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <FormField
+                  control={form.control}
+                  name="title"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Session Title</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., Pre-Season Fitness" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-            {isEditing && (
+                <FormField
+                  control={form.control}
+                  name="sessionType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Session Type</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="fitness">Fitness</SelectItem>
+                          <SelectItem value="technical">Technical</SelectItem>
+                          <SelectItem value="tactical">Tactical</SelectItem>
+                          <SelectItem value="match_prep">Match Preparation</SelectItem>
+                          <SelectItem value="recovery">Recovery</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="date"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Date</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="startTime"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Start Time</FormLabel>
+                      <FormControl>
+                        <Input type="time" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="duration"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Duration (minutes)</FormLabel>
+                      <FormControl>
+                        <Input type="number" min="30" max="180" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="location"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Location</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Training ground" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="maxParticipants"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Max Participants</FormLabel>
+                      <FormControl>
+                        <Input type="number" min="1" max="30" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="mt-4">
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          placeholder="Brief overview of the session objectives..."
+                          rows={3}
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Training Sections */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Training Structure</CardTitle>
+              <CardDescription>
+                Design your training session with detailed sections for comprehensive planning
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Tabs defaultValue="fitness" className="w-full">
+                <TabsList className="grid w-full grid-cols-4">
+                  <TabsTrigger value="fitness" className="flex items-center gap-2">
+                    <Heart className="h-4 w-4" />
+                    Fitness
+                  </TabsTrigger>
+                  <TabsTrigger value="main" className="flex items-center gap-2">
+                    <Target className="h-4 w-4" />
+                    Main Part
+                  </TabsTrigger>
+                  <TabsTrigger value="goalkeeper" className="flex items-center gap-2">
+                    <Shield className="h-4 w-4" />
+                    Goalkeeper
+                  </TabsTrigger>
+                  <TabsTrigger value="specific" className="flex items-center gap-2">
+                    <Star className="h-4 w-4" />
+                    Specific Work
+                  </TabsTrigger>
+                </TabsList>
+
+                {/* Fitness Section */}
+                <TabsContent value="fitness" className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="fitnessAerobic"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center gap-2">
+                            <Activity className="h-4 w-4" />
+                            Aerobic Training
+                          </FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Aerobic exercises, running drills, cardio work..."
+                              rows={3}
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="fitnessStrength"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center gap-2">
+                            <Dumbbell className="h-4 w-4" />
+                            Strength Training
+                          </FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Strength exercises, weight training, resistance work..."
+                              rows={3}
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="fitnessEndurance"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center gap-2">
+                            <Timer className="h-4 w-4" />
+                            Endurance Training
+                          </FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Endurance drills, stamina building, long runs..."
+                              rows={3}
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="fitnessTests"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center gap-2">
+                            <TrendingUp className="h-4 w-4" />
+                            Fitness Tests
+                          </FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Fitness assessments, benchmark tests, measurements..."
+                              rows={3}
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="fitnessRecovery"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Recovery Work</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Cool down, stretching, recovery exercises..."
+                              rows={3}
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="fitnessTapering"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Tapering</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Tapering protocols, load reduction..."
+                              rows={3}
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={form.control}
+                    name="fitnessOther"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Other Fitness Activities</FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            placeholder="Additional fitness work, specialized training..."
+                            rows={2}
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </TabsContent>
+
+                {/* Main Part Section */}
+                <TabsContent value="main" className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="mainTechnical"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Technical Training</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Ball control, passing, shooting technique..."
+                              rows={3}
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="mainTactical"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Tactical Training</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Formation work, positioning, tactical awareness..."
+                              rows={3}
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="mainMatchPrep"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Match Preparation</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Opposition analysis, match scenarios..."
+                              rows={3}
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="mainPossession"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Possession Training</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Possession drills, ball retention, build-up play..."
+                              rows={3}
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="mainTransition"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Transition Training</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Attack to defense transitions, counter-attacks..."
+                              rows={3}
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="mainSetPieces"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Set Pieces</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Corners, free kicks, throw-ins..."
+                              rows={3}
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={form.control}
+                    name="mainFinishing"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Finishing Training</FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            placeholder="Goal scoring practice, shooting drills..."
+                            rows={2}
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </TabsContent>
+
+                {/* Goalkeeper Section */}
+                <TabsContent value="goalkeeper" className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="gkHandling"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Handling Exercises</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Catching, handling under pressure, ball security..."
+                              rows={3}
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="gkShotStopping"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Shot Stopping</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Reaction saves, diving, reflexes..."
+                              rows={3}
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="gkDistribution"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Distribution</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Throwing, kicking, passing accuracy..."
+                              rows={3}
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="gkFootwork"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Footwork & Positioning</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Positioning, footwork drills, angles..."
+                              rows={3}
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="gkCrossing"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Dealing with Crosses</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="High balls, claiming crosses, command of area..."
+                              rows={3}
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="gkOneOnOne"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>1v1 Situations</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="One-on-one scenarios, narrowing angles..."
+                              rows={3}
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </TabsContent>
+
+                {/* Specific Work Section */}
+                <TabsContent value="specific" className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="specificIndividual"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Individual Work</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Player-specific training, individual development..."
+                              rows={3}
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="specificPosition"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Position-Specific Training</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Defender, midfielder, forward specific work..."
+                              rows={3}
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="specificInjuryPrev"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Injury Prevention</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Injury prevention exercises, prehab..."
+                              rows={3}
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="specificRehab"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Rehabilitation</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Recovery training, return to play protocols..."
+                              rows={3}
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="specificYouth"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Youth Development</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Age-specific training, skill development..."
+                              rows={3}
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="specificCondition"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Conditioning</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Specialized conditioning, sport-specific fitness..."
+                              rows={3}
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
+
+          {/* Additional Notes */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Additional Notes</CardTitle>
+            </CardHeader>
+            <CardContent>
               <FormField
                 control={form.control}
-                name="status"
+                name="notes"
                 render={({ field }) => (
-                  <FormItem className="form-field">
-                    <FormLabel>Status</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select status" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="scheduled">Scheduled</SelectItem>
-                        <SelectItem value="completed">Completed</SelectItem>
-                        <SelectItem value="cancelled">Cancelled</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  <FormItem>
+                    <FormLabel>Session Notes</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Any additional notes, equipment needed, special considerations..."
+                        rows={3}
+                        {...field} 
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-            )}
+            </CardContent>
+          </Card>
+
+          {/* Submit Button */}
+          <div className="flex justify-end gap-4">
+            <Button type="submit" disabled={isSubmitting} className="min-w-32">
+              {isSubmitting ? "Saving..." : isEditing ? "Update Session" : "Create Session"}
+            </Button>
           </div>
-
-          <FormField
-            control={form.control}
-            name="description"
-            render={({ field }) => (
-              <FormItem className="form-field">
-                <FormLabel>Description</FormLabel>
-                <FormControl>
-                  <Textarea {...field} className="form-input" placeholder="Brief description of the training session..." />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        {/* Schedule & Location Section */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold border-b pb-2">Schedule & Location</h3>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <FormField
-              control={form.control}
-              name="date"
-              render={({ field }) => (
-                <FormItem className="form-field">
-                  <FormLabel>Date</FormLabel>
-                  <FormControl>
-                    <Input {...field} type="date" className="form-input" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="startTime"
-              render={({ field }) => (
-                <FormItem className="form-field">
-                  <FormLabel>Start Time</FormLabel>
-                  <FormControl>
-                    <Input {...field} type="time" className="form-input" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="duration"
-              render={({ field }) => (
-                <FormItem className="form-field">
-                  <FormLabel>Duration (minutes)</FormLabel>
-                  <FormControl>
-                    <Input {...field} type="number" className="form-input" placeholder="90" min="30" step="15" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
-          <FormField
-            control={form.control}
-            name="location"
-            render={({ field }) => (
-              <FormItem className="form-field">
-                <FormLabel>Location</FormLabel>
-                <FormControl>
-                  <Input {...field} className="form-input" placeholder="e.g., Main Training Ground, Gym A" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        {/* Team & Participants Section */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold border-b pb-2">Team & Participants</h3>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="teamId"
-              render={({ field }) => (
-                <FormItem className="form-field">
-                  <FormLabel>Team</FormLabel>
-                  <Select onValueChange={(value) => field.onChange(parseInt(value))} defaultValue={field.value?.toString()}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select team" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {teams.map((team: any) => (
-                        <SelectItem key={team.id} value={team.id.toString()}>
-                          {team.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="maxParticipants"
-              render={({ field }) => (
-                <FormItem className="form-field">
-                  <FormLabel>Max Participants (optional)</FormLabel>
-                  <FormControl>
-                    <Input 
-                      {...field} 
-                      type="number" 
-                      min={1} 
-                      max={50}
-                      onChange={(e) => field.onChange(parseInt(e.target.value) || null)}
-                      className="form-input" 
-                      placeholder="e.g., 25"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-        </div>
-
-        {/* Notes Section */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold border-b pb-2">Additional Notes</h3>
-          
-          <FormField
-            control={form.control}
-            name="notes"
-            render={({ field }) => (
-              <FormItem className="form-field">
-                <FormLabel>Notes</FormLabel>
-                <FormControl>
-                  <Textarea {...field} className="form-input" placeholder="Additional notes or instructions..." />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        {/* Submit Buttons */}
-        <div className="flex justify-end space-x-4 pt-6 border-t">
-          <Button type="button" variant="outline" onClick={onSuccess}>
-            Cancel
-          </Button>
-          <Button type="submit" disabled={isPending} className="action-button">
-            {isPending ? "Saving..." : isEditing ? "Update Session" : "Create Session"}
-          </Button>
-        </div>
-      </form>
-    </Form>
+        </form>
+      </Form>
+    </div>
   );
 }
