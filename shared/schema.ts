@@ -135,6 +135,19 @@ export const trainingSessions = pgTable("training_sessions", {
   trainingImageType: text("training_image_type"), // 'library', 'upload', 'created'
   trainingImageName: text("training_image_name"),
   
+  // Section-specific Training Images
+  fitnessImageUrl: text("fitness_image_url"),
+  fitnessImageType: text("fitness_image_type"), // 'library', 'upload', 'created'
+  fitnessImageName: text("fitness_image_name"),
+  
+  goalkeepingImageUrl: text("goalkeeping_image_url"),
+  goalkeepingImageType: text("goalkeeping_image_type"), // 'library', 'upload', 'created'
+  goalkeepingImageName: text("goalkeeping_image_name"),
+  
+  specificWorkImageUrl: text("specific_work_image_url"),
+  specificWorkImageType: text("specific_work_image_type"), // 'library', 'upload', 'created'
+  specificWorkImageName: text("specific_work_image_name"),
+  
   notes: text("notes"),
   status: text("status").default("scheduled").notNull(), // scheduled, completed, cancelled
   createdAt: timestamp("created_at").defaultNow().notNull(),

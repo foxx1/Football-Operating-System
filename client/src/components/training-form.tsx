@@ -112,6 +112,19 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
       trainingImageType: session?.trainingImageType || "",
       trainingImageName: session?.trainingImageName || "",
       
+      // Section-specific images
+      fitnessImageUrl: session?.fitnessImageUrl || "",
+      fitnessImageType: session?.fitnessImageType || "",
+      fitnessImageName: session?.fitnessImageName || "",
+      
+      goalkeepingImageUrl: session?.goalkeepingImageUrl || "",
+      goalkeepingImageType: session?.goalkeepingImageType || "",
+      goalkeepingImageName: session?.goalkeepingImageName || "",
+      
+      specificWorkImageUrl: session?.specificWorkImageUrl || "",
+      specificWorkImageType: session?.specificWorkImageType || "",
+      specificWorkImageName: session?.specificWorkImageName || "",
+      
       notes: session?.notes || "",
       status: session?.status || "scheduled",
     },
@@ -622,6 +635,26 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                       </FormItem>
                     )}
                   />
+
+                  {/* Fitness Section Image Upload */}
+                  <div className="mt-6 border-t pt-6">
+                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                      <Heart className="h-5 w-5" />
+                      Fitness Training Image
+                    </h3>
+                    <TrainingImageUpload
+                      value={{
+                        url: form.watch("fitnessImageUrl"),
+                        type: form.watch("fitnessImageType") as "library" | "upload" | "created" | undefined,
+                        name: form.watch("fitnessImageName")
+                      }}
+                      onChange={(value) => {
+                        form.setValue("fitnessImageUrl", value.url);
+                        form.setValue("fitnessImageType", value.type);
+                        form.setValue("fitnessImageName", value.name);
+                      }}
+                    />
+                  </div>
                 </TabsContent>
 
                 {/* Main Part Section */}
@@ -974,6 +1007,26 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                       )}
                     />
                   </div>
+
+                  {/* Goalkeeper Section Image Upload */}
+                  <div className="mt-6 border-t pt-6">
+                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                      <Shield className="h-5 w-5" />
+                      Goalkeeper Training Image
+                    </h3>
+                    <TrainingImageUpload
+                      value={{
+                        url: form.watch("goalkeepingImageUrl"),
+                        type: form.watch("goalkeepingImageType") as "library" | "upload" | "created" | undefined,
+                        name: form.watch("goalkeepingImageName")
+                      }}
+                      onChange={(value) => {
+                        form.setValue("goalkeepingImageUrl", value.url);
+                        form.setValue("goalkeepingImageType", value.type);
+                        form.setValue("goalkeepingImageName", value.name);
+                      }}
+                    />
+                  </div>
                 </TabsContent>
 
                 {/* Specific Work Section */}
@@ -1193,6 +1246,26 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                           <FormMessage />
                         </FormItem>
                       )}
+                    />
+                  </div>
+
+                  {/* Specific Work Section Image Upload */}
+                  <div className="mt-6 border-t pt-6">
+                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                      <Star className="h-5 w-5" />
+                      Specific Work Training Image
+                    </h3>
+                    <TrainingImageUpload
+                      value={{
+                        url: form.watch("specificWorkImageUrl"),
+                        type: form.watch("specificWorkImageType") as "library" | "upload" | "created" | undefined,
+                        name: form.watch("specificWorkImageName")
+                      }}
+                      onChange={(value) => {
+                        form.setValue("specificWorkImageUrl", value.url);
+                        form.setValue("specificWorkImageType", value.type);
+                        form.setValue("specificWorkImageName", value.name);
+                      }}
                     />
                   </div>
                 </TabsContent>
