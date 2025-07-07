@@ -126,7 +126,7 @@ export default function Training() {
               Schedule Session
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" aria-describedby="training-dialog-description">
+          <DialogContent className="max-w-6xl max-h-[95vh] overflow-y-auto" aria-describedby="training-dialog-description">
             <DialogHeader>
               <DialogTitle>Schedule Training Session</DialogTitle>
               <div id="training-dialog-description" className="text-sm text-muted-foreground">

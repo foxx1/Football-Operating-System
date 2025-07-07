@@ -181,7 +181,7 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
   const isSubmitting = createSessionMutation.isPending || updateSessionMutation.isPending;
 
   return (
-    <div className="max-w-6xl mx-auto p-6 space-y-6">
+    <div className="max-w-6xl mx-auto p-6 space-y-6 max-h-[80vh] overflow-y-auto">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">
@@ -366,8 +366,8 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Tabs defaultValue="fitness" className="w-full">
-                <TabsList className="grid w-full grid-cols-4">
+              <Tabs defaultValue="fitness" className="w-full" orientation="horizontal">
+                <TabsList className="grid w-full grid-cols-4 mb-6">
                   <TabsTrigger value="fitness" className="flex items-center gap-2">
                     <Heart className="h-4 w-4" />
                     Fitness
