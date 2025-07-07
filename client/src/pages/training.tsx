@@ -126,9 +126,12 @@ export default function Training() {
               Schedule Session
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" aria-describedby="training-dialog-description">
             <DialogHeader>
               <DialogTitle>Schedule Training Session</DialogTitle>
+              <div id="training-dialog-description" className="text-sm text-muted-foreground">
+                Create a comprehensive training session with structured sections and image support
+              </div>
             </DialogHeader>
             <TrainingForm onSuccess={() => setIsAddSessionOpen(false)} />
           </DialogContent>

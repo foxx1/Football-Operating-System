@@ -112,6 +112,11 @@ export const trainingSessions = pgTable("training_sessions", {
   specificYouth: text("specific_youth"), // Youth player development
   specificCondition: text("specific_condition"), // Conditioning work
   
+  // Training Image
+  trainingImageUrl: text("training_image_url"),
+  trainingImageType: text("training_image_type"), // 'library', 'upload', 'created'
+  trainingImageName: text("training_image_name"),
+  
   notes: text("notes"),
   status: text("status").default("scheduled").notNull(), // scheduled, completed, cancelled
   createdAt: timestamp("created_at").defaultNow().notNull(),

@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { insertTrainingSessionSchema, type TrainingSession } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import TrainingImageUpload from "./training-image-upload";
 import { 
   Calendar, 
   Clock, 
@@ -87,6 +88,11 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
       specificRehab: session?.specificRehab || "",
       specificYouth: session?.specificYouth || "",
       specificCondition: session?.specificCondition || "",
+      
+      // Training Image
+      trainingImageUrl: session?.trainingImageUrl || "",
+      trainingImageType: session?.trainingImageType || "",
+      trainingImageName: session?.trainingImageName || "",
       
       notes: session?.notes || "",
       status: session?.status || "scheduled",
@@ -298,6 +304,23 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                       <FormMessage />
                     </FormItem>
                   )}
+                />
+              </div>
+
+              <div className="mt-4">
+                <TrainingImageUpload
+                  onImageSelect={(url, type, name) => {
+                    form.setValue("trainingImageUrl", url);
+                    form.setValue("trainingImageType", type);
+                    form.setValue("trainingImageName", name);
+                  }}
+                  currentImage={
+                    form.watch("trainingImageUrl") ? {
+                      url: form.watch("trainingImageUrl"),
+                      type: form.watch("trainingImageType"),
+                      name: form.watch("trainingImageName")
+                    } : undefined
+                  }
                 />
               </div>
             </CardContent>

@@ -636,6 +636,17 @@ export async function registerRoutes(app: Express, upload?: any): Promise<Server
     }
   });
 
+  // Training image library route (for future tactical board integration)
+  app.get("/api/training-images/library", async (req, res) => {
+    try {
+      // This would return saved tactical board images in production
+      // For now, return empty array
+      res.json([]);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch training images" });
+    }
+  });
+
   // Wearable Devices routes
   app.get("/api/wearable-devices", async (req, res) => {
     try {
