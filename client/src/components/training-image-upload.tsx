@@ -11,7 +11,13 @@ import { Upload, Image, Paintbrush, FolderOpen, Check, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface TrainingImageUploadProps {
-  onImageSelect: (imageUrl: string, imageType: string, imageName: string) => void;
+  onImageSelect?: (imageUrl: string, imageType: string, imageName: string) => void;
+  onChange?: (value: { url: string; type: string; name: string }) => void;
+  value?: {
+    url: string;
+    type: string;
+    name: string;
+  };
   currentImage?: {
     url: string;
     type: string;
@@ -19,11 +25,22 @@ interface TrainingImageUploadProps {
   };
 }
 
-export default function TrainingImageUpload({ onImageSelect, currentImage }: TrainingImageUploadProps) {
+export default function TrainingImageUpload({ onImageSelect, onChange, value, currentImage }: TrainingImageUploadProps) {
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState<string>("library");
   const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
+
+  // Helper function to handle image selection with both prop patterns
+  const handleImageSelect = (url: string, type: string, name: string) => {
+    if (onImageSelect) {
+      onImageSelect(url, type, name);
+    }
+    if (onChange) {
+      onChange({ url, type, name });
+    }
+    setUploadDialogOpen(false);
+  };
 
   // Mock tactical board library images - in production, these would come from saved tactical board creations
   const libraryImages = [
@@ -138,8 +155,7 @@ export default function TrainingImageUpload({ onImageSelect, currentImage }: Tra
   };
 
   const handleLibrarySelect = (image: typeof libraryImages[0]) => {
-    onImageSelect(image.url, 'library', image.name);
-    setUploadDialogOpen(false);
+    handleImageSelect(image.url, 'library', image.name);
     toast({
       title: "Image selected",
       description: `${image.name} has been added to your training session`,
@@ -170,15 +186,46 @@ export default function TrainingImageUpload({ onImageSelect, currentImage }: Tra
     }
   };
 
+  // Get current image from value prop or fallback to currentImage
+  const displayImage = value?.url ? value : currentImage;
+
   return (
     <div className="space-y-4">
+      {/* Current Image Display */}
+      {displayImage && (
+        <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+          <div className="flex items-center gap-3">
+            <div className="w-16 h-12 bg-background rounded overflow-hidden">
+              <img 
+                src={displayImage.url} 
+                alt={displayImage.name}
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <div>
+              <p className="font-medium">{displayImage.name}</p>
+              <Badge variant="outline" className="text-xs">
+                {displayImage.type}
+              </Badge>
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleImageSelect("", "", "")}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+      
       <div className="flex items-center justify-between">
         <Label className="text-base font-medium">Training Image</Label>
         <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
           <DialogTrigger asChild>
             <Button variant="outline" size="sm">
               <Image className="w-4 h-4 mr-2" />
-              {currentImage ? 'Change Image' : 'Add Image'}
+              {displayImage ? 'Change Image' : 'Add Image'}
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
