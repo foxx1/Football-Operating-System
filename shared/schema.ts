@@ -73,6 +73,10 @@ export const trainingSessions = pgTable("training_sessions", {
   date: text("date").notNull(),
   startTime: text("start_time").notNull(),
   duration: integer("duration").notNull(), // in minutes
+  fitnessDuration: integer("fitness_duration"), // Duration of fitness section in minutes
+  mainPartDuration: integer("main_part_duration"), // Duration of main part section in minutes
+  goalkeepingDuration: integer("goalkeeping_duration"), // Duration of goalkeeping section in minutes
+  specificWorkDuration: integer("specific_work_duration"), // Duration of specific work section in minutes
   location: text("location").notNull(),
   teamId: integer("team_id").notNull(),
   coachId: integer("coach_id").notNull(),

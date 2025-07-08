@@ -53,6 +53,26 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
       z.string().transform(val => parseInt(val, 10)),
       z.number()
     ]),
+    fitnessDuration: z.union([
+      z.string().transform(val => val === "" ? undefined : parseInt(val, 10)),
+      z.number(),
+      z.undefined()
+    ]).optional(),
+    mainPartDuration: z.union([
+      z.string().transform(val => val === "" ? undefined : parseInt(val, 10)),
+      z.number(),
+      z.undefined()
+    ]).optional(),
+    goalkeepingDuration: z.union([
+      z.string().transform(val => val === "" ? undefined : parseInt(val, 10)),
+      z.number(),
+      z.undefined()
+    ]).optional(),
+    specificWorkDuration: z.union([
+      z.string().transform(val => val === "" ? undefined : parseInt(val, 10)),
+      z.number(),
+      z.undefined()
+    ]).optional(),
     teamId: z.union([
       z.string().transform(val => parseInt(val, 10)),
       z.number()
@@ -76,6 +96,10 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
       teamId: session?.teamId || 1,
       coachId: session?.coachId || 1,
       maxParticipants: session?.maxParticipants || undefined,
+      fitnessDuration: session?.fitnessDuration || undefined,
+      mainPartDuration: session?.mainPartDuration || undefined,
+      goalkeepingDuration: session?.goalkeepingDuration || undefined,
+      specificWorkDuration: session?.specificWorkDuration || undefined,
       
       // Fitness Section
       fitnessAerobic: session?.fitnessAerobic || "",
@@ -302,7 +326,7 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                   name="duration"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Duration (minutes)</FormLabel>
+                      <FormLabel>Total Duration (minutes)</FormLabel>
                       <FormControl>
                         <Input type="number" min="30" max="180" {...field} />
                       </FormControl>
@@ -324,7 +348,141 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                     </FormItem>
                   )}
                 />
+              </div>
 
+              {/* Duration Breakdown Section */}
+              <div className="mt-8">
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <Timer className="h-5 w-5" />
+                  Training Part Durations
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="fitnessDuration"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-2">
+                          <Heart className="h-4 w-4" />
+                          Fitness (minutes)
+                        </FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            min="0" 
+                            max="120" 
+                            placeholder="0"
+                            {...field}
+                            onChange={(e) => {
+                              field.onChange(e);
+                              // Calculate total duration based on fitness and main part
+                              const mainPartDuration = parseInt(form.getValues('mainPartDuration') || '0');
+                              const fitnessDuration = parseInt(e.target.value || '0');
+                              const totalDuration = mainPartDuration + fitnessDuration;
+                              if (totalDuration > 0) {
+                                form.setValue('duration', totalDuration);
+                              }
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="mainPartDuration"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-2">
+                          <Activity className="h-4 w-4" />
+                          Main Part (minutes)
+                        </FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            min="0" 
+                            max="120" 
+                            placeholder="0"
+                            {...field}
+                            onChange={(e) => {
+                              field.onChange(e);
+                              // Calculate total duration based on fitness and main part
+                              const fitnessDuration = parseInt(form.getValues('fitnessDuration') || '0');
+                              const mainPartDuration = parseInt(e.target.value || '0');
+                              const totalDuration = mainPartDuration + fitnessDuration;
+                              if (totalDuration > 0) {
+                                form.setValue('duration', totalDuration);
+                              }
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="goalkeepingDuration"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-2">
+                          <Shield className="h-4 w-4" />
+                          Goalkeeping (minutes)
+                        </FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            min="0" 
+                            max="60" 
+                            placeholder="0"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="specificWorkDuration"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-2">
+                          <Star className="h-4 w-4" />
+                          Specific Work (minutes)
+                        </FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            min="0" 
+                            max="60" 
+                            placeholder="0"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                  <p className="text-sm text-blue-700 dark:text-blue-300">
+                    <strong>Note:</strong> Total Duration will be automatically calculated as the sum of Fitness + Main Part durations.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Description Section */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="maxParticipants"
@@ -338,9 +496,7 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                     </FormItem>
                   )}
                 />
-              </div>
-
-              <div className="mt-4">
+                
                 <FormField
                   control={form.control}
                   name="description"

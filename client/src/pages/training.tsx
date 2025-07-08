@@ -374,6 +374,42 @@ export default function Training() {
                       <span>Maximum {viewingSession.maxParticipants} participants</span>
                     </div>
                   )}
+                  
+                  {/* Duration Breakdown */}
+                  {(viewingSession.fitnessDuration || viewingSession.mainPartDuration || viewingSession.goalkeepingDuration || viewingSession.specificWorkDuration) && (
+                    <div className="mt-4">
+                      <h4 className="font-medium mb-2 flex items-center gap-2">
+                        <Timer className="h-4 w-4 text-muted-foreground" />
+                        Duration Breakdown
+                      </h4>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                        {viewingSession.fitnessDuration && (
+                          <div className="flex items-center gap-2 p-2 bg-red-50 dark:bg-red-900/20 rounded">
+                            <Heart className="h-3 w-3 text-red-600" />
+                            <span>Fitness: {viewingSession.fitnessDuration}min</span>
+                          </div>
+                        )}
+                        {viewingSession.mainPartDuration && (
+                          <div className="flex items-center gap-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded">
+                            <Activity className="h-3 w-3 text-blue-600" />
+                            <span>Main: {viewingSession.mainPartDuration}min</span>
+                          </div>
+                        )}
+                        {viewingSession.goalkeepingDuration && (
+                          <div className="flex items-center gap-2 p-2 bg-green-50 dark:bg-green-900/20 rounded">
+                            <Shield className="h-3 w-3 text-green-600" />
+                            <span>GK: {viewingSession.goalkeepingDuration}min</span>
+                          </div>
+                        )}
+                        {viewingSession.specificWorkDuration && (
+                          <div className="flex items-center gap-2 p-2 bg-purple-50 dark:bg-purple-900/20 rounded">
+                            <Star className="h-3 w-3 text-purple-600" />
+                            <span>Specific: {viewingSession.specificWorkDuration}min</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
