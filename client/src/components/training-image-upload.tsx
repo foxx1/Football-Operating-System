@@ -33,13 +33,22 @@ export default function TrainingImageUpload({ onImageSelect, onChange, value, cu
 
   // Helper function to handle image selection with both prop patterns
   const handleImageSelect = (url: string, type: string, name: string) => {
-    if (onImageSelect) {
-      onImageSelect(url, type, name);
+    try {
+      if (onImageSelect) {
+        onImageSelect(url, type, name);
+      }
+      if (onChange) {
+        onChange({ url, type, name });
+      }
+      setUploadDialogOpen(false);
+    } catch (error) {
+      console.error('Error in handleImageSelect:', error);
+      toast({
+        title: "Error",
+        description: "Failed to process image selection",
+        variant: "destructive",
+      });
     }
-    if (onChange) {
-      onChange({ url, type, name });
-    }
-    setUploadDialogOpen(false);
   };
 
   // Mock tactical board library images - in production, these would come from saved tactical board creations
@@ -136,7 +145,8 @@ export default function TrainingImageUpload({ onImageSelect, onChange, value, cu
 
       const data = await response.json();
       
-      onImageSelect(data.filePath, 'upload', file.name);
+      // Use the helper function to handle both patterns
+      handleImageSelect(data.filePath, 'upload', file.name);
       setUploadDialogOpen(false);
       
       toast({
@@ -144,6 +154,7 @@ export default function TrainingImageUpload({ onImageSelect, onChange, value, cu
         description: "Training image has been added to your session",
       });
     } catch (error) {
+      console.error('Upload error:', error);
       toast({
         title: "Upload failed",
         description: "Failed to upload image. Please try again.",
