@@ -127,7 +127,7 @@ export default function Training() {
               Schedule Session
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-6xl max-h-[95vh] overflow-y-auto" aria-describedby="training-dialog-description">
+          <DialogContent className="max-w-[98vw] w-full max-h-[95vh] overflow-y-auto p-2" aria-describedby="training-dialog-description">
             <DialogHeader>
               <DialogTitle>Schedule Training Session</DialogTitle>
               <div id="training-dialog-description" className="text-sm text-muted-foreground">
@@ -484,7 +484,7 @@ export default function Training() {
 
       {/* Edit Session Dialog */}
       <Dialog open={!!editingSession} onOpenChange={() => setEditingSession(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-[98vw] w-full max-h-[95vh] overflow-y-auto p-2">
           <DialogHeader>
             <DialogTitle>Edit Training Session</DialogTitle>
           </DialogHeader>

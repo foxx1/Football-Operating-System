@@ -227,7 +227,7 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
   const isSubmitting = createSessionMutation.isPending || updateSessionMutation.isPending;
 
   return (
-    <div className="max-w-6xl mx-auto p-6 space-y-6 max-h-[80vh] overflow-y-auto">
+    <div className="w-full p-2 space-y-4 max-h-[90vh] overflow-y-auto">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">
@@ -240,7 +240,7 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
       </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
           {/* Basic Information */}
           <Card>
             <CardHeader>
@@ -252,7 +252,7 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                 Set the fundamental details for your training session
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4">
               {/* First Row: Title and Session Type */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <FormField
@@ -509,7 +509,7 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                 Design your training session with detailed sections for comprehensive planning
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4">
               <Tabs defaultValue="fitness" className="w-full" orientation="horizontal">
                 <TabsList className="grid w-full grid-cols-4 mb-6">
                   <TabsTrigger value="fitness" className="flex items-center gap-2">
@@ -1422,7 +1422,7 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
             <CardHeader>
               <CardTitle>Additional Notes</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4">
               <FormField
                 control={form.control}
                 name="notes"
