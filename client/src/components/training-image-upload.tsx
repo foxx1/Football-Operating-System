@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Upload, Image, Paintbrush, FolderOpen, Check, X } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Upload, Image, Paintbrush, FolderOpen, Check, X, Search, Filter, Tag } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface TrainingImageUploadProps {
@@ -29,6 +30,8 @@ export default function TrainingImageUpload({ onImageSelect, onChange, value, cu
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState<string>("library");
   const [uploading, setUploading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedType, setSelectedType] = useState<string>("all");
   const { toast } = useToast();
 
   // Helper function to handle image selection with both prop patterns
@@ -102,6 +105,31 @@ export default function TrainingImageUpload({ onImageSelect, onChange, value, cu
       description: "Goalkeeper training setup with cones and equipment"
     }
   ];
+
+  // Smart filtering logic
+  const filteredImages = useMemo(() => {
+    return libraryImages.filter(image => {
+      // Type filter
+      const matchesType = selectedType === "all" || image.type === selectedType;
+      
+      // Search filter
+      const matchesSearch = searchQuery === "" || 
+        image.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        image.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        image.type.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      return matchesType && matchesSearch;
+    });
+  }, [searchQuery, selectedType]);
+
+  // Get unique types for filter dropdown
+  const availableTypes = useMemo(() => {
+    const types = Array.from(new Set(libraryImages.map(img => img.type)));
+    return types.map(type => ({
+      value: type,
+      label: type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
+    }));
+  }, []);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -261,48 +289,131 @@ export default function TrainingImageUpload({ onImageSelect, onChange, value, cu
               </TabsList>
               
               <TabsContent value="library" className="space-y-4">
-                <div className="text-sm text-muted-foreground">
-                  Choose from your saved tactical board creations
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {libraryImages.map((image) => (
-                    <Card key={image.id} className="cursor-pointer hover:shadow-md transition-shadow">
-                      <CardContent className="p-4">
-                        <div className="aspect-video bg-muted rounded-lg mb-3 overflow-hidden">
-                          <img 
-                            src={image.thumbnail} 
-                            alt={image.name}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              // Fallback to icon if image fails to load
-                              e.currentTarget.style.display = 'none';
-                              e.currentTarget.nextSibling.style.display = 'flex';
-                            }}
-                          />
-                          <div className="hidden w-full h-full items-center justify-center">
-                            <Image className="w-8 h-8 text-muted-foreground" />
-                          </div>
+                <div className="space-y-4">
+                  {/* Search and Filter Controls */}
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search tactical boards..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Filter className="h-4 w-4 text-muted-foreground" />
+                      <Select value={selectedType} onValueChange={setSelectedType}>
+                        <SelectTrigger className="w-40">
+                          <SelectValue placeholder="Filter by type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Types</SelectItem>
+                          {availableTypes.map((type) => (
+                            <SelectItem key={type.value} value={type.value}>
+                              {type.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {/* Results Summary */}
+                  <div className="flex items-center justify-between text-sm text-muted-foreground">
+                    <span>
+                      {filteredImages.length} of {libraryImages.length} tactical boards
+                      {searchQuery && ` matching "${searchQuery}"`}
+                      {selectedType !== "all" && ` in ${selectedType.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}`}
+                    </span>
+                    {(searchQuery || selectedType !== "all") && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => {
+                          setSearchQuery("");
+                          setSelectedType("all");
+                        }}
+                      >
+                        <X className="h-4 w-4 mr-1" />
+                        Clear filters
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Image Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-80 overflow-y-auto">
+                    {filteredImages.length > 0 ? (
+                      filteredImages.map((image) => (
+                        <Card key={image.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleLibrarySelect(image)}>
+                          <CardContent className="p-4">
+                            <div className="aspect-video bg-muted rounded-lg mb-3 overflow-hidden">
+                              <img 
+                                src={image.thumbnail} 
+                                alt={image.name}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  // Fallback to icon if image fails to load
+                                  e.currentTarget.style.display = 'none';
+                                  const nextElement = e.currentTarget.nextElementSibling as HTMLElement;
+                                  if (nextElement) {
+                                    nextElement.style.display = 'flex';
+                                  }
+                                }}
+                              />
+                              <div className="hidden w-full h-full items-center justify-center">
+                                <Image className="w-8 h-8 text-muted-foreground" />
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <h4 className="font-medium text-sm">{image.name}</h4>
+                                <Badge variant="outline" className={getTypeColor(image.type)}>
+                                  <Tag className="h-3 w-3 mr-1" />
+                                  {image.type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                                </Badge>
+                              </div>
+                              <p className="text-xs text-muted-foreground line-clamp-2">{image.description}</p>
+                              <Button 
+                                size="sm" 
+                                className="w-full"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleLibrarySelect(image);
+                                }}
+                              >
+                                <Check className="w-4 h-4 mr-2" />
+                                Select
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))
+                    ) : (
+                      <div className="col-span-3 text-center py-8">
+                        <div className="text-muted-foreground">
+                          <FolderOpen className="h-8 w-8 mx-auto mb-2" />
+                          {searchQuery || selectedType !== "all" ? 
+                            "No tactical boards match your search criteria" : 
+                            "No tactical boards available"
+                          }
                         </div>
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <h4 className="font-medium text-sm">{image.name}</h4>
-                            <Badge variant="outline" className={getTypeColor(image.type)}>
-                              {image.type.replace('_', ' ')}
-                            </Badge>
-                          </div>
-                          <p className="text-xs text-muted-foreground">{image.description}</p>
+                        {(searchQuery || selectedType !== "all") && (
                           <Button 
+                            variant="outline" 
                             size="sm" 
-                            className="w-full"
-                            onClick={() => handleLibrarySelect(image)}
+                            className="mt-2"
+                            onClick={() => {
+                              setSearchQuery("");
+                              setSelectedType("all");
+                            }}
                           >
-                            <Check className="w-4 h-4 mr-2" />
-                            Select
+                            Clear filters
                           </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </TabsContent>
               
@@ -397,7 +508,7 @@ export default function TrainingImageUpload({ onImageSelect, onChange, value, cu
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => onImageSelect('', '', '')}
+                onClick={() => onImageSelect?.('', '', '')}
               >
                 <X className="w-4 h-4" />
               </Button>
