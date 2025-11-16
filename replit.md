@@ -40,6 +40,7 @@ Core entities include Users, Players, Teams, Training Sessions, Matches, Tactica
 - **Wearable Device Integration**: Custom system for Fitbit, Garmin, Oura, Apple Watch, Polar device data.
 - **Regional Settings**: Support for multiple timezones and currencies (USD, EUR, SAR, QAR, AED, OMR, KWD, BHD, GBP, JPY).
 - **UI/UX**: Professional design with sidebar navigation, modern components, interactive charts (Recharts), and responsive layouts. Custom SVG icons and a consistent design system are used throughout.
+- **Dashboard Navigation**: All dashboard cards and quick actions are fully clickable with navigation to their respective pages. Includes hover effects, visual feedback, and smooth transitions for better user experience.
 
 ## External Dependencies
 
