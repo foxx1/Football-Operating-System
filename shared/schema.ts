@@ -252,6 +252,24 @@ export const matchSquads = pgTable("match_squads", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const meetings = pgTable("meetings", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description"),
+  meetingType: text("meeting_type").notNull(), // team, tactical, staff, individual, medical, board, sponsors, other
+  date: text("date").notNull(),
+  startTime: text("start_time").notNull(),
+  duration: integer("duration").notNull(), // in minutes
+  location: text("location").notNull(),
+  organizerId: integer("organizer_id").notNull(), // staff id who organized the meeting
+  attendees: text("attendees").array(), // array of staff/player IDs or names
+  agenda: text("agenda"),
+  notes: text("notes"),
+  status: text("status").default("scheduled").notNull(), // scheduled, in_progress, completed, cancelled, postponed
+  priority: text("priority").default("medium").notNull(), // low, medium, high, urgent
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const analyticsReports = pgTable("analytics_reports", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
@@ -666,6 +684,14 @@ export const insertMatchSquadSchema = createInsertSchema(matchSquads).omit({
   id: true,
   createdAt: true,
 });
+
+export const insertMeetingSchema = createInsertSchema(meetings).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertMeeting = z.infer<typeof insertMeetingSchema>;
+export type Meeting = typeof meetings.$inferSelect;
 
 export const insertAnalyticsReportSchema = createInsertSchema(analyticsReports).omit({
   id: true,
