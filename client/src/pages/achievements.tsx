@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Trophy, Medal, Star, Crown, Target, Users, Calendar, Clock, Flame, Award } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { translateWithParams, useI18n } from "@/contexts/I18nContext";
+import { cn, getDisplayName } from "@/lib/utils";
 
 const iconMap = {
   Play: Target,
@@ -47,25 +49,26 @@ const categoryColors = {
 export default function AchievementsPage() {
   const [selectedPlayer, setSelectedPlayer] = useState<string>("");
   const { toast } = useToast();
+  const { isRtl, t } = useI18n();
 
   // Fetch all players
-  const { data: players = [] } = useQuery({
+  const { data: players = [] } = useQuery<any[]>({
     queryKey: ["/api/players"],
   });
 
   // Fetch all achievements
-  const { data: achievements = [] } = useQuery({
+  const { data: achievements = [] } = useQuery<any[]>({
     queryKey: ["/api/achievements"],
   });
 
   // Fetch player achievements when a player is selected
-  const { data: playerAchievements = [] } = useQuery({
+  const { data: playerAchievements = [] } = useQuery<any[]>({
     queryKey: ["/api/achievements", selectedPlayer],
     enabled: !!selectedPlayer,
   });
 
   // Fetch leaderboard
-  const { data: leaderboard = [] } = useQuery({
+  const { data: leaderboard = [] } = useQuery<any[]>({
     queryKey: ["/api/achievements/leaderboard"],
   });
 
@@ -75,14 +78,14 @@ export default function AchievementsPage() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/achievements"] });
       toast({
-        title: "Success",
+        title: t("achievements.toastSuccessTitle"),
         description: data.message,
       });
     },
     onError: () => {
       toast({
-        title: "Error",
-        description: "Failed to initialize player achievements",
+        title: t("achievements.toastErrorTitle"),
+        description: t("achievements.toastErrorDescription"),
         variant: "destructive",
       });
     },
@@ -105,72 +108,80 @@ export default function AchievementsPage() {
     return categoryColors[category as keyof typeof categoryColors] || categoryColors.training;
   };
 
+  const getRarityLabel = (rarity: string) => {
+    return t(`achievements.rarity.${rarity}`);
+  };
+
+  const getCategoryLabel = (category: string) => {
+    return t(`achievements.category.${category}`);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Achievements</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t("achievements.title")}</h1>
           <p className="text-muted-foreground">
-            Track training milestones and celebrate player accomplishments
+            {t("achievements.description")}
           </p>
         </div>
-        <Button 
+        <Button
           onClick={() => initializeMutation.mutate()}
           disabled={initializeMutation.isPending}
           variant="outline"
         >
-          {initializeMutation.isPending ? "Initializing..." : "Initialize Player Achievements"}
+          {initializeMutation.isPending ? t("achievements.initializing") : t("achievements.initialize")}
         </Button>
       </div>
 
       <Tabs defaultValue="overview" className="space-y-6">
         <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="player-progress">Player Progress</TabsTrigger>
-          <TabsTrigger value="leaderboard">Leaderboard</TabsTrigger>
-          <TabsTrigger value="all-achievements">All Achievements</TabsTrigger>
+          <TabsTrigger value="overview">{t("achievements.tabs.overview")}</TabsTrigger>
+          <TabsTrigger value="player-progress">{t("achievements.tabs.playerProgress")}</TabsTrigger>
+          <TabsTrigger value="leaderboard">{t("achievements.tabs.leaderboard")}</TabsTrigger>
+          <TabsTrigger value="all-achievements">{t("achievements.tabs.allAchievements")}</TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Achievements</CardTitle>
+              <CardHeader className={cn("flex items-center justify-between space-y-0 pb-2", isRtl ? "flex-row-reverse" : "flex-row")}>
+                <CardTitle className="text-sm font-medium">{t("achievements.stats.totalAchievements")}</CardTitle>
                 <Trophy className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{achievements.length}</div>
-                <p className="text-xs text-muted-foreground">Available to unlock</p>
+                <p className="text-xs text-muted-foreground">{t("achievements.stats.availableToUnlock")}</p>
               </CardContent>
             </Card>
 
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Active Players</CardTitle>
+              <CardHeader className={cn("flex items-center justify-between space-y-0 pb-2", isRtl ? "flex-row-reverse" : "flex-row")}>
+                <CardTitle className="text-sm font-medium">{t("achievements.stats.activePlayers")}</CardTitle>
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{players.length}</div>
-                <p className="text-xs text-muted-foreground">Tracking progress</p>
+                <p className="text-xs text-muted-foreground">{t("achievements.stats.trackingProgress")}</p>
               </CardContent>
             </Card>
 
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Categories</CardTitle>
+              <CardHeader className={cn("flex items-center justify-between space-y-0 pb-2", isRtl ? "flex-row-reverse" : "flex-row")}>
+                <CardTitle className="text-sm font-medium">{t("achievements.stats.categories")}</CardTitle>
                 <Target className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">6</div>
-                <p className="text-xs text-muted-foreground">Achievement types</p>
+                <p className={cn("text-xs text-muted-foreground", isRtl ? "text-right" : "text-left")}>{t("achievements.stats.achievementTypes")}</p>
               </CardContent>
             </Card>
 
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Top Scorer</CardTitle>
+              <CardHeader className={cn("flex items-center justify-between space-y-0 pb-2", isRtl ? "flex-row-reverse" : "flex-row")}>
+                <CardTitle className="text-sm font-medium">{t("achievements.stats.topScorer")}</CardTitle>
                 <Crown className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -178,7 +189,17 @@ export default function AchievementsPage() {
                   {leaderboard[0]?.total_points || 0}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {leaderboard[0] ? `${leaderboard[0].first_name} ${leaderboard[0].last_name}` : 'No data'}
+                  {leaderboard[0]
+                    ? getDisplayName(
+                        {
+                          firstName: leaderboard[0].first_name,
+                          lastName: leaderboard[0].last_name,
+                          firstNameAr: leaderboard[0].first_name_ar,
+                          lastNameAr: leaderboard[0].last_name_ar,
+                        },
+                        isRtl,
+                      )
+                    : t("achievements.stats.noData")}
                 </p>
               </CardContent>
             </Card>
@@ -190,13 +211,13 @@ export default function AchievementsPage() {
               const categoryAchievements = achievements.filter((a: any) => a.category === category);
               return (
                 <Card key={category}>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
+                  <CardHeader className={cn(isRtl && "items-end text-right")}>
+                    <CardTitle className={cn("flex items-center gap-2", isRtl && "flex-row-reverse")}>
                       <div className={`w-3 h-3 rounded-full ${color}`}></div>
-                      {category.charAt(0).toUpperCase() + category.slice(1).replace('_', ' ')}
+                      {getCategoryLabel(category)}
                     </CardTitle>
                     <CardDescription>
-                      {categoryAchievements.length} achievements available
+                      {translateWithParams(t, "achievements.categoriesAvailable", { count: String(categoryAchievements.length) })}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -204,7 +225,7 @@ export default function AchievementsPage() {
                       {categoryAchievements.slice(0, 3).map((achievement: any) => (
                         <div key={achievement.id} className="flex items-center gap-2">
                           <Badge variant="outline" className={getRarityColor(achievement.rarity)}>
-                            {achievement.rarity}
+                            {getRarityLabel(achievement.rarity)}
                           </Badge>
                           <span className="text-sm">{achievement.name}</span>
                         </div>
@@ -221,21 +242,21 @@ export default function AchievementsPage() {
         <TabsContent value="player-progress" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Player Achievement Progress</CardTitle>
+              <CardTitle>{t("achievements.playerProgressTitle")}</CardTitle>
               <CardDescription>
-                Select a player to view their achievement progress and milestones
+                {t("achievements.playerProgressDescription")}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="mb-6">
                 <Select onValueChange={setSelectedPlayer} value={selectedPlayer}>
                   <SelectTrigger className="w-full max-w-xs">
-                    <SelectValue placeholder="Select a player..." />
+                    <SelectValue placeholder={t("achievements.selectPlayerPlaceholder")} />
                   </SelectTrigger>
                   <SelectContent>
                     {players.map((player: any) => (
                       <SelectItem key={player.id} value={player.id.toString()}>
-                        {player.firstName} {player.lastName}
+                        {getDisplayName(player, isRtl)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -258,11 +279,11 @@ export default function AchievementsPage() {
                             </div>
                             <div className="flex items-center gap-2">
                               <Badge variant="outline" className={getRarityColor(achievement.rarity)}>
-                                {achievement.rarity}
+                                {getRarityLabel(achievement.rarity)}
                               </Badge>
                               {achievement.is_completed && (
                                 <Badge variant="default" className="bg-green-600">
-                                  Completed
+                                  {t("achievements.completed")}
                                 </Badge>
                               )}
                             </div>
@@ -272,14 +293,14 @@ export default function AchievementsPage() {
                         <CardContent>
                           <div className="space-y-3">
                             <div className="flex justify-between text-sm">
-                              <span>Progress</span>
+                              <span>{t("achievements.progress")}</span>
                               <span>{achievement.progress || 0} / {achievement.threshold}</span>
                             </div>
                             <Progress value={progressPercentage} className="h-2" />
                             <div className="flex justify-between items-center text-sm text-muted-foreground">
-                              <span>{achievement.points} points</span>
+                              <span>{achievement.points} {t("achievements.points")}</span>
                               {achievement.completed_at && (
-                                <span>Completed: {new Date(achievement.completed_at).toLocaleDateString()}</span>
+                                <span>{translateWithParams(t, "achievements.completedOn", { date: new Date(achievement.completed_at).toLocaleDateString() })}</span>
                               )}
                             </div>
                           </div>
@@ -297,9 +318,9 @@ export default function AchievementsPage() {
         <TabsContent value="leaderboard" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Achievement Leaderboard</CardTitle>
+              <CardTitle>{t("achievements.leaderboardTitle")}</CardTitle>
               <CardDescription>
-                Top players ranked by total achievement points earned
+                {t("achievements.leaderboardDescription")}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -317,16 +338,24 @@ export default function AchievementsPage() {
                       </div>
                       <div>
                         <div className="font-semibold">
-                          {player.first_name} {player.last_name}
+                          {getDisplayName(
+                            {
+                              firstName: player.first_name,
+                              lastName: player.last_name,
+                              firstNameAr: player.first_name_ar,
+                              lastNameAr: player.last_name_ar,
+                            },
+                            isRtl,
+                          )}
                         </div>
                         <div className="text-sm text-muted-foreground">
-                          {player.completed_achievements} achievements completed
+                          {translateWithParams(t, "achievements.achievementsCompleted", { count: String(player.completed_achievements) })}
                         </div>
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className={cn(isRtl ? "text-left" : "text-right")}>
                       <div className="font-bold text-lg">{player.total_points}</div>
-                      <div className="text-sm text-muted-foreground">points</div>
+                      <div className="text-sm text-muted-foreground">{t("achievements.points")}</div>
                     </div>
                   </div>
                 ))}
@@ -339,16 +368,16 @@ export default function AchievementsPage() {
         <TabsContent value="all-achievements" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>All Achievements</CardTitle>
+              <CardTitle>{t("achievements.allAchievementsTitle")}</CardTitle>
               <CardDescription>
-                Complete list of all available achievements and their requirements
+                {t("achievements.allAchievementsDescription")}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {achievements.map((achievement: any) => {
                   const IconComponent = getIcon(achievement.icon);
-                  
+
                   return (
                     <Card key={achievement.id}>
                       <CardHeader className="pb-3">
@@ -358,7 +387,7 @@ export default function AchievementsPage() {
                             <CardTitle className="text-base">{achievement.name}</CardTitle>
                           </div>
                           <Badge variant="outline" className={getRarityColor(achievement.rarity)}>
-                            {achievement.rarity}
+                            {getRarityLabel(achievement.rarity)}
                           </Badge>
                         </div>
                         <CardDescription>{achievement.description}</CardDescription>
@@ -366,17 +395,17 @@ export default function AchievementsPage() {
                       <CardContent>
                         <div className="space-y-2">
                           <div className="flex justify-between text-sm">
-                            <span>Category</span>
+                            <span>{t("achievements.category")}</span>
                             <Badge variant="outline" style={{ backgroundColor: getCategoryColor(achievement.category) + '20' }}>
-                              {achievement.category.replace('_', ' ')}
+                              {getCategoryLabel(achievement.category)}
                             </Badge>
                           </div>
                           <div className="flex justify-between text-sm">
-                            <span>Requirement</span>
+                            <span>{t("achievements.requirement")}</span>
                             <span>{achievement.threshold} {achievement.criteria_type?.replace('_', ' ')}</span>
                           </div>
                           <div className="flex justify-between text-sm">
-                            <span>Points</span>
+                            <span>{t("achievements.pointsLabel")}</span>
                             <span className="font-semibold">{achievement.points}</span>
                           </div>
                         </div>

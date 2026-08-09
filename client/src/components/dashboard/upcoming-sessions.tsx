@@ -82,8 +82,9 @@ export default function UpcomingSessions() {
         <div className="space-y-4">
           {sessions.slice(0, 3).map((session) => {
             const config = sessionTypeConfig[session.sessionType as keyof typeof sessionTypeConfig] || sessionTypeConfig.technical;
-            const timeFromNow = formatDistanceToNow(new Date(session.scheduledAt), { addSuffix: true });
-            const formattedTime = format(new Date(session.scheduledAt), "PPp");
+            const scheduledAt = new Date(`${session.date}T${session.startTime || "00:00"}`);
+            const timeFromNow = formatDistanceToNow(scheduledAt, { addSuffix: true });
+            const formattedTime = format(scheduledAt, "PPp");
             
             return (
               <div

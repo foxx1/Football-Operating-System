@@ -84,7 +84,7 @@ export interface TacticalBoardState {
 const defaultFormations: Formation[] = [
   {
     id: '4-4-2',
-    name: '4-4-2 Classic',
+    name: '1-4-4-2 Classic',
     description: 'Balanced formation with two strikers and four midfielders',
     category: 'balanced',
     popularity: 95,
@@ -104,7 +104,7 @@ const defaultFormations: Formation[] = [
   },
   {
     id: '4-3-3',
-    name: '4-3-3 Attack',
+    name: '1-4-3-3 Attack',
     description: 'Attacking formation with three forwards and creative midfield',
     category: 'attacking',
     popularity: 88,
@@ -124,7 +124,7 @@ const defaultFormations: Formation[] = [
   },
   {
     id: '3-5-2',
-    name: '3-5-2 Wing-backs',
+    name: '1-3-5-2 Wing-backs',
     description: 'Formation with wing-backs providing width and two strikers',
     category: 'balanced',
     popularity: 72,
@@ -144,7 +144,7 @@ const defaultFormations: Formation[] = [
   },
   {
     id: '5-4-1',
-    name: '5-4-1 Defensive',
+    name: '1-5-4-1 Defensive',
     description: 'Defensive formation with five defenders and solid midfield',
     category: 'defensive',
     popularity: 65,
@@ -164,7 +164,7 @@ const defaultFormations: Formation[] = [
   },
   {
     id: '4-2-3-1',
-    name: '4-2-3-1 Modern',
+    name: '1-4-2-3-1 Modern',
     description: 'Modern formation with two holding midfielders and attacking trio',
     category: 'attacking',
     popularity: 85,
@@ -180,6 +180,66 @@ const defaultFormations: Formation[] = [
       { id: '53', name: 'CAM', number: 10, position: 'Attacking Midfielder', x: 50, y: 35, team: 'home', color: '#f59e0b', icon: '🎯' },
       { id: '54', name: 'RW', number: 11, position: 'Right Winger', x: 75, y: 35, team: 'home', color: '#f59e0b', icon: '🏃' },
       { id: '55', name: 'ST', number: 9, position: 'Striker', x: 50, y: 20, team: 'home', color: '#f59e0b', icon: '⚽' },
+    ]
+  },
+  {
+    id: '3-4-3',
+    name: '1-3-4-3 Possession',
+    description: 'Three center-backs, a flat midfield four, and a front three for total width',
+    category: 'attacking',
+    popularity: 60,
+    players: [
+      { id: '56', name: 'GK', number: 1, position: 'Goalkeeper', x: 50, y: 90, team: 'home', color: '#06b6d4', icon: '🥅' },
+      { id: '57', name: 'CB', number: 2, position: 'Center Back', x: 68, y: 72, team: 'home', color: '#06b6d4', icon: '🛡️' },
+      { id: '58', name: 'CB', number: 3, position: 'Center Back', x: 50, y: 75, team: 'home', color: '#06b6d4', icon: '🛡️' },
+      { id: '59', name: 'CB', number: 4, position: 'Center Back', x: 32, y: 72, team: 'home', color: '#06b6d4', icon: '🛡️' },
+      { id: '60', name: 'RM', number: 7, position: 'Right Midfielder', x: 82, y: 50, team: 'home', color: '#06b6d4', icon: '⚙️' },
+      { id: '61', name: 'CM', number: 8, position: 'Central Midfielder', x: 58, y: 50, team: 'home', color: '#06b6d4', icon: '⚙️' },
+      { id: '62', name: 'CM', number: 6, position: 'Central Midfielder', x: 42, y: 50, team: 'home', color: '#06b6d4', icon: '⚙️' },
+      { id: '63', name: 'LM', number: 11, position: 'Left Midfielder', x: 18, y: 50, team: 'home', color: '#06b6d4', icon: '⚙️' },
+      { id: '64', name: 'RW', number: 9, position: 'Right Winger', x: 75, y: 25, team: 'home', color: '#06b6d4', icon: '🏃' },
+      { id: '65', name: 'ST', number: 10, position: 'Striker', x: 50, y: 20, team: 'home', color: '#06b6d4', icon: '⚽' },
+      { id: '66', name: 'LW', number: 17, position: 'Left Winger', x: 25, y: 25, team: 'home', color: '#06b6d4', icon: '🏃' },
+    ]
+  },
+  {
+    id: '5-2-3',
+    name: '1-5-2-3 Ultra-Attacking Wing-backs',
+    description: 'Five defenders with attacking wing-backs bombing forward to support a front three',
+    category: 'attacking',
+    popularity: 40,
+    players: [
+      { id: '67', name: 'GK', number: 1, position: 'Goalkeeper', x: 50, y: 90, team: 'home', color: '#ec4899', icon: '🥅' },
+      { id: '68', name: 'RWB', number: 2, position: 'Right Wing-back', x: 85, y: 62, team: 'home', color: '#ec4899', icon: '🏃' },
+      { id: '69', name: 'CB', number: 3, position: 'Center Back', x: 65, y: 74, team: 'home', color: '#ec4899', icon: '🛡️' },
+      { id: '70', name: 'CB', number: 4, position: 'Center Back', x: 50, y: 76, team: 'home', color: '#ec4899', icon: '🛡️' },
+      { id: '71', name: 'CB', number: 5, position: 'Center Back', x: 35, y: 74, team: 'home', color: '#ec4899', icon: '🛡️' },
+      { id: '72', name: 'LWB', number: 6, position: 'Left Wing-back', x: 15, y: 62, team: 'home', color: '#ec4899', icon: '🏃' },
+      { id: '73', name: 'CM', number: 8, position: 'Central Midfielder', x: 60, y: 48, team: 'home', color: '#ec4899', icon: '⚙️' },
+      { id: '74', name: 'CM', number: 10, position: 'Central Midfielder', x: 40, y: 48, team: 'home', color: '#ec4899', icon: '⚙️' },
+      { id: '75', name: 'RW', number: 7, position: 'Right Winger', x: 75, y: 25, team: 'home', color: '#ec4899', icon: '🏃' },
+      { id: '76', name: 'ST', number: 9, position: 'Striker', x: 50, y: 20, team: 'home', color: '#ec4899', icon: '⚽' },
+      { id: '77', name: 'LW', number: 11, position: 'Left Winger', x: 25, y: 25, team: 'home', color: '#ec4899', icon: '🏃' },
+    ]
+  },
+  {
+    id: '4-1-4-1',
+    name: '1-4-1-4-1 Balanced',
+    description: 'A lone defensive midfielder shields the back four, supporting a wide attacking midfield band',
+    category: 'defensive',
+    popularity: 55,
+    players: [
+      { id: '78', name: 'GK', number: 1, position: 'Goalkeeper', x: 50, y: 90, team: 'home', color: '#84cc16', icon: '🥅' },
+      { id: '79', name: 'RB', number: 2, position: 'Right Back', x: 80, y: 72, team: 'home', color: '#84cc16', icon: '🛡️' },
+      { id: '80', name: 'CB', number: 3, position: 'Center Back', x: 60, y: 74, team: 'home', color: '#84cc16', icon: '🛡️' },
+      { id: '81', name: 'CB', number: 4, position: 'Center Back', x: 40, y: 74, team: 'home', color: '#84cc16', icon: '🛡️' },
+      { id: '82', name: 'LB', number: 5, position: 'Left Back', x: 20, y: 72, team: 'home', color: '#84cc16', icon: '🛡️' },
+      { id: '83', name: 'CDM', number: 6, position: 'Defensive Midfielder', x: 50, y: 58, team: 'home', color: '#84cc16', icon: '⚙️' },
+      { id: '84', name: 'RM', number: 7, position: 'Right Midfielder', x: 80, y: 38, team: 'home', color: '#84cc16', icon: '⚙️' },
+      { id: '85', name: 'CM', number: 8, position: 'Central Midfielder', x: 58, y: 40, team: 'home', color: '#84cc16', icon: '⚙️' },
+      { id: '86', name: 'CM', number: 10, position: 'Central Midfielder', x: 42, y: 40, team: 'home', color: '#84cc16', icon: '⚙️' },
+      { id: '87', name: 'LM', number: 11, position: 'Left Midfielder', x: 20, y: 38, team: 'home', color: '#84cc16', icon: '⚙️' },
+      { id: '88', name: 'ST', number: 9, position: 'Striker', x: 50, y: 20, team: 'home', color: '#84cc16', icon: '⚽' },
     ]
   }
 ];

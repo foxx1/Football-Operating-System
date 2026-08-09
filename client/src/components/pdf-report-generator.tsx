@@ -32,11 +32,11 @@ export default function PDFReportGeneratorComponent({ onClose }: PDFReportGenera
   const [isGenerating, setIsGenerating] = useState(false);
 
   // Fetch data for dropdowns
-  const { data: teams = [] } = useQuery({ queryKey: ["/api/teams"] });
-  const { data: matches = [] } = useQuery({ queryKey: ["/api/matches"] });
-  const { data: sessions = [] } = useQuery({ queryKey: ["/api/training-sessions"] });
-  const { data: players = [] } = useQuery({ queryKey: ["/api/players"] });
-  const { data: settings = [] } = useQuery({ queryKey: ["/api/settings"] });
+  const { data: teams = [] } = useQuery<any[]>({ queryKey: ["/api/teams"] });
+  const { data: matches = [] } = useQuery<any[]>({ queryKey: ["/api/matches"] });
+  const { data: sessions = [] } = useQuery<any[]>({ queryKey: ["/api/training-sessions"] });
+  const { data: players = [] } = useQuery<any[]>({ queryKey: ["/api/players"] });
+  const { data: settings = [] } = useQuery<any[]>({ queryKey: ["/api/settings"] });
 
   // Get settings values
   const getSettingValue = (category: string, key: string, defaultValue: string = "") => {

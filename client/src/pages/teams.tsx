@@ -9,6 +9,8 @@ import { Plus, Users, Edit, Trash2, UserPlus, Shield } from "lucide-react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import TeamForm from "@/components/team-form";
 import TeamPlayerManagement from "@/components/team-player-management";
+import { translateWithParams, useI18n } from "@/contexts/I18nContext";
+import { cn } from "@/lib/utils";
 import type { Team } from "@shared/schema";
 
 export default function Teams() {
@@ -16,6 +18,7 @@ export default function Teams() {
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [isManagePlayersOpen, setIsManagePlayersOpen] = useState(false);
   const [selectedTeamForManagement, setSelectedTeamForManagement] = useState<Team | null>(null);
+  const { isRtl, t } = useI18n();
 
   const { data: teams = [], isLoading: teamsLoading } = useQuery<Team[]>({
     queryKey: ["/api/teams"],
@@ -36,7 +39,7 @@ export default function Teams() {
   });
 
   const handleDeleteTeam = (teamId: number) => {
-    if (confirm("Are you sure you want to delete this team?")) {
+    if (confirm(t("teams.confirmDelete"))) {
       deleteTeamMutation.mutate(teamId);
     }
   };
@@ -65,26 +68,11 @@ export default function Teams() {
   };
 
   const formatCategoryName = (category: string) => {
-    switch (category.toLowerCase()) {
-      case 'first_team':
-        return 'First Team';
-      case 'reserves':
-        return 'Reserves';
-      case 'under_21':
-        return 'Under 21';
-      case 'under_19':
-        return 'Under 19';
-      case 'under_17':
-        return 'Under 17';
-      case 'under_15':
-        return 'Under 15';
-      case 'academy_rootgrass':
-        return 'Academy - Rootgrass';
-      case 'youth':
-        return 'Youth Team';
-      default:
-        return category.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-    }
+    const key = `teamCategory.${category.toLowerCase()}`;
+    const translated = t(key);
+    return translated === key
+      ? category.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+      : translated;
   };
 
   if (teamsLoading) {
@@ -106,23 +94,23 @@ export default function Teams() {
   return (
     <div className="p-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Teams & Squads</h1>
-          <p className="text-muted-foreground">Manage your team squads and player assignments</p>
+          <h1 className="text-3xl font-bold text-foreground">{t("teams.title")}</h1>
+          <p className="text-muted-foreground">{t("teams.description")}</p>
         </div>
         <Dialog open={isAddTeamOpen} onOpenChange={setIsAddTeamOpen}>
           <DialogTrigger asChild>
             <Button className="action-button bg-primary text-primary-foreground hover:bg-primary/90">
-              <Plus className="w-4 h-4 mr-2" />
-              Create Team
+              <Plus className={cn("w-4 h-4", isRtl ? "ml-2" : "mr-2")} />
+              {t("teams.create")}
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Create New Team</DialogTitle>
+              <DialogTitle>{t("teams.createTitle")}</DialogTitle>
               <DialogDescription>
-                Create a new team with category selection and custom naming options.
+                {t("teams.createDescription")}
               </DialogDescription>
             </DialogHeader>
             <TeamForm
@@ -142,8 +130,8 @@ export default function Teams() {
             onClick={() => setSelectedTeam(team)}
           >
             <CardHeader>
-              <div className="flex items-start justify-between">
-                <div className="flex items-center space-x-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className={cn("flex items-center", isRtl ? "space-x-reverse space-x-3" : "space-x-3")}>
                   <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
                     <Shield className="w-6 h-6 text-primary" />
                   </div>
@@ -172,9 +160,9 @@ export default function Teams() {
               )}
               
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                <div className={cn("flex items-center text-sm text-muted-foreground", isRtl ? "space-x-reverse space-x-2" : "space-x-2")}>
                   <Users className="w-4 h-4" />
-                  <span>View Squad</span>
+                  <span>{t("teams.viewSquad")}</span>
                 </div>
                 <Button 
                   variant="outline" 
@@ -185,8 +173,8 @@ export default function Teams() {
                     setIsManagePlayersOpen(true);
                   }}
                 >
-                  <Edit className="w-3 h-3 mr-1" />
-                  Manage
+                  <Edit className={cn("w-3 h-3", isRtl ? "ml-1" : "mr-1")} />
+                  {t("teams.manage")}
                 </Button>
               </div>
             </CardContent>
@@ -199,13 +187,13 @@ export default function Teams() {
         <Card className="text-center p-12">
           <CardContent>
             <Shield className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-foreground mb-2">No Teams Found</h3>
+            <h3 className="text-lg font-semibold text-foreground mb-2">{t("teams.noTeams")}</h3>
             <p className="text-muted-foreground mb-4">
-              Get started by creating your first team squad.
+              {t("teams.noTeamsDescription")}
             </p>
             <Button onClick={() => setIsAddTeamOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Create First Team
+              <Plus className={cn("w-4 h-4", isRtl ? "ml-2" : "mr-2")} />
+              {t("teams.createFirst")}
             </Button>
           </CardContent>
         </Card>
@@ -215,9 +203,9 @@ export default function Teams() {
       <Dialog open={!!selectedTeam} onOpenChange={() => setSelectedTeam(null)}>
         <DialogContent className="max-w-4xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center space-x-3">
+            <DialogTitle className={cn("flex items-center", isRtl ? "space-x-reverse space-x-3" : "space-x-3")}>
               <Shield className="w-6 h-6 text-primary" />
-              <span>{selectedTeam?.name} Squad</span>
+              <span>{selectedTeam?.name} {t("teams.squad")}</span>
               <Badge className={getCategoryColor(selectedTeam?.category || '')}>
                 {formatCategoryName(selectedTeam?.category || '')}
               </Badge>
@@ -236,30 +224,30 @@ export default function Teams() {
             ) : teamPlayers?.length === 0 ? (
               <div className="text-center py-8">
                 <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-foreground mb-2">No Players Assigned</h3>
+                <h3 className="text-lg font-semibold text-foreground mb-2">{t("teams.noPlayersAssigned")}</h3>
                 <p className="text-muted-foreground mb-4">
-                  This team doesn't have any players assigned yet.
+                  {t("teams.noPlayersAssignedDescription")}
                 </p>
                 <Button onClick={() => {
                   setSelectedTeamForManagement(selectedTeam);
                   setIsManagePlayersOpen(true);
                   setSelectedTeam(null);
                 }}>
-                  <UserPlus className="w-4 h-4 mr-2" />
-                  Add Players
+                  <UserPlus className={cn("w-4 h-4", isRtl ? "ml-2" : "mr-2")} />
+                  {t("teams.addPlayers")}
                 </Button>
               </div>
             ) : (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold">Squad Members ({teamPlayers?.length || 0})</h3>
+                  <h3 className="text-lg font-semibold">{translateWithParams(t, "teams.squadMembers", { count: String(teamPlayers?.length || 0) })}</h3>
                   <Button size="sm" onClick={() => {
                     setSelectedTeamForManagement(selectedTeam);
                     setIsManagePlayersOpen(true);
                     setSelectedTeam(null);
                   }}>
-                    <UserPlus className="w-4 h-4 mr-2" />
-                    Add Player
+                    <UserPlus className={cn("w-4 h-4", isRtl ? "ml-2" : "mr-2")} />
+                    {t("teams.addPlayer")}
                   </Button>
                 </div>
                 
@@ -271,7 +259,7 @@ export default function Teams() {
                     
                     return (
                       <Card key={teamPlayer.id} className="p-4">
-                        <div className="flex items-center space-x-3">
+                        <div className={cn("flex items-center", isRtl ? "space-x-reverse space-x-3" : "space-x-3")}>
                           <div className="relative">
                             <Avatar className="w-10 h-10">
                               <AvatarImage src={teamPlayer.player.profilePicture || `https://images.unsplash.com/photo-150${teamPlayer.player.id || 1}0794778202-cad84cf45f1d?w=120&h=120&fit=crop&crop=face`} />
@@ -291,13 +279,13 @@ export default function Teams() {
                             <h4 className="font-medium text-foreground">
                               {teamPlayer.player.firstName} {teamPlayer.player.lastName}
                             </h4>
-                            <div className="flex items-center space-x-2">
+                            <div className={cn("flex items-center", isRtl ? "space-x-reverse space-x-2" : "space-x-2")}>
                               <Badge variant="outline" className="text-xs">
-                                {teamPlayer.player.position}
+                                {t(`position.${teamPlayer.player.position}`)}
                               </Badge>
                               {teamPlayer.isStarter && (
                                 <Badge className="text-xs bg-primary/10 text-primary">
-                                  Starter
+                                  {t("teams.starter")}
                                 </Badge>
                               )}
                             </div>

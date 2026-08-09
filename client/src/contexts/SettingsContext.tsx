@@ -1,4 +1,5 @@
 import { createContext, useContext, ReactNode } from 'react';
+import { useI18n } from '@/contexts/I18nContext';
 import { useQuery } from '@tanstack/react-query';
 import type { SystemSettings } from '@shared/schema';
 
@@ -24,10 +25,18 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   });
 
   const getSettingValue = (category: string, key: string, defaultValue: string = "") => {
-    const setting = (settings as SystemSettings[]).find((s: SystemSettings) => 
+    // Filter all matching settings
+    const matchingSettings = (settings as SystemSettings[]).filter((s: SystemSettings) =>
       s.category === category && s.settingKey === key
     );
-    return setting?.settingValue || defaultValue;
+
+    // If no settings found, return default
+    if (matchingSettings.length === 0) return defaultValue;
+
+    // Sort by ID descending to get the latest one
+    matchingSettings.sort((a, b) => b.id - a.id);
+
+    return matchingSettings[0].settingValue || defaultValue;
   };
 
   // Pre-compute commonly used settings for easy access
@@ -35,7 +44,17 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     getSettingValue,
     settings: settings as SystemSettings[],
     isLoading,
-    organizationName: getSettingValue("general", "org_name", "ProCoach Team"),
+    organizationName: (() => {
+      try {
+        const { locale } = useI18n();
+        if (locale === 'ar') {
+          return getSettingValue("general", "org_name_ar", getSettingValue("general", "org_name", "ProCoach Team"));
+        }
+      } catch (e) {
+        // fallback if hook not available
+      }
+      return getSettingValue("general", "org_name", "ProCoach Team");
+    })(),
     currentSeason: getSettingValue("general", "current_season", "2024-25"),
     logoUrl: getSettingValue("general", "logo_url", ""),
     currency: getSettingValue("general", "currency", "USD"),
@@ -64,7 +83,7 @@ export const getCurrencySymbol = (currency: string): string => {
     USD: "$",
     EUR: "€",
     SAR: "SR",
-    QAR: "QR", 
+    QAR: "QR",
     AED: "AED",
     OMR: "OMR",
     KWD: "KD",
@@ -78,5 +97,6 @@ export const getCurrencySymbol = (currency: string): string => {
 // Currency formatting function
 export const formatCurrency = (amount: number, currency: string): string => {
   const symbol = getCurrencySymbol(currency);
-  return `${symbol}${amount.toLocaleString()}`;
+  const safeAmount = (amount == null || isNaN(amount)) ? 0 : amount;
+  return `${symbol}${safeAmount.toLocaleString()}`;
 };

@@ -42,7 +42,7 @@ export function StaffTeamAssignment({ staff }: TeamStaffProps) {
 
   // Get staff's current team assignments
   const { data: staffTeams = [] } = useQuery<Array<{ teamId: number; team: Team }>>({
-    queryKey: ["/api/staff-teams", staff.id],
+    queryKey: [`/api/staff-teams/${staff.id}`],
     enabled: open,
   });
 
@@ -51,14 +51,10 @@ export function StaffTeamAssignment({ staff }: TeamStaffProps) {
 
   // Add staff to team mutation
   const addToTeamMutation = useMutation({
-    mutationFn: (teamId: number) => 
-      apiRequest("/api/staff-teams", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ teamId, staffId: staff.id }),
-      }),
+    mutationFn: (teamId: number) =>
+      apiRequest("POST", "/api/staff-teams", { teamId, staffId: staff.id }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/staff-teams", staff.id] });
+      queryClient.invalidateQueries({ queryKey: [`/api/staff-teams/${staff.id}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
       toast({
         title: "Success",
@@ -76,12 +72,10 @@ export function StaffTeamAssignment({ staff }: TeamStaffProps) {
 
   // Remove staff from team mutation
   const removeFromTeamMutation = useMutation({
-    mutationFn: (teamId: number) => 
-      apiRequest(`/api/teams/${teamId}/staff/${staff.id}`, {
-        method: "DELETE",
-      }),
+    mutationFn: (teamId: number) =>
+      apiRequest("DELETE", `/api/teams/${teamId}/staff/${staff.id}`),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/staff-teams", staff.id] });
+      queryClient.invalidateQueries({ queryKey: [`/api/staff-teams/${staff.id}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
       toast({
         title: "Success",

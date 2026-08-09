@@ -15,18 +15,18 @@ export default function PerformanceDashboard({ playerId }: PerformanceDashboardP
   const [selectedTimeframe, setSelectedTimeframe] = useState("7");
 
   // Fetch player data
-  const { data: players = [] } = useQuery({
+  const { data: players = [] } = useQuery<Player[]>({
     queryKey: ["/api/players"],
   });
 
   // Fetch performance metrics
-  const { data: metrics = [] } = useQuery({
+  const { data: metrics = [] } = useQuery<PerformanceMetrics[]>({
     queryKey: ["/api/performance-metrics", playerId],
     enabled: !!playerId,
   });
 
   // Fetch recent wearable data
-  const { data: wearableData = [] } = useQuery({
+  const { data: wearableData = [] } = useQuery<WearableData[]>({
     queryKey: ["/api/wearable-data", playerId],
     enabled: !!playerId,
   });

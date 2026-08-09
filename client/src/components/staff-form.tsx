@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useSettings, getCurrencySymbol } from "@/contexts/SettingsContext";
+import { useI18n, translateWithParams } from "@/contexts/I18nContext";
 import { insertStaffSchema, type Staff, type Team } from "@shared/schema";
 import { FileUpload } from "@/components/ui/file-upload";
 import { PhoneInput } from "@/components/ui/phone-input";
@@ -34,6 +35,7 @@ interface StaffFormProps {
 
 export default function StaffForm({ staff, onSuccess }: StaffFormProps) {
   const { toast } = useToast();
+  const { t } = useI18n();
   const { currency } = useSettings();
   const currencySymbol = getCurrencySymbol(currency);
   const [selectedTeam, setSelectedTeam] = useState<number | null>(null);
@@ -47,11 +49,11 @@ export default function StaffForm({ staff, onSuccess }: StaffFormProps) {
   // Helper function to calculate contract total value
   const calculateContractTotal = (startDate: string, endDate: string, monthlySalary: number) => {
     if (!startDate || !endDate || !monthlySalary) return 0;
-    
+
     const start = new Date(startDate);
     const end = new Date(endDate);
     const months = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 30.44)); // Average days per month
-    
+
     return months > 0 ? months * monthlySalary : 0;
   };
 
@@ -60,6 +62,8 @@ export default function StaffForm({ staff, onSuccess }: StaffFormProps) {
     defaultValues: {
       firstName: staff?.firstName || "",
       lastName: staff?.lastName || "",
+      firstNameAr: staff?.firstNameAr || "",
+      lastNameAr: staff?.lastNameAr || "",
       email: staff?.email || "",
       phoneNumber: staff?.phoneNumber || null,
       role: staff?.role || "",
@@ -83,6 +87,8 @@ export default function StaffForm({ staff, onSuccess }: StaffFormProps) {
       // Clean up the data to handle empty strings and null values
       const staffData = {
         ...data,
+        firstNameAr: data.firstNameAr || null,
+        lastNameAr: data.lastNameAr || null,
         phoneNumber: data.phoneNumber || null,
         emergencyContact: data.emergencyContact || null,
         qualifications: data.qualifications || null,
@@ -93,7 +99,7 @@ export default function StaffForm({ staff, onSuccess }: StaffFormProps) {
         contractEndDate: data.contractEndDate || null,
         salary: data.salary || null,
       };
-      
+
       if (staff) {
         return apiRequest("PATCH", `/api/staff/${staff.id}`, staffData);
       } else {
@@ -109,34 +115,27 @@ export default function StaffForm({ staff, onSuccess }: StaffFormProps) {
             staffId: (newStaff as any).id,
           });
           toast({
-            title: staff ? "Staff member updated" : "Staff member created",
-            description: `Staff member ${staff ? "updated" : "added"} and assigned to team successfully.`,
+            title: staff ? t("staff.form.toast.updatedTitle") : t("staff.form.toast.addedTitle"),
+            description: staff ? t("staff.form.toast.updatedDescription") : t("staff.form.toast.addedDescription"),
           });
         } catch (error) {
           toast({
-            title: "Warning",
-            description: "Staff member saved but team assignment failed.",
+            title: t("staff.form.toast.teamAssignWarningTitle"),
+            description: t("staff.form.toast.teamAssignWarningDescription"),
             variant: "destructive",
           });
         }
       } else {
         toast({
-          title: "Staff member saved successfully",
-          description: staff ? "Staff member has been updated." : "New staff member has been added.",
+          title: staff ? t("staff.form.toast.updatedTitle") : t("staff.form.toast.addedTitle"),
+          description: staff ? t("staff.form.toast.updatedDescription") : t("staff.form.toast.addedDescription"),
         });
       }
-      
-      queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/staff-teams"] });
-      form.reset();
-      setSelectedTeam(null);
-      onSuccess();
     },
     onError: () => {
       toast({
-        title: "Error",
-        description: "Failed to save staff member. Please try again.",
+        title: t("staff.form.toast.errorTitle"),
+        description: t("staff.form.toast.errorDescription"),
         variant: "destructive",
       });
     },
@@ -156,9 +155,9 @@ export default function StaffForm({ staff, onSuccess }: StaffFormProps) {
             name="firstName"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>First Name</FormLabel>
+                <FormLabel>{t("staff.form.firstName")}</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter first name" {...field} />
+                  <Input placeholder={t("staff.form.firstNamePlaceholder")} {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -169,9 +168,9 @@ export default function StaffForm({ staff, onSuccess }: StaffFormProps) {
             name="lastName"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Last Name</FormLabel>
+                <FormLabel>{t("staff.form.lastName")}</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter last name" {...field} />
+                  <Input placeholder={t("staff.form.lastNamePlaceholder")} {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -179,25 +178,56 @@ export default function StaffForm({ staff, onSuccess }: StaffFormProps) {
           />
         </div>
 
+        {/* Arabic Name (optional, shown when Arabic is selected) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="firstNameAr"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t("staff.form.firstNameAr")}</FormLabel>
+                <FormControl>
+                  <Input dir="rtl" placeholder={t("staff.form.firstNameArPlaceholder")} {...field} value={field.value || ""} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="lastNameAr"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t("staff.form.lastNameAr")}</FormLabel>
+                <FormControl>
+                  <Input dir="rtl" placeholder={t("staff.form.lastNameArPlaceholder")} {...field} value={field.value || ""} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <p className="text-xs text-muted-foreground md:col-span-2">{t("staff.form.arabicNameHint")}</p>
+        </div>
+
         {/* Team Assignment Section - Available for both creation and editing */}
         <div className="form-field">
-          <FormLabel>Assign to Team (Optional)</FormLabel>
-          <Select 
-            value={selectedTeam ? selectedTeam.toString() : "none"} 
+          <FormLabel>{t("staff.form.teamAssignmentOptional")}</FormLabel>
+          <Select
+            value={selectedTeam ? selectedTeam.toString() : "none"}
             onValueChange={(value) => setSelectedTeam(value === "none" ? null : parseInt(value))}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Select team to assign staff member" />
+              <SelectValue placeholder={t("staff.selectTeam")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="none">No team assignment</SelectItem>
+              <SelectItem value="none">{t("staff.form.noTeamAssignment")}</SelectItem>
               {teams.map((team) => (
-                  <SelectItem key={team.id} value={team.id.toString()}>
-                    {team.name} ({team.category})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                <SelectItem key={team.id} value={team.id.toString()}>
+                  {team.name} ({team.category})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Contact Information */}
@@ -207,9 +237,9 @@ export default function StaffForm({ staff, onSuccess }: StaffFormProps) {
             name="email"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Email</FormLabel>
+                <FormLabel>{t("staff.form.email")}</FormLabel>
                 <FormControl>
-                  <Input type="email" placeholder="Enter email" {...field} />
+                  <Input type="email" placeholder={t("staff.form.emailPlaceholder")} {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -220,12 +250,12 @@ export default function StaffForm({ staff, onSuccess }: StaffFormProps) {
             name="phoneNumber"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Phone</FormLabel>
+                <FormLabel>{t("staff.form.phone")}</FormLabel>
                 <FormControl>
                   <PhoneInput
                     value={field.value || ""}
                     onChange={field.onChange}
-                    placeholder="Enter phone number"
+                    placeholder={t("staff.form.phonePlaceholder")}
                   />
                 </FormControl>
                 <FormMessage />
@@ -241,12 +271,12 @@ export default function StaffForm({ staff, onSuccess }: StaffFormProps) {
             name="nationality"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Nationality</FormLabel>
+                <FormLabel>{t("staff.form.nationality")}</FormLabel>
                 <FormControl>
                   <NationalitySelect
                     value={field.value || ""}
                     onChange={field.onChange}
-                    placeholder="Select nationality"
+                    placeholder={t("staff.form.nationalityPlaceholder")}
                   />
                 </FormControl>
                 <FormMessage />
@@ -263,9 +293,9 @@ export default function StaffForm({ staff, onSuccess }: StaffFormProps) {
             name="idNumber"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>National ID Number</FormLabel>
+                <FormLabel>{t("staff.form.idNumber")}</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter ID number" {...field} />
+                  <Input placeholder={t("staff.form.idNumberPlaceholder")} {...field} value={field.value || ""} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -276,9 +306,9 @@ export default function StaffForm({ staff, onSuccess }: StaffFormProps) {
             name="passportNumber"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Passport Number</FormLabel>
+                <FormLabel>{t("staff.form.passportNumber")}</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter passport number" {...field} />
+                  <Input placeholder={t("staff.form.passportNumberPlaceholder")} {...field} value={field.value || ""} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -293,9 +323,9 @@ export default function StaffForm({ staff, onSuccess }: StaffFormProps) {
             name="passportIssueDate"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Passport Issue Date</FormLabel>
+                <FormLabel>{t("staff.form.passportIssueDate")}</FormLabel>
                 <FormControl>
-                  <Input type="date" {...field} />
+                  <Input type="date" {...field} value={field.value || ""} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -306,48 +336,48 @@ export default function StaffForm({ staff, onSuccess }: StaffFormProps) {
             name="passportExpiryDate"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Passport Expiry Date</FormLabel>
+                <FormLabel>{t("staff.form.passportExpiryDate")}</FormLabel>
                 <FormControl>
-                  <Input type="date" {...field} />
+                  <Input type="date" {...field} value={field.value || ""} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
         </div>
-        
+
         {/* Passport Expiry Calculation */}
         {form.watch("passportExpiryDate") && (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h4 className="font-medium text-blue-900 mb-2">Passport Validity</h4>
+            <h4 className="font-medium text-blue-900 mb-2">{t("staff.form.passportValidityTitle")}</h4>
             <div className="text-sm text-blue-700">
               {(() => {
                 const expiryDateString = form.watch("passportExpiryDate");
                 if (!expiryDateString) return null;
-                
+
                 const expiryDate = new Date(expiryDateString);
                 const today = new Date();
                 const diffTime = expiryDate.getTime() - today.getTime();
-                
+
                 if (diffTime < 0) {
-                  return <span className="text-red-600 font-medium">⚠️ Passport has expired!</span>;
+                  return <span className="text-red-600 font-medium">{t("staff.form.passportExpired")}</span>;
                 }
-                
+
                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
                 const years = Math.floor(diffDays / 365);
                 const months = Math.floor((diffDays % 365) / 30);
                 const days = diffDays % 30;
-                
+
                 let timeRemaining = "";
                 if (years > 0) timeRemaining += `${years} year${years > 1 ? 's' : ''} `;
                 if (months > 0) timeRemaining += `${months} month${months > 1 ? 's' : ''} `;
                 if (days > 0) timeRemaining += `${days} day${days > 1 ? 's' : ''}`;
-                
+
                 if (diffDays <= 90) {
-                  return <span className="text-orange-600 font-medium">⚠️ Expires in {timeRemaining} - Renewal needed soon!</span>;
+                  return <span className="text-orange-600 font-medium">{translateWithParams(t, "staff.form.passportExpiresSoon", { timeRemaining })}</span>;
                 }
-                
-                return <span className="text-green-600 font-medium">✅ Valid for {timeRemaining}</span>;
+
+                return <span className="text-green-600 font-medium">{translateWithParams(t, "staff.form.passportValid", { timeRemaining })}</span>;
               })()}
             </div>
           </div>
@@ -359,9 +389,9 @@ export default function StaffForm({ staff, onSuccess }: StaffFormProps) {
             name="emergencyContact"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Emergency Contact</FormLabel>
+                <FormLabel>{t("staff.form.emergencyContact")}</FormLabel>
                 <FormControl>
-                  <Input placeholder="Emergency contact details" {...field} />
+                  <Input placeholder={t("staff.form.emergencyContactPlaceholder")} {...field} value={field.value || ""} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -376,21 +406,23 @@ export default function StaffForm({ staff, onSuccess }: StaffFormProps) {
             name="role"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Role</FormLabel>
+                <FormLabel>{t("staff.form.role")}</FormLabel>
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select role" />
+                      <SelectValue placeholder={t("staff.form.selectRole")} />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="head_coach">Head Coach</SelectItem>
-                    <SelectItem value="assistant_coach">Assistant Coach</SelectItem>
-                    <SelectItem value="fitness_coach">Fitness Coach</SelectItem>
-                    <SelectItem value="goalkeeping_coach">Goalkeeping Coach</SelectItem>
-                    <SelectItem value="physiotherapist">Physiotherapist</SelectItem>
-                    <SelectItem value="analyst">Analyst</SelectItem>
-                    <SelectItem value="kit_manager">Kit Manager</SelectItem>
+                    <SelectItem value="head_coach">{t("staff.role.head_coach")}</SelectItem>
+                    <SelectItem value="assistant_coach">{t("staff.role.assistant_coach")}</SelectItem>
+                    <SelectItem value="fitness_coach">{t("staff.role.fitness_coach")}</SelectItem>
+                    <SelectItem value="goalkeeping_coach">{t("staff.role.goalkeeping_coach")}</SelectItem>
+                    <SelectItem value="physiotherapist">{t("staff.role.physiotherapist")}</SelectItem>
+                    <SelectItem value="analyst">{t("staff.role.analyst")}</SelectItem>
+                    <SelectItem value="kit_manager">{t("staff.role.kit_manager")}</SelectItem>
+                    <SelectItem value="team_manager">{t("staff.role.team_manager")}</SelectItem>
+                    <SelectItem value="team_administrative">{t("staff.role.team_administrative")}</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -402,18 +434,18 @@ export default function StaffForm({ staff, onSuccess }: StaffFormProps) {
             name="department"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Department</FormLabel>
+                <FormLabel>{t("staff.form.department")}</FormLabel>
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select department" />
+                      <SelectValue placeholder={t("staff.form.selectDepartment")} />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="coaching">Coaching</SelectItem>
-                    <SelectItem value="medical">Medical</SelectItem>
-                    <SelectItem value="analysis">Analysis</SelectItem>
-                    <SelectItem value="operations">Operations</SelectItem>
+                    <SelectItem value="coaching">{t("staff.filterCoaching")}</SelectItem>
+                    <SelectItem value="medical">{t("staff.filterMedical")}</SelectItem>
+                    <SelectItem value="analysis">{t("staff.filterAnalysis")}</SelectItem>
+                    <SelectItem value="operations">{t("staff.filterOperations")}</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -428,18 +460,18 @@ export default function StaffForm({ staff, onSuccess }: StaffFormProps) {
           name="employmentType"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Employment Type</FormLabel>
+              <FormLabel>{t("staff.form.employmentType")}</FormLabel>
               <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select employment type" />
+                    <SelectValue placeholder={t("staff.form.selectEmploymentType")} />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="full_time">Full Time</SelectItem>
-                  <SelectItem value="part_time">Part Time</SelectItem>
-                  <SelectItem value="contract">Contract</SelectItem>
-                  <SelectItem value="volunteer">Volunteer</SelectItem>
+                  <SelectItem value="full_time">{t("staff.employmentType.full_time")}</SelectItem>
+                  <SelectItem value="part_time">{t("staff.employmentType.part_time")}</SelectItem>
+                  <SelectItem value="contract">{t("staff.employmentType.contract")}</SelectItem>
+                  <SelectItem value="volunteer">{t("staff.employmentType.volunteer")}</SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -452,12 +484,13 @@ export default function StaffForm({ staff, onSuccess }: StaffFormProps) {
           name="qualifications"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Qualifications & Experience</FormLabel>
+              <FormLabel>{t("staff.form.qualifications")}</FormLabel>
               <FormControl>
-                <Textarea 
-                  placeholder="UEFA licenses, coaching experience, certifications..." 
+                <Textarea
+                  placeholder={t("staff.form.qualificationsPlaceholder")}
                   rows={3}
-                  {...field} 
+                  {...field}
+                  value={field.value || ""}
                 />
               </FormControl>
               <FormMessage />
@@ -467,16 +500,16 @@ export default function StaffForm({ staff, onSuccess }: StaffFormProps) {
 
         {/* Contract Information */}
         <div className="col-span-2 space-y-6 border-t pt-6">
-          <h3 className="text-lg font-semibold">Contract Information</h3>
+          <h3 className="text-lg font-semibold">{t("staff.form.contractInfo")}</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <FormField
               control={form.control}
               name="startDate"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Contract Start Date</FormLabel>
+                  <FormLabel>{t("staff.form.contractStartDate")}</FormLabel>
                   <FormControl>
-                    <Input type="date" {...field} />
+                    <Input type="date" {...field} value={field.value || ""} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -487,9 +520,9 @@ export default function StaffForm({ staff, onSuccess }: StaffFormProps) {
               name="contractEndDate"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Contract End Date</FormLabel>
+                  <FormLabel>{t("staff.form.contractEndDate")}</FormLabel>
                   <FormControl>
-                    <Input type="date" {...field} />
+                    <Input type="date" {...field} value={field.value || ""} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -500,13 +533,13 @@ export default function StaffForm({ staff, onSuccess }: StaffFormProps) {
               name="salary"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Monthly Salary ({currencySymbol})</FormLabel>
+                  <FormLabel>{`${t("staff.form.salary")} (${currencySymbol})`}</FormLabel>
                   <FormControl>
                     <div className="relative">
-                      <Input 
-                        type="number" 
-                        step="0.01" 
-                        placeholder="0.00" 
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder={t("staff.form.salaryPlaceholder")}
                         {...field}
                         value={field.value || ""}
                         onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
@@ -522,12 +555,53 @@ export default function StaffForm({ staff, onSuccess }: StaffFormProps) {
               )}
             />
           </div>
-          
+
+          {/* Contract Validity Calculation */}
+          {form.watch("contractEndDate") && (
+            <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h4 className="font-medium text-blue-900 mb-2">{t("staff.form.contractValidityTitle")}</h4>
+              <div className="text-sm text-blue-700">
+                {(() => {
+                  const expiryDateString = form.watch("contractEndDate");
+                  if (!expiryDateString) return null;
+
+                  const expiryDate = new Date(expiryDateString);
+                  const today = new Date();
+                  // Reset hours to compare dates only
+                  expiryDate.setHours(0, 0, 0, 0);
+                  today.setHours(0, 0, 0, 0);
+
+                  const diffTime = expiryDate.getTime() - today.getTime();
+
+                  if (diffTime < 0) {
+                    return <span className="text-red-600 font-medium">{t("staff.form.contractExpired")}</span>;
+                  }
+
+                  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                  const years = Math.floor(diffDays / 365);
+                  const months = Math.floor((diffDays % 365) / 30);
+                  const days = diffDays % 30;
+
+                  let timeRemaining = "";
+                  if (years > 0) timeRemaining += `${years} year${years > 1 ? 's' : ''} `;
+                  if (months > 0) timeRemaining += `${months} month${months > 1 ? 's' : ''} `;
+                  if (days > 0) timeRemaining += `${days} day${days > 1 ? 's' : ''}`;
+
+                  if (diffDays <= 120) {
+                    return <span className="text-orange-600 font-medium">{translateWithParams(t, "staff.form.contractExpiresSoon", { timeRemaining })}</span>;
+                  }
+
+                  return <span className="text-green-600 font-medium">{translateWithParams(t, "staff.form.contractValid", { timeRemaining })}</span>;
+                })()}
+              </div>
+            </div>
+          )}
+
           {/* Contract Total Calculation */}
           {form.watch("startDate") && form.watch("contractEndDate") && form.watch("salary") && (
             <div className="mt-4 p-4 bg-muted/50 rounded-lg">
               <div className="flex justify-between items-center">
-                <span className="text-sm font-medium">Total Contract Value:</span>
+                <span className="text-sm font-medium">{t("staff.form.totalContractValue")}</span>
                 <span className="text-lg font-bold text-primary">
                   {currencySymbol}{calculateContractTotal(
                     form.watch("startDate") || "",
@@ -537,7 +611,7 @@ export default function StaffForm({ staff, onSuccess }: StaffFormProps) {
                 </span>
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                Calculated based on contract duration and monthly salary
+                {t("staff.form.totalContractDescription")}
               </p>
             </div>
           )}
@@ -545,8 +619,8 @@ export default function StaffForm({ staff, onSuccess }: StaffFormProps) {
 
         {/* File Upload Section */}
         <div className="col-span-2 space-y-6 border-t pt-6">
-          <h3 className="text-lg font-semibold">Documents & Photos</h3>
-          
+          <h3 className="text-lg font-semibold">{t("staff.form.documentsTitle")}</h3>
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Profile Picture */}
             <FormField
@@ -555,11 +629,11 @@ export default function StaffForm({ staff, onSuccess }: StaffFormProps) {
               render={({ field }) => (
                 <FormItem>
                   <FileUpload
-                    label="Profile Picture"
+                    label={t("staff.form.profilePicture")}
                     accept="image/*"
                     value={field.value || ""}
                     onChange={field.onChange}
-                    description="Upload staff profile photo (JPG, PNG)"
+                    description={t("staff.form.profilePictureDescription")}
                   />
                   <FormMessage />
                 </FormItem>
@@ -573,11 +647,11 @@ export default function StaffForm({ staff, onSuccess }: StaffFormProps) {
               render={({ field }) => (
                 <FormItem>
                   <FileUpload
-                    label="ID/Passport Copy"
+                    label={t("staff.form.idDocument")}
                     accept="image/*,.pdf"
                     value={field.value || ""}
                     onChange={field.onChange}
-                    description="Upload ID or passport copy"
+                    description={t("staff.form.idDocumentDescription")}
                   />
                   <FormMessage />
                 </FormItem>
@@ -591,11 +665,11 @@ export default function StaffForm({ staff, onSuccess }: StaffFormProps) {
               render={({ field }) => (
                 <FormItem>
                   <FileUpload
-                    label="Contract"
+                    label={t("staff.form.contractDocument")}
                     accept=".pdf,image/*"
                     value={field.value || ""}
                     onChange={field.onChange}
-                    description="Upload signed contract"
+                    description={t("staff.form.contractDocumentDescription")}
                   />
                   <FormMessage />
                 </FormItem>
@@ -606,7 +680,7 @@ export default function StaffForm({ staff, onSuccess }: StaffFormProps) {
 
         <div className="flex justify-end space-x-3">
           <Button type="submit" disabled={mutation.isPending}>
-            {mutation.isPending ? "Saving..." : staff ? "Update Staff" : "Add Staff"}
+            {mutation.isPending ? t("staff.form.button.saving") : staff ? t("staff.form.button.updateStaff") : t("staff.form.button.addStaff")}
           </Button>
         </div>
       </form>

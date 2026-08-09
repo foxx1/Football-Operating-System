@@ -23,12 +23,12 @@ export default function SettingsPage() {
   const [tempSettings, setTempSettings] = useState<Record<string, any>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { data: settings = [], isLoading } = useQuery({
+  const { data: settings = [], isLoading } = useQuery<SystemSettings[]>({
     queryKey: ["/api/settings"],
   });
 
   const updateSettingMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: any }) => 
+    mutationFn: ({ id, data }: { id: number; data: any }) =>
       apiRequest("PATCH", `/api/settings/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
@@ -47,7 +47,7 @@ export default function SettingsPage() {
   });
 
   const createSettingMutation = useMutation({
-    mutationFn: (data: any) => 
+    mutationFn: (data: any) =>
       apiRequest("POST", "/api/settings", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
@@ -71,9 +71,9 @@ export default function SettingsPage() {
     if (tempSettings[settingId]) {
       return tempSettings[settingId].value;
     }
-    
+
     // Fall back to stored settings
-    const setting = settings.find((s: SystemSettings) => 
+    const setting = settings.find((s: SystemSettings) =>
       s.category === category && s.settingKey === key
     );
     return setting?.settingValue || defaultValue;
@@ -101,10 +101,10 @@ export default function SettingsPage() {
         });
         return;
       }
-      
+
       if (file.size > 2 * 1024 * 1024) { // 2MB limit
         toast({
-          title: "Error", 
+          title: "Error",
           description: "Image file size should be less than 2MB",
           variant: "destructive",
         });
@@ -113,7 +113,7 @@ export default function SettingsPage() {
 
       setLogoFile(file);
       setHasUnsavedChanges(true);
-      
+
       // Create preview
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -125,37 +125,38 @@ export default function SettingsPage() {
 
   const saveAllSettings = async () => {
     try {
+      // Create a copy of temp settings to work with
+      const settingsToSave = { ...tempSettings };
+
       // Upload logo first if there's a new logo
       if (logoFile) {
         const formData = new FormData();
         formData.append('logo', logoFile);
-        
+
         const res = await fetch("/api/upload/logo", {
           method: "POST",
           body: formData,
           credentials: "include",
         });
-        
+
         if (!res.ok) {
           throw new Error(`Failed to upload logo: ${res.statusText}`);
         }
-        
+
         const logoResult = await res.json();
-        // Update the logo URL setting
-        setTempSettings(prev => ({
-          ...prev,
-          general_logo_url: { 
-            category: "general", 
-            key: "logo_url", 
-            value: logoResult.logoUrl,
-            description: "Organization logo URL"
-          }
-        }));
+
+        // Add the logo setting to our local object to ensure it gets saved
+        settingsToSave['general_logo_url'] = {
+          category: "general",
+          key: "logo_url",
+          value: logoResult.logoUrl,
+          description: "Organization logo URL"
+        };
       }
 
-      // Save all temporary settings
-      for (const [settingId, setting] of Object.entries(tempSettings)) {
-        const existing = settings.find((s: SystemSettings) => 
+      // Save all settings including the new logo if applicable
+      for (const [settingId, setting] of Object.entries(settingsToSave)) {
+        const existing = settings.find((s: SystemSettings) =>
           s.category === setting.category && s.settingKey === setting.key
         );
 
@@ -182,10 +183,10 @@ export default function SettingsPage() {
 
       // Refresh settings and force re-render of all components
       await queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
-      
+
       // Clear all query cache to ensure fresh data
       queryClient.clear();
-      
+
       // Force a page reload to ensure all components pick up the new settings
       setTimeout(() => {
         window.location.reload();
@@ -319,11 +320,11 @@ export default function SettingsPage() {
                   </div>
                 </div>
               </div>
-              
+
               <Separator />
-              
+
               {/* Organization Details */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="org-name">Organization Name</Label>
                   <Input
@@ -332,6 +333,16 @@ export default function SettingsPage() {
                     onChange={(e) => updateSetting("general", "org_name", e.target.value)}
                   />
                 </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="org-name-ar">Organization Name (Arabic)</Label>
+                  <Input
+                    id="org-name-ar"
+                    defaultValue={getSettingValue("general", "org_name_ar", "")}
+                    onChange={(e) => updateSetting("general", "org_name_ar", e.target.value)}
+                  />
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="season">Current Season</Label>
                   <Input
@@ -458,7 +469,7 @@ export default function SettingsPage() {
                 </div>
                 <Switch
                   checked={getSettingValue("general", "auto_match_reports", "false") === "true"}
-                  onCheckedChange={(checked) => 
+                  onCheckedChange={(checked) =>
                     updateSetting("general", "auto_match_reports", checked.toString())
                   }
                 />
@@ -483,7 +494,7 @@ export default function SettingsPage() {
                 </div>
                 <Switch
                   checked={getSettingValue("notifications", "email_enabled", "true") === "true"}
-                  onCheckedChange={(checked) => 
+                  onCheckedChange={(checked) =>
                     updateSetting("notifications", "email_enabled", checked.toString())
                   }
                 />
@@ -496,7 +507,7 @@ export default function SettingsPage() {
                 </div>
                 <Switch
                   checked={getSettingValue("notifications", "training_reminders", "true") === "true"}
-                  onCheckedChange={(checked) => 
+                  onCheckedChange={(checked) =>
                     updateSetting("notifications", "training_reminders", checked.toString())
                   }
                 />
@@ -509,7 +520,7 @@ export default function SettingsPage() {
                 </div>
                 <Switch
                   checked={getSettingValue("notifications", "match_alerts", "true") === "true"}
-                  onCheckedChange={(checked) => 
+                  onCheckedChange={(checked) =>
                     updateSetting("notifications", "match_alerts", checked.toString())
                   }
                 />
@@ -534,7 +545,7 @@ export default function SettingsPage() {
                 </div>
                 <Switch
                   checked={getSettingValue("security", "2fa_enabled", "false") === "true"}
-                  onCheckedChange={(checked) => 
+                  onCheckedChange={(checked) =>
                     updateSetting("security", "2fa_enabled", checked.toString())
                   }
                 />

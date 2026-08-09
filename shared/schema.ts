@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb, decimal, varchar, uuid, json, date } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb, decimal, varchar, uuid, json, date, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -6,7 +6,7 @@ export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
-  role: text("role").notNull().default("assistant"), // head_coach, assistant_coach, admin
+  role: text("role").notNull().default("assistant"), // club_super_admin, head_coach, assistant_coach, admin, assistant, player
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
   email: text("email").notNull().unique(),
@@ -17,6 +17,8 @@ export const players = pgTable("players", {
   id: serial("id").primaryKey(),
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
+  firstNameAr: text("first_name_ar"), // Arabic first name, shown when Arabic locale is active
+  lastNameAr: text("last_name_ar"), // Arabic last name, shown when Arabic locale is active
   position: text("position").notNull(), // goalkeeper, defender, midfielder, forward
   shirtNumber: integer("shirt_number"),
   dateOfBirth: text("date_of_birth").notNull(),
@@ -52,17 +54,29 @@ export const teams = pgTable("teams", {
 
 export const teamPlayers = pgTable("team_players", {
   id: serial("id").primaryKey(),
-  teamId: integer("team_id").notNull(),
-  playerId: integer("player_id").notNull(),
+  teamId: integer("team_id").references(() => teams.id).notNull(),
+  playerId: integer("player_id").references(() => players.id).notNull(),
   isStarter: boolean("is_starter").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    teamPlayerUnique: uniqueIndex("team_players_team_id_player_id_unique").on(table.teamId, table.playerId),
+    teamIdIdx: index("team_players_team_id_idx").on(table.teamId),
+    playerIdIdx: index("team_players_player_id_idx").on(table.playerId),
+  };
 });
 
 export const teamStaff = pgTable("team_staff", {
   id: serial("id").primaryKey(),
-  teamId: integer("team_id").notNull(),
-  staffId: integer("staff_id").notNull(),
+  teamId: integer("team_id").references(() => teams.id).notNull(),
+  staffId: integer("staff_id").references(() => staff.id).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    teamStaffUnique: uniqueIndex("team_staff_team_id_staff_id_unique").on(table.teamId, table.staffId),
+    teamIdIdx: index("team_staff_team_id_idx").on(table.teamId),
+    staffIdIdx: index("team_staff_staff_id_idx").on(table.staffId),
+  };
 });
 
 export const trainingSessions = pgTable("training_sessions", {
@@ -78,10 +92,10 @@ export const trainingSessions = pgTable("training_sessions", {
   goalkeepingDuration: integer("goalkeeping_duration"), // Duration of goalkeeping section in minutes
   specificWorkDuration: integer("specific_work_duration"), // Duration of specific work section in minutes
   location: text("location").notNull(),
-  teamId: integer("team_id").notNull(),
-  coachId: integer("coach_id").notNull(),
+  teamId: integer("team_id").references(() => teams.id).notNull(),
+  coachId: integer("coach_id").references(() => staff.id).notNull(),
   maxParticipants: integer("max_participants"),
-  
+
   // Fitness Section (General Preparation)
   fitnessAerobic: text("fitness_aerobic"), // Aerobic exercises and details
   fitnessStrength: text("fitness_strength"), // Strength training details
@@ -96,7 +110,7 @@ export const trainingSessions = pgTable("training_sessions", {
   fitnessSpeed: text("fitness_speed"), // Speed training
   fitnessPower: text("fitness_power"), // Power training
   fitnessOther: text("fitness_other"), // Other fitness activities
-  
+
   // Main Part Section
   mainTechnical: text("main_technical"), // Technical training details
   mainTactical: text("main_tactical"), // Tactical training details
@@ -105,7 +119,7 @@ export const trainingSessions = pgTable("training_sessions", {
   mainTransition: text("main_transition"), // Transition training
   mainSetPieces: text("main_set_pieces"), // Set pieces training
   mainFinishing: text("main_finishing"), // Finishing training
-  
+
   // Goalkeeper Specific Section
   gkHandling: text("gk_handling"), // Goalkeeper handling exercises
   gkShotStopping: text("gk_shot_stopping"), // Shot stopping training
@@ -119,7 +133,7 @@ export const trainingSessions = pgTable("training_sessions", {
   gkDiving: text("gk_diving"), // Diving techniques
   gkThrowing: text("gk_throwing"), // Throwing techniques
   gkKicking: text("gk_kicking"), // Kicking techniques
-  
+
   // Specific Work Section
   specificIndividual: text("specific_individual"), // Individual player work
   specificPosition: text("specific_position"), // Position-specific training
@@ -133,54 +147,87 @@ export const trainingSessions = pgTable("training_sessions", {
   specificPressing: text("specific_pressing"), // Pressing training
   specificCounterAttack: text("specific_counter_attack"), // Counter-attack training
   specificMental: text("specific_mental"), // Mental training
-  
+
   // Training Image
   trainingImageUrl: text("training_image_url"),
   trainingImageType: text("training_image_type"), // 'library', 'upload', 'created'
   trainingImageName: text("training_image_name"),
-  
+
   // Section-specific Training Images
   fitnessImageUrl: text("fitness_image_url"),
   fitnessImageType: text("fitness_image_type"), // 'library', 'upload', 'created'
   fitnessImageName: text("fitness_image_name"),
-  
+
   goalkeepingImageUrl: text("goalkeeping_image_url"),
   goalkeepingImageType: text("goalkeeping_image_type"), // 'library', 'upload', 'created'
   goalkeepingImageName: text("goalkeeping_image_name"),
-  
+
   specificWorkImageUrl: text("specific_work_image_url"),
   specificWorkImageType: text("specific_work_image_type"), // 'library', 'upload', 'created'
   specificWorkImageName: text("specific_work_image_name"),
-  
+
   notes: text("notes"),
   status: text("status").default("scheduled").notNull(), // scheduled, completed, cancelled
   createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    teamIdIdx: index("training_sessions_team_id_idx").on(table.teamId),
+    coachIdIdx: index("training_sessions_coach_id_idx").on(table.coachId),
+    dateIdx: index("training_sessions_date_idx").on(table.date),
+    statusIdx: index("training_sessions_status_idx").on(table.status),
+  };
 });
 
 export const sessionAttendance = pgTable("session_attendance", {
   id: serial("id").primaryKey(),
-  sessionId: integer("session_id").notNull(),
-  playerId: integer("player_id").notNull(),
-  status: text("status").notNull(), // present, absent, excused, late
+  sessionId: integer("session_id").references(() => trainingSessions.id).notNull(),
+  playerId: integer("player_id").references(() => players.id).notNull(),
+  status: text("status").notNull(), // confirmed, leave_requested, late (player-set) | present, absent, excused, late (staff-set)
   rating: integer("rating"), // 1-10 performance rating
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    sessionPlayerUnique: uniqueIndex("session_attendance_session_id_player_id_unique").on(table.sessionId, table.playerId),
+    sessionIdIdx: index("session_attendance_session_id_idx").on(table.sessionId),
+    playerIdIdx: index("session_attendance_player_id_idx").on(table.playerId),
+  };
+});
+
+export const notifications = pgTable("notifications", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  type: text("type").notNull(), // training_scheduled, leave_requested
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  link: text("link"),
+  isRead: boolean("is_read").default(false).notNull(),
+  relatedSessionId: integer("related_session_id").references(() => trainingSessions.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    userIdIdx: index("notifications_user_id_idx").on(table.userId),
+  };
 });
 
 export const tacticalFormations = pgTable("tactical_formations", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   formation: text("formation").notNull(), // e.g., "4-4-2", "3-5-2"
-  teamId: integer("team_id").notNull(),
+  teamId: integer("team_id").references(() => teams.id).notNull(),
   positions: jsonb("positions").notNull(), // JSON array of player positions
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    teamIdIdx: index("tactical_formations_team_id_idx").on(table.teamId),
+  };
 });
 
 export const playerStats = pgTable("player_stats", {
   id: serial("id").primaryKey(),
-  playerId: integer("player_id").notNull(),
-  sessionId: integer("session_id"),
+  playerId: integer("player_id").references(() => players.id).notNull(),
+  sessionId: integer("session_id").references(() => trainingSessions.id),
   goals: integer("goals").default(0).notNull(),
   assists: integer("assists").default(0).notNull(),
   yellowCards: integer("yellow_cards").default(0).notNull(),
@@ -190,16 +237,23 @@ export const playerStats = pgTable("player_stats", {
   technicalScore: integer("technical_score"), // 1-100
   tacticalScore: integer("tactical_score"), // 1-100
   createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    playerIdIdx: index("player_stats_player_id_idx").on(table.playerId),
+    sessionIdIdx: index("player_stats_session_id_idx").on(table.sessionId),
+  };
 });
 
 export const staff = pgTable("staff", {
   id: serial("id").primaryKey(),
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
+  firstNameAr: text("first_name_ar"), // Arabic first name, shown when Arabic locale is active
+  lastNameAr: text("last_name_ar"), // Arabic last name, shown when Arabic locale is active
   email: text("email").notNull().unique(),
   phoneNumber: text("phone_number"),
   nationality: text("nationality"),
-  role: text("role").notNull(), // head_coach, assistant_coach, fitness_coach, goalkeeping_coach, physiotherapist, analyst, kit_manager
+  role: text("role").notNull(), // head_coach, assistant_coach, fitness_coach, goalkeeping_coach, physiotherapist, analyst, kit_manager, team_manager, team_administrative
   department: text("department").notNull(), // coaching, medical, analysis, operations
   employmentType: text("employment_type").notNull(), // full_time, part_time, contract, volunteer
   startDate: text("start_date").notNull(),
@@ -220,7 +274,7 @@ export const staff = pgTable("staff", {
 
 export const matches = pgTable("matches", {
   id: serial("id").primaryKey(),
-  homeTeamId: integer("home_team_id").notNull(),
+  homeTeamId: integer("home_team_id").references(() => teams.id).notNull(),
   awayTeam: text("away_team").notNull(), // opponent team name
   competition: text("competition").notNull(), // league, cup, friendly
   matchType: text("match_type").notNull(), // home, away, neutral
@@ -230,16 +284,29 @@ export const matches = pgTable("matches", {
   status: text("status").default("scheduled").notNull(), // scheduled, ongoing, completed, cancelled, postponed
   homeScore: integer("home_score"),
   awayScore: integer("away_score"),
+  // Half-time scores
+  firstHalfHomeScore: integer("first_half_home_score"),
+  firstHalfAwayScore: integer("first_half_away_score"),
+  secondHalfHomeScore: integer("second_half_home_score"),
+  secondHalfAwayScore: integer("second_half_away_score"),
+  // Goal events: array of { minute, half, team, scorerName, assistName }
+  goalEvents: jsonb("goal_events"),
   notes: text("notes"),
   weatherConditions: text("weather_conditions"),
   attendance: integer("attendance"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    homeTeamIdIdx: index("matches_home_team_id_idx").on(table.homeTeamId),
+    dateIdx: index("matches_date_idx").on(table.date),
+    statusIdx: index("matches_status_idx").on(table.status),
+  };
 });
 
 export const matchSquads = pgTable("match_squads", {
   id: serial("id").primaryKey(),
-  matchId: integer("match_id").notNull(),
-  playerId: integer("player_id").notNull(),
+  matchId: integer("match_id").references(() => matches.id).notNull(),
+  playerId: integer("player_id").references(() => players.id).notNull(),
   status: text("status").notNull(), // starting_xi, substitute, not_selected, injured
   position: text("position"),
   shirtNumber: integer("shirt_number"),
@@ -250,6 +317,12 @@ export const matchSquads = pgTable("match_squads", {
   redCards: integer("red_cards").default(0),
   rating: integer("rating"), // 1-10
   createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    matchPlayerUnique: uniqueIndex("match_squads_match_id_player_id_unique").on(table.matchId, table.playerId),
+    matchIdIdx: index("match_squads_match_id_idx").on(table.matchId),
+    playerIdIdx: index("match_squads_player_id_idx").on(table.playerId),
+  };
 });
 
 export const meetings = pgTable("meetings", {
@@ -261,13 +334,19 @@ export const meetings = pgTable("meetings", {
   startTime: text("start_time").notNull(),
   duration: integer("duration").notNull(), // in minutes
   location: text("location").notNull(),
-  organizerId: integer("organizer_id").notNull(), // staff id who organized the meeting
+  organizerId: integer("organizer_id").references(() => staff.id).notNull(), // staff id who organized the meeting
   attendees: text("attendees").array(), // array of staff/player IDs or names
   agenda: text("agenda"),
   notes: text("notes"),
   status: text("status").default("scheduled").notNull(), // scheduled, in_progress, completed, cancelled, postponed
   priority: text("priority").default("medium").notNull(), // low, medium, high, urgent
   createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    organizerIdIdx: index("meetings_organizer_id_idx").on(table.organizerId),
+    dateIdx: index("meetings_date_idx").on(table.date),
+    statusIdx: index("meetings_status_idx").on(table.status),
+  };
 });
 
 export const analyticsReports = pgTable("analytics_reports", {
@@ -278,10 +357,16 @@ export const analyticsReports = pgTable("analytics_reports", {
   dataPoints: jsonb("data_points").notNull(), // JSON data for charts/metrics
   insights: text("insights"),
   recommendations: text("recommendations"),
-  generatedBy: integer("generated_by").notNull(), // staff id
-  teamId: integer("team_id"),
-  playerId: integer("player_id"),
+  generatedBy: integer("generated_by").references(() => users.id).notNull(),
+  teamId: integer("team_id").references(() => teams.id),
+  playerId: integer("player_id").references(() => players.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    generatedByIdx: index("analytics_reports_generated_by_idx").on(table.generatedBy),
+    teamIdIdx: index("analytics_reports_team_id_idx").on(table.teamId),
+    playerIdIdx: index("analytics_reports_player_id_idx").on(table.playerId),
+  };
 });
 
 export const systemSettings = pgTable("system_settings", {
@@ -291,14 +376,48 @@ export const systemSettings = pgTable("system_settings", {
   settingValue: text("setting_value"),
   description: text("description"),
   isActive: boolean("is_active").default(true),
-  updatedBy: integer("updated_by").notNull(),
+  updatedBy: integer("updated_by").references(() => users.id).notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    categoryKeyUnique: uniqueIndex("system_settings_category_key_unique").on(table.category, table.settingKey),
+  };
+});
+
+// Annual Budget Management (Fiscal Year Allocations)
+export const annualBudgets = pgTable("annual_budgets", {
+  id: serial("id").primaryKey(),
+  fiscalYear: text("fiscal_year").notNull().unique(), // e.g., "2025-26"
+  seasonStartDate: date("season_start_date"),
+  seasonEndDate: date("season_end_date"),
+  totalBudget: decimal("total_budget", { precision: 12, scale: 2 }).notNull(),
+  salariesBudget: decimal("salaries_budget", { precision: 12, scale: 2 }).notNull(),
+  operationalBudget: decimal("operational_budget", { precision: 12, scale: 2 }).notNull(),
+  equipmentBudget: decimal("equipment_budget", { precision: 12, scale: 2 }).notNull(),
+  travelBudget: decimal("travel_budget", { precision: 12, scale: 2 }).notNull(),
+  medicalBudget: decimal("medical_budget", { precision: 12, scale: 2 }).notNull(),
+  facilitiesBudget: decimal("facilities_budget", { precision: 12, scale: 2 }).notNull(),
+  marketingBudget: decimal("marketing_budget", { precision: 12, scale: 2 }).notNull(),
+  otherBudget: decimal("other_budget", { precision: 12, scale: 2 }).notNull(),
+  notes: text("notes"),
+  status: text("status").default("active").notNull(), // active, archived, draft
+  createdBy: integer("created_by").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    createdByIdx: index("annual_budgets_created_by_idx").on(table.createdBy),
+    statusIdx: index("annual_budgets_status_idx").on(table.status),
+  };
 });
 
 // Monthly Budget Management
 export const monthlyBudgets = pgTable("monthly_budgets", {
   id: serial("id").primaryKey(),
   month: text("month").notNull(), // YYYY-MM format
+  annualBudgetId: integer("annual_budget_id").references(() => annualBudgets.id),
+  seasonStartDate: date("season_start_date"),
+  seasonEndDate: date("season_end_date"),
   budgetName: text("budget_name").notNull(),
   totalBudget: decimal("total_budget", { precision: 12, scale: 2 }).notNull(),
   salariesBudget: decimal("salaries_budget", { precision: 12, scale: 2 }).notNull(),
@@ -311,10 +430,16 @@ export const monthlyBudgets = pgTable("monthly_budgets", {
   otherBudget: decimal("other_budget", { precision: 12, scale: 2 }).notNull(),
   notes: text("notes"),
   status: text("status").default("active").notNull(), // active, archived, draft
-  createdBy: integer("created_by").notNull(),
-  approvedBy: integer("approved_by"),
+  createdBy: integer("created_by").references(() => users.id).notNull(),
+  approvedBy: integer("approved_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    annualBudgetIdIdx: index("monthly_budgets_annual_budget_id_idx").on(table.annualBudgetId),
+    monthIdx: index("monthly_budgets_month_idx").on(table.month),
+    createdByIdx: index("monthly_budgets_created_by_idx").on(table.createdBy),
+  };
 });
 
 // Expense Tracking
@@ -330,13 +455,20 @@ export const expenses = pgTable("expenses", {
   paymentMethod: text("payment_method"), // cash, card, transfer, cheque
   receipt: text("receipt"), // file path to receipt/invoice
   status: text("status").default("pending").notNull(), // pending, approved, rejected, paid
-  approvedBy: integer("approved_by"),
+  approvedBy: integer("approved_by").references(() => users.id),
   approvedAt: timestamp("approved_at"),
   paymentReference: text("payment_reference"),
   notes: text("notes"),
-  createdBy: integer("created_by").notNull(),
+  createdBy: integer("created_by").references(() => users.id).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    budgetIdIdx: index("expenses_budget_id_idx").on(table.budgetId),
+    categoryIdx: index("expenses_category_idx").on(table.category),
+    statusIdx: index("expenses_status_idx").on(table.status),
+    expenseDateIdx: index("expenses_expense_date_idx").on(table.expenseDate),
+  };
 });
 
 // Player Salaries (extending player info with salary details)
@@ -352,9 +484,15 @@ export const playerContracts = pgTable("player_contracts", {
   isActive: boolean("is_active").default(true).notNull(),
   contractDocument: text("contract_document"), // file path
   notes: text("notes"),
-  createdBy: integer("created_by").notNull(),
+  createdBy: integer("created_by").references(() => users.id).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    playerIdIdx: index("player_contracts_player_id_idx").on(table.playerId),
+    createdByIdx: index("player_contracts_created_by_idx").on(table.createdBy),
+    activeIdx: index("player_contracts_is_active_idx").on(table.isActive),
+  };
 });
 
 // Terra-like Unified Wearable API System
@@ -382,6 +520,12 @@ export const terraUsers = pgTable("terra_users", {
   accessToken: text("access_token"), // Encrypted
   refreshToken: text("refresh_token"), // Encrypted
   createdAt: timestamp("created_at").defaultNow(),
+}, (table) => {
+  return {
+    playerIdIdx: index("terra_users_player_id_idx").on(table.playerId),
+    providerIdx: index("terra_users_provider_idx").on(table.provider),
+    providerUserIdx: index("terra_users_provider_user_id_idx").on(table.providerUserId),
+  };
 });
 
 // Terra-like Activity Data Model
@@ -414,6 +558,11 @@ export const terraActivityData = pgTable("terra_activity_data", {
   // Additional metadata
   metadata: json("metadata"),
   createdAt: timestamp("created_at").defaultNow(),
+}, (table) => {
+  return {
+    terraUserIdIdx: index("terra_activity_data_terra_user_id_idx").on(table.terraUserId),
+    startTimeIdx: index("terra_activity_data_start_time_idx").on(table.startTime),
+  };
 });
 
 // Terra-like Sleep Data Model
@@ -451,6 +600,11 @@ export const terraSleepData = pgTable("terra_sleep_data", {
   avgRespirationRate: decimal("avg_respiration_rate", { precision: 5, scale: 2 }),
   metadata: json("metadata"),
   createdAt: timestamp("created_at").defaultNow(),
+}, (table) => {
+  return {
+    terraUserIdIdx: index("terra_sleep_data_terra_user_id_idx").on(table.terraUserId),
+    bedtimeStartIdx: index("terra_sleep_data_bedtime_start_idx").on(table.bedtimeStart),
+  };
 });
 
 // Terra-like Body Data Model
@@ -483,6 +637,11 @@ export const terraBodyData = pgTable("terra_body_data", {
   skinfoldMm: decimal("skinfold_mm", { precision: 5, scale: 2 }),
   metadata: json("metadata"),
   createdAt: timestamp("created_at").defaultNow(),
+}, (table) => {
+  return {
+    terraUserIdIdx: index("terra_body_data_terra_user_id_idx").on(table.terraUserId),
+    measurementTimeIdx: index("terra_body_data_measurement_time_idx").on(table.measurementTime),
+  };
 });
 
 // Terra-like Daily Summary Data
@@ -517,12 +676,18 @@ export const terraDailyData = pgTable("terra_daily_data", {
   metadata: json("metadata"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    terraUserDateUnique: uniqueIndex("terra_daily_data_terra_user_id_calendar_date_unique").on(table.terraUserId, table.calendarDate),
+    terraUserIdIdx: index("terra_daily_data_terra_user_id_idx").on(table.terraUserId),
+    calendarDateIdx: index("terra_daily_data_calendar_date_idx").on(table.calendarDate),
+  };
 });
 
 // Event/Webhook logs
 export const terraWebhookLogs = pgTable("terra_webhook_logs", {
   id: serial("id").primaryKey(),
-  terraUserId: uuid("terra_user_id"),
+  terraUserId: uuid("terra_user_id").references(() => terraUsers.userId),
   eventType: varchar("event_type", { length: 100 }).notNull(), // activity, sleep, body, daily, auth, etc.
   provider: varchar("provider", { length: 50 }).notNull(),
   status: varchar("status", { length: 20 }).notNull(), // success, failed, retry
@@ -531,6 +696,13 @@ export const terraWebhookLogs = pgTable("terra_webhook_logs", {
   processingTimeMs: integer("processing_time_ms"),
   signature: varchar("signature", { length: 255 }), // HMAC verification
   createdAt: timestamp("created_at").defaultNow(),
+}, (table) => {
+  return {
+    terraUserIdIdx: index("terra_webhook_logs_terra_user_id_idx").on(table.terraUserId),
+    eventTypeIdx: index("terra_webhook_logs_event_type_idx").on(table.eventType),
+    statusIdx: index("terra_webhook_logs_status_idx").on(table.status),
+    createdAtIdx: index("terra_webhook_logs_created_at_idx").on(table.createdAt),
+  };
 });
 
 // Performance Reactions - Quick emoji feedback for player performances
@@ -547,6 +719,12 @@ export const performanceReactions = pgTable("performance_reactions", {
   intensity: integer("intensity").default(3).notNull(), // 1-5 scale for reaction intensity
   contextDate: date("context_date").notNull(), // when the performance being reacted to occurred
   createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    playerIdIdx: index("performance_reactions_player_id_idx").on(table.playerId),
+    coachIdIdx: index("performance_reactions_coach_id_idx").on(table.coachId),
+    contextDateIdx: index("performance_reactions_context_date_idx").on(table.contextDate),
+  };
 });
 
 // Tactical Boards Library - Save/Open tactical formations and drawings
@@ -562,6 +740,12 @@ export const tacticalBoards = pgTable("tactical_boards", {
   createdBy: integer("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    createdByIdx: index("tactical_boards_created_by_idx").on(table.createdBy),
+    updatedAtIdx: index("tactical_boards_updated_at_idx").on(table.updatedAt),
+    publicIdx: index("tactical_boards_is_public_idx").on(table.isPublic),
+  };
 });
 
 // Achievement System - Gamified training milestone tracking
@@ -586,6 +770,10 @@ export const achievementCriteria = pgTable("achievement_criteria", {
   timeframe: text("timeframe"), // daily, weekly, monthly, yearly, all_time
   isActive: boolean("is_active").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    achievementTypeIdIdx: index("achievement_criteria_type_id_idx").on(table.achievementTypeId),
+  };
 });
 
 export const playerAchievements = pgTable("player_achievements", {
@@ -600,6 +788,12 @@ export const playerAchievements = pgTable("player_achievements", {
   metadata: json("metadata"), // additional tracking data
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    playerAchievementUnique: uniqueIndex("player_achievements_player_id_type_id_unique").on(table.playerId, table.achievementTypeId),
+    playerIdIdx: index("player_achievements_player_id_idx").on(table.playerId),
+    achievementTypeIdIdx: index("player_achievements_type_id_idx").on(table.achievementTypeId),
+  };
 });
 
 export const achievementRewards = pgTable("achievement_rewards", {
@@ -610,6 +804,10 @@ export const achievementRewards = pgTable("achievement_rewards", {
   description: text("description").notNull(),
   isActive: boolean("is_active").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    achievementTypeIdIdx: index("achievement_rewards_type_id_idx").on(table.achievementTypeId),
+  };
 });
 
 export const achievementProgress = pgTable("achievement_progress", {
@@ -622,7 +820,93 @@ export const achievementProgress = pgTable("achievement_progress", {
   eventId: integer("event_id"), // reference to specific event
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    playerIdIdx: index("achievement_progress_player_id_idx").on(table.playerId),
+    achievementTypeIdIdx: index("achievement_progress_type_id_idx").on(table.achievementTypeId),
+    dateIdx: index("achievement_progress_date_idx").on(table.date),
+  };
 });
+
+// Player Invitations - Tokens for inviting players to self-register
+export const playerInvitations = pgTable("player_invitations", {
+  id: serial("id").primaryKey(),
+  token: text("token").notNull().unique(),
+  teamId: integer("team_id").references(() => teams.id).notNull(),
+  email: text("email"), // optional: where the invite was sent
+  invitedBy: integer("invited_by").references(() => users.id).notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"), // null = not yet used
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    tokenIdx: index("player_invitations_token_idx").on(table.token),
+    teamIdIdx: index("player_invitations_team_id_idx").on(table.teamId),
+    invitedByIdx: index("player_invitations_invited_by_idx").on(table.invitedBy),
+  };
+});
+
+// Keep this list shared by the employee invite UI and the API so an invite can
+// never grant an arbitrary user role.
+export const employeeRoles = [
+  "head_coach",
+  "assistant_coach",
+  "fitness_coach",
+  "goalkeeping_coach",
+  "physiotherapist",
+  "analyst",
+  "kit_manager",
+  "team_manager",
+  "team_administrative",
+] as const;
+
+export type EmployeeRole = (typeof employeeRoles)[number];
+
+// Roles that belong in the restricted technical workspace. Operations roles
+// deliberately remain on the manager side of the application.
+export const technicalStaffRoles = [
+  "head_coach",
+  "assistant_coach",
+  "fitness_coach",
+  "goalkeeping_coach",
+  "analyst",
+  "physiotherapist",
+] as const satisfies readonly EmployeeRole[];
+
+export type TechnicalStaffRole = (typeof technicalStaffRoles)[number];
+
+export function isTechnicalStaffRole(role: string | null | undefined): role is TechnicalStaffRole {
+  return Boolean(role && (technicalStaffRoles as readonly string[]).includes(role));
+}
+
+// Employee Invitations - Tokens for inviting staff accounts with a fixed role
+export const employeeInvitations = pgTable("employee_invitations", {
+  id: serial("id").primaryKey(),
+  token: text("token").notNull().unique(),
+  role: text("role").$type<EmployeeRole>().notNull(),
+  email: text("email"),
+  invitedBy: integer("invited_by").references(() => users.id).notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    tokenIdx: index("employee_invitations_token_idx").on(table.token),
+    invitedByIdx: index("employee_invitations_invited_by_idx").on(table.invitedBy),
+  };
+});
+
+export const registrationReminders = pgTable("registration_reminders", {
+  id: serial("id").primaryKey(),
+  targetUserId: integer("target_user_id").references(() => users.id).notNull(),
+  sentBy: integer("sent_by").references(() => users.id).notNull(),
+  missingFields: jsonb("missing_fields").$type<string[]>().notNull(),
+  message: text("message").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  targetUserIdIdx: index("registration_reminders_target_user_id_idx").on(table.targetUserId),
+  sentByIdx: index("registration_reminders_sent_by_idx").on(table.sentBy),
+}));
 
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
@@ -663,6 +947,12 @@ export const insertSessionAttendanceSchema = createInsertSchema(sessionAttendanc
 export const insertTacticalFormationSchema = createInsertSchema(tacticalFormations).omit({
   id: true,
   createdAt: true,
+});
+
+export const insertNotificationSchema = createInsertSchema(notifications).omit({
+  id: true,
+  createdAt: true,
+  isRead: true,
 });
 
 export const insertPlayerStatsSchema = createInsertSchema(playerStats).omit({
@@ -746,6 +1036,12 @@ export const insertTerraWebhookLogSchema = createInsertSchema(terraWebhookLogs).
   createdAt: true,
 });
 
+export const insertAnnualBudgetSchema = createInsertSchema(annualBudgets).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertMonthlyBudgetSchema = createInsertSchema(monthlyBudgets).omit({
   id: true,
   createdAt: true,
@@ -819,6 +1115,9 @@ export type TrainingSession = typeof trainingSessions.$inferSelect;
 export type InsertSessionAttendance = z.infer<typeof insertSessionAttendanceSchema>;
 export type SessionAttendance = typeof sessionAttendance.$inferSelect;
 
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type Notification = typeof notifications.$inferSelect;
+
 export type InsertTacticalFormation = z.infer<typeof insertTacticalFormationSchema>;
 export type TacticalFormation = typeof tacticalFormations.$inferSelect;
 
@@ -836,6 +1135,9 @@ export type MatchSquad = typeof matchSquads.$inferSelect;
 
 export type InsertAnalyticsReport = z.infer<typeof insertAnalyticsReportSchema>;
 export type AnalyticsReport = typeof analyticsReports.$inferSelect;
+
+export type InsertAnnualBudget = z.infer<typeof insertAnnualBudgetSchema>;
+export type AnnualBudget = typeof annualBudgets.$inferSelect;
 
 export type InsertMonthlyBudget = z.infer<typeof insertMonthlyBudgetSchema>;
 export type MonthlyBudget = typeof monthlyBudgets.$inferSelect;
@@ -855,7 +1157,7 @@ export type PerformanceReaction = typeof performanceReactions.$inferSelect;
 // Wearable Devices - For tracking connected fitness devices
 export const wearableDevices = pgTable("wearable_devices", {
   id: serial("id").primaryKey(),
-  playerId: integer("player_id").notNull(),
+  playerId: integer("player_id").references(() => players.id).notNull(),
   deviceType: text("device_type").notNull(), // fitbit, apple_watch, garmin, polar, etc.
   deviceModel: text("device_model").notNull(),
   deviceId: text("device_id").notNull().unique(), // unique device identifier
@@ -863,31 +1165,49 @@ export const wearableDevices = pgTable("wearable_devices", {
   lastSyncAt: timestamp("last_sync_at"),
   isActive: boolean("is_active").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    playerIdIdx: index("wearable_devices_player_id_idx").on(table.playerId),
+    activeIdx: index("wearable_devices_is_active_idx").on(table.isActive),
+  };
 });
 
 // Wearable Data - Raw data from wearable devices
 export const wearableData = pgTable("wearable_data", {
   id: serial("id").primaryKey(),
-  deviceId: integer("device_id").notNull(),
-  playerId: integer("player_id").notNull(),
+  deviceId: integer("device_id").references(() => wearableDevices.id).notNull(),
+  playerId: integer("player_id").references(() => players.id).notNull(),
   dataType: text("data_type").notNull(), // heart_rate, steps, calories, sleep, distance, etc.
   value: text("value").notNull(), // JSON string for complex data or simple value
   unit: text("unit"), // bpm, steps, calories, minutes, km, etc.
   timestamp: timestamp("timestamp").notNull(), // when the data was recorded
-  sessionId: integer("session_id"), // link to training session if applicable
+  sessionId: integer("session_id").references(() => trainingSessions.id), // link to training session if applicable
   createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    deviceIdIdx: index("wearable_data_device_id_idx").on(table.deviceId),
+    playerIdIdx: index("wearable_data_player_id_idx").on(table.playerId),
+    dataTypeIdx: index("wearable_data_data_type_idx").on(table.dataType),
+    timestampIdx: index("wearable_data_timestamp_idx").on(table.timestamp),
+  };
 });
 
 // Performance Metrics - Processed analytics from wearable data
 export const performanceMetrics = pgTable("performance_metrics", {
   id: serial("id").primaryKey(),
-  playerId: integer("player_id").notNull(),
+  playerId: integer("player_id").references(() => players.id).notNull(),
   metricType: text("metric_type").notNull(), // daily_activity, workout_intensity, recovery_score, etc.
   date: text("date").notNull(), // YYYY-MM-DD format
   value: integer("value").notNull(),
   additionalData: jsonb("additional_data"), // any extra metrics as JSON
-  sessionId: integer("session_id"), // link to training session
+  sessionId: integer("session_id").references(() => trainingSessions.id), // link to training session
   createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    playerMetricDateIdx: index("performance_metrics_player_metric_date_idx").on(table.playerId, table.metricType, table.date),
+    playerIdIdx: index("performance_metrics_player_id_idx").on(table.playerId),
+    sessionIdIdx: index("performance_metrics_session_id_idx").on(table.sessionId),
+  };
 });
 
 export const insertWearableDeviceSchema = createInsertSchema(wearableDevices).omit({
@@ -954,3 +1274,34 @@ export type AchievementReward = typeof achievementRewards.$inferSelect;
 
 export type InsertAchievementProgress = z.infer<typeof insertAchievementProgressSchema>;
 export type AchievementProgress = typeof achievementProgress.$inferSelect;
+
+// Player Invitation insert schema and types
+export const insertPlayerInvitationSchema = createInsertSchema(playerInvitations).omit({
+  id: true,
+  createdAt: true,
+  usedAt: true,
+});
+
+export type InsertPlayerInvitation = z.infer<typeof insertPlayerInvitationSchema>;
+export type PlayerInvitation = typeof playerInvitations.$inferSelect;
+
+export const insertEmployeeInvitationSchema = createInsertSchema(employeeInvitations, {
+  role: z.enum(employeeRoles),
+}).omit({
+  id: true,
+  createdAt: true,
+  usedAt: true,
+});
+
+export type InsertEmployeeInvitation = z.infer<typeof insertEmployeeInvitationSchema>;
+export type EmployeeInvitation = typeof employeeInvitations.$inferSelect;
+
+export const insertRegistrationReminderSchema = createInsertSchema(registrationReminders, {
+  missingFields: z.array(z.string()),
+}).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertRegistrationReminder = z.infer<typeof insertRegistrationReminderSchema>;
+export type RegistrationReminder = typeof registrationReminders.$inferSelect;

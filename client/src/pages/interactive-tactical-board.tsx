@@ -1,7 +1,7 @@
-import NewKonvaTacticalBoard from '@/components/tactical-board/NewKonvaTacticalBoard';
+import SportSessionPlanner from '@/components/tactical-board/SportSessionPlanner';
 
 export default function InteractiveTacticalBoardPage() {
   return (
-    <NewKonvaTacticalBoard />
+    <SportSessionPlanner />
   );
 }

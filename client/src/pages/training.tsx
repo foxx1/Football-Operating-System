@@ -4,9 +4,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Calendar, Plus, Clock, MapPin, Users, Edit, Trash2, Target, Activity, Eye, Heart, Shield, Star, Dumbbell } from "lucide-react";
+import { Calendar, Plus, Clock, MapPin, Users, Edit, Trash2, Target, Activity, Eye, Heart, Shield, Star, Dumbbell, Timer } from "lucide-react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import TrainingForm from "@/components/training-form";
+import { useI18n, translateWithParams } from "@/contexts/I18nContext";
 import type { TrainingSession } from "@shared/schema";
 import { format } from "date-fns";
 
@@ -15,12 +16,13 @@ export default function Training() {
   const [editingSession, setEditingSession] = useState<TrainingSession | null>(null);
   const [viewingSession, setViewingSession] = useState<TrainingSession | null>(null);
 
-  const { data: sessions, isLoading } = useQuery({
+  const { t } = useI18n();
+  const { data: sessions, isLoading } = useQuery<TrainingSession[]>({
     queryKey: ["/api/training-sessions"],
   });
 
   const deleteSessionMutation = useMutation({
-    mutationFn: (sessionId: number) => 
+    mutationFn: (sessionId: number) =>
       apiRequest("DELETE", `/api/training-sessions/${sessionId}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/training-sessions"] });
@@ -28,12 +30,13 @@ export default function Training() {
   });
 
   const handleDeleteSession = (sessionId: number) => {
-    if (confirm("Are you sure you want to delete this training session?")) {
+    if (confirm(t("training.confirmDelete"))) {
       deleteSessionMutation.mutate(sessionId);
     }
   };
 
-  const getSessionTypeColor = (type: string) => {
+  const getSessionTypeColor = (type: string | null | undefined) => {
+    if (!type) return 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400';
     switch (type.toLowerCase()) {
       case 'technical':
         return 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400';
@@ -48,7 +51,8 @@ export default function Training() {
     }
   };
 
-  const getSessionIcon = (type: string) => {
+  const getSessionIcon = (type: string | null | undefined) => {
+    if (!type) return Activity;
     switch (type.toLowerCase()) {
       case 'technical':
         return Activity;
@@ -63,7 +67,8 @@ export default function Training() {
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string | null | undefined) => {
+    if (!status) return 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400';
     switch (status.toLowerCase()) {
       case 'scheduled':
         return 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400';
@@ -76,11 +81,23 @@ export default function Training() {
     }
   };
 
-  const formatSessionType = (type: string) => {
-    return type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+  const formatSessionType = (type: string | null | undefined) => {
+    if (!type) return '';
+    const formattedType = type.toLowerCase().replace('_', '.');
+    const translationKey = `training.sessionType.${formattedType}`;
+    const translated = t(translationKey);
+    return translated !== translationKey ? translated : type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
-  const formatTime = (time: string) => {
+  const formatSessionStatus = (status: string | null | undefined) => {
+    const normalized = status?.toLowerCase() || 'scheduled';
+    const translationKey = `training.status.${normalized}`;
+    const translated = t(translationKey);
+    return translated !== translationKey ? translated : status || 'Scheduled';
+  };
+
+  const formatTime = (time: string | null | undefined) => {
+    if (!time) return '';
     return format(new Date(`2000-01-01T${time}`), 'h:mm a');
   };
 
@@ -117,21 +134,21 @@ export default function Training() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Training Schedule</h1>
-          <p className="text-muted-foreground">Plan and manage training sessions for your teams</p>
+          <h1 className="text-3xl font-bold text-foreground">{t("training.title")}</h1>
+          <p className="text-muted-foreground">{t("training.description")}</p>
         </div>
         <Dialog open={isAddSessionOpen} onOpenChange={setIsAddSessionOpen}>
           <DialogTrigger asChild>
             <Button className="action-button bg-primary text-primary-foreground hover:bg-primary/90">
               <Plus className="w-4 h-4 mr-2" />
-              Schedule Session
+              {t("training.scheduleSession")}
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-[98vw] w-full max-h-[95vh] overflow-y-auto p-2" aria-describedby="training-dialog-description">
             <DialogHeader>
-              <DialogTitle>Schedule Training Session</DialogTitle>
+              <DialogTitle>{t("training.dialogTitle")}</DialogTitle>
               <div id="training-dialog-description" className="text-sm text-muted-foreground">
-                Create a comprehensive training session with structured sections and image support
+                {t("training.dialogDescription")}
               </div>
             </DialogHeader>
             <TrainingForm onSuccess={() => setIsAddSessionOpen(false)} />
@@ -149,7 +166,7 @@ export default function Training() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{sessions?.length || 0}</p>
-                <p className="text-sm text-muted-foreground">Total Sessions</p>
+                <p className="text-sm text-muted-foreground">{t("training.totalSessions")}</p>
               </div>
             </div>
           </CardContent>
@@ -164,7 +181,7 @@ export default function Training() {
                 <p className="text-2xl font-bold">
                   {sessions?.filter((s: TrainingSession) => s.sessionType === 'technical')?.length || 0}
                 </p>
-                <p className="text-sm text-muted-foreground">Technical</p>
+                <p className="text-sm text-muted-foreground">{t("training.technical")}</p>
               </div>
             </div>
           </CardContent>
@@ -179,7 +196,7 @@ export default function Training() {
                 <p className="text-2xl font-bold">
                   {sessions?.filter((s: TrainingSession) => s.sessionType === 'fitness')?.length || 0}
                 </p>
-                <p className="text-sm text-muted-foreground">Fitness</p>
+                <p className="text-sm text-muted-foreground">{t("training.fitness")}</p>
               </div>
             </div>
           </CardContent>
@@ -194,7 +211,7 @@ export default function Training() {
                 <p className="text-2xl font-bold">
                   {sessions?.filter((s: TrainingSession) => s.sessionType === 'tactical')?.length || 0}
                 </p>
-                <p className="text-sm text-muted-foreground">Tactical</p>
+                <p className="text-sm text-muted-foreground">{t("training.tactical")}</p>
               </div>
             </div>
           </CardContent>
@@ -226,33 +243,33 @@ export default function Training() {
                                 {formatSessionType(session.sessionType)}
                               </Badge>
                               <Badge className={getStatusColor(session.status)}>
-                                {session.status}
+                                {formatSessionStatus(session.status)}
                               </Badge>
                             </div>
                           </div>
                         </div>
                         <div className="flex space-x-1">
-                          <Button 
-                            variant="ghost" 
+                          <Button
+                            variant="ghost"
                             size="sm"
                             onClick={() => setViewingSession(session)}
-                            title="View Details"
+                            title={t("training.viewDetails")}
                           >
                             <Eye className="w-4 h-4" />
                           </Button>
-                          <Button 
-                            variant="ghost" 
+                          <Button
+                            variant="ghost"
                             size="sm"
                             onClick={() => setEditingSession(session)}
-                            title="Edit Session"
+                            title={t("training.editSession")}
                           >
                             <Edit className="w-4 h-4" />
                           </Button>
-                          <Button 
-                            variant="ghost" 
+                          <Button
+                            variant="ghost"
                             size="sm"
                             onClick={() => handleDeleteSession(session.id)}
-                            title="Delete Session"
+                            title={t("training.deleteSession")}
                           >
                             <Trash2 className="w-4 h-4 text-destructive" />
                           </Button>
@@ -263,11 +280,11 @@ export default function Training() {
                       {session.description && (
                         <p className="text-sm text-muted-foreground mb-4">{session.description}</p>
                       )}
-                      
+
                       <div className="space-y-2 text-sm">
                         <div className="flex items-center space-x-2">
                           <Clock className="w-4 h-4 text-muted-foreground" />
-                          <span>{formatTime(session.startTime)} • {session.duration} minutes</span>
+                          <span>{formatTime(session.startTime)} • {session.duration} {t("training.minutes")}</span>
                         </div>
                         <div className="flex items-center space-x-2">
                           <MapPin className="w-4 h-4 text-muted-foreground" />
@@ -276,7 +293,7 @@ export default function Training() {
                         {session.maxParticipants && (
                           <div className="flex items-center space-x-2">
                             <Users className="w-4 h-4 text-muted-foreground" />
-                            <span>Max {session.maxParticipants} players</span>
+                            <span>{translateWithParams(t, "training.maxPlayers", { count: session.maxParticipants?.toString() || '0' })}</span>
                           </div>
                         )}
                       </div>
@@ -300,13 +317,13 @@ export default function Training() {
         <Card className="text-center p-12">
           <CardContent>
             <Calendar className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-foreground mb-2">No Training Sessions Scheduled</h3>
+            <h3 className="text-lg font-semibold text-foreground mb-2">{t("training.noSessionsScheduled")}</h3>
             <p className="text-muted-foreground mb-4">
-              Get started by scheduling your first training session.
+              {t("training.getStarted")}
             </p>
             <Button onClick={() => setIsAddSessionOpen(true)}>
               <Plus className="w-4 h-4 mr-2" />
-              Schedule First Session
+              {t("training.scheduleFirstSession")}
             </Button>
           </CardContent>
         </Card>
@@ -318,10 +335,9 @@ export default function Training() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Eye className="h-5 w-5" />
-              Training Session Details
+              {t("training.sessionDetailsTitle")}
             </DialogTitle>
           </DialogHeader>
-          
           {viewingSession && (
             <div className="space-y-6">
               {/* Basic Information */}
@@ -329,30 +345,30 @@ export default function Training() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Calendar className="h-5 w-5" />
-                    Basic Information
+                    {t("training.basicInformation")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-sm font-medium text-muted-foreground">Title</label>
+                      <label className="text-sm font-medium text-muted-foreground">{t("training.labelTitle")}</label>
                       <p className="text-lg font-medium">{viewingSession.title}</p>
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-muted-foreground">Session Type</label>
+                      <label className="text-sm font-medium text-muted-foreground">{t("training.labelSessionType")}</label>
                       <Badge className={getSessionTypeColor(viewingSession.sessionType)}>
                         {formatSessionType(viewingSession.sessionType)}
                       </Badge>
                     </div>
                   </div>
-                  
+
                   {viewingSession.description && (
                     <div>
-                      <label className="text-sm font-medium text-muted-foreground">Description</label>
+                      <label className="text-sm font-medium text-muted-foreground">{t("training.labelDescription")}</label>
                       <p className="mt-1">{viewingSession.description}</p>
                     </div>
                   )}
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -360,33 +376,33 @@ export default function Training() {
                     </div>
                     <div className="flex items-center gap-2">
                       <Clock className="h-4 w-4 text-muted-foreground" />
-                      <span>{formatTime(viewingSession.startTime)} • {viewingSession.duration} minutes</span>
+                      <span>{formatTime(viewingSession.startTime)} • {viewingSession.duration} {t("training.minutes")}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <MapPin className="h-4 w-4 text-muted-foreground" />
                       <span>{viewingSession.location}</span>
                     </div>
                   </div>
-                  
+
                   {viewingSession.maxParticipants && (
                     <div className="flex items-center gap-2">
                       <Users className="h-4 w-4 text-muted-foreground" />
-                      <span>Maximum {viewingSession.maxParticipants} participants</span>
+                      <span>{translateWithParams(t, "training.maxParticipants", { count: viewingSession.maxParticipants?.toString() || '0' })}</span>
                     </div>
                   )}
-                  
+
                   {/* Duration Breakdown */}
                   {(viewingSession.fitnessDuration || viewingSession.mainPartDuration || viewingSession.goalkeepingDuration || viewingSession.specificWorkDuration) && (
                     <div className="mt-4">
                       <h4 className="font-medium mb-2 flex items-center gap-2">
                         <Timer className="h-4 w-4 text-muted-foreground" />
-                        Duration Breakdown
+                        {t("training.durationBreakdown")}
                       </h4>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                         {viewingSession.fitnessDuration && (
                           <div className="flex items-center gap-2 p-2 bg-red-50 dark:bg-red-900/20 rounded">
                             <Heart className="h-3 w-3 text-red-600" />
-                            <span>Fitness: {viewingSession.fitnessDuration}min</span>
+                            <span>{t("training.fitness")}: {viewingSession.fitnessDuration}min</span>
                           </div>
                         )}
                         {viewingSession.mainPartDuration && (
@@ -416,7 +432,7 @@ export default function Training() {
               {/* Training Details */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Training Structure</CardTitle>
+                  <CardTitle>{t("training.trainingStructure")}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
@@ -425,12 +441,12 @@ export default function Training() {
                       <div>
                         <h4 className="font-semibold flex items-center gap-2 mb-2">
                           <Heart className="h-4 w-4" />
-                          Fitness Training
+                          {t("training.fitnessTraining")}
                         </h4>
                         <div className="text-sm space-y-1 ml-6">
-                          {viewingSession.fitnessAerobic && <p><span className="font-medium">Aerobic:</span> {viewingSession.fitnessAerobic}</p>}
-                          {viewingSession.fitnessStrength && <p><span className="font-medium">Strength:</span> {viewingSession.fitnessStrength}</p>}
-                          {viewingSession.fitnessEndurance && <p><span className="font-medium">Endurance:</span> {viewingSession.fitnessEndurance}</p>}
+                          {viewingSession.fitnessAerobic && <p><span className="font-medium">{t("training.aerobic")}</span> {viewingSession.fitnessAerobic}</p>}
+                          {viewingSession.fitnessStrength && <p><span className="font-medium">{t("training.strength")}</span> {viewingSession.fitnessStrength}</p>}
+                          {viewingSession.fitnessEndurance && <p><span className="font-medium">{t("training.endurance")}</span> {viewingSession.fitnessEndurance}</p>}
                         </div>
                       </div>
                     )}
@@ -439,12 +455,12 @@ export default function Training() {
                       <div>
                         <h4 className="font-semibold flex items-center gap-2 mb-2">
                           <Shield className="h-4 w-4" />
-                          Goalkeeper Training
+                          {t("training.goalkeeperTraining")}
                         </h4>
                         <div className="text-sm space-y-1 ml-6">
-                          {viewingSession.gkHandling && <p><span className="font-medium">Handling:</span> {viewingSession.gkHandling}</p>}
-                          {viewingSession.gkShotStopping && <p><span className="font-medium">Shot Stopping:</span> {viewingSession.gkShotStopping}</p>}
-                          {viewingSession.gkDistribution && <p><span className="font-medium">Distribution:</span> {viewingSession.gkDistribution}</p>}
+                          {viewingSession.gkHandling && <p><span className="font-medium">{t("training.handling")}</span> {viewingSession.gkHandling}</p>}
+                          {viewingSession.gkShotStopping && <p><span className="font-medium">{t("training.shotStopping")}</span> {viewingSession.gkShotStopping}</p>}
+                          {viewingSession.gkDistribution && <p><span className="font-medium">{t("training.distribution")}</span> {viewingSession.gkDistribution}</p>}
                         </div>
                       </div>
                     )}
@@ -453,12 +469,12 @@ export default function Training() {
                       <div>
                         <h4 className="font-semibold flex items-center gap-2 mb-2">
                           <Star className="h-4 w-4" />
-                          Specific Work
+                          {t("training.specificWork")}
                         </h4>
                         <div className="text-sm space-y-1 ml-6">
-                          {viewingSession.specificFinishing && <p><span className="font-medium">Finishing:</span> {viewingSession.specificFinishing}</p>}
-                          {viewingSession.specificDefending && <p><span className="font-medium">Defending:</span> {viewingSession.specificDefending}</p>}
-                          {viewingSession.specificPressing && <p><span className="font-medium">Pressing:</span> {viewingSession.specificPressing}</p>}
+                          {viewingSession.specificFinishing && <p><span className="font-medium">{t("training.finishing")}</span> {viewingSession.specificFinishing}</p>}
+                          {viewingSession.specificDefending && <p><span className="font-medium">{t("training.defending")}</span> {viewingSession.specificDefending}</p>}
+                          {viewingSession.specificPressing && <p><span className="font-medium">{t("training.pressing")}</span> {viewingSession.specificPressing}</p>}
                         </div>
                       </div>
                     )}
@@ -470,7 +486,7 @@ export default function Training() {
               {viewingSession.notes && (
                 <Card>
                   <CardHeader>
-                    <CardTitle>Additional Notes</CardTitle>
+                    <CardTitle>{t("training.additionalNotes")}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <p className="text-muted-foreground">{viewingSession.notes}</p>
@@ -486,12 +502,12 @@ export default function Training() {
       <Dialog open={!!editingSession} onOpenChange={() => setEditingSession(null)}>
         <DialogContent className="max-w-[98vw] w-full max-h-[95vh] overflow-y-auto p-2">
           <DialogHeader>
-            <DialogTitle>Edit Training Session</DialogTitle>
+            <DialogTitle>{t("training.editTrainingSession")}</DialogTitle>
           </DialogHeader>
           {editingSession && (
-            <TrainingForm 
+            <TrainingForm
               session={editingSession}
-              onSuccess={() => setEditingSession(null)} 
+              onSuccess={() => setEditingSession(null)}
             />
           )}
         </DialogContent>

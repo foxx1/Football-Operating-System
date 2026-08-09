@@ -1,45 +1,52 @@
 import express, { type Request, Response, NextFunction } from "express";
-import multer from "multer";
+import session from "express-session";
+import connectPgSimple from "connect-pg-simple";
 import path from "path";
 import fs from "fs";
 import { registerRoutes } from "./routes";
+import { registerAuthRoutes } from "./auth";
 import { setupVite, serveStatic, log } from "./vite";
+import { pool } from "./db";
+import { apiErrorHandler } from "./api-contracts";
+import { env } from "./env";
+import { registerBackgroundJobs } from "./jobs/job-queue";
+import { logger } from "./logger";
+import { createUploadService } from "./services/upload-service";
 
 const app = express();
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+// Raised from Express's 100kb default because tactical board saves and
+// training session images embed base64 PNG/SVG data URLs (canvas exports,
+// library thumbnails) directly in the JSON body.
+app.use(express.json({ limit: "20mb" }));
+app.use(express.urlencoded({ extended: false, limit: "20mb" }));
 
-// Create uploads directory if it doesn't exist
-const uploadsDir = path.join(process.cwd(), 'uploads');
+const PgSessionStore = connectPgSimple(session);
+
+app.use(session({
+  store: process.env.DATABASE_URL ? new PgSessionStore({
+    pool,
+    createTableIfMissing: true,
+  }) : undefined,
+  secret: process.env.SESSION_SECRET || "dev-session-secret-change-me",
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: env.NODE_ENV === "production",
+    maxAge: 1000 * 60 * 60 * 8,
+  },
+}));
+
+registerBackgroundJobs();
+
+const uploadService = createUploadService();
+
+// Local uploads are still served by this process. Object storage providers should serve through signed/public URLs.
+const uploadsDir = path.join(process.cwd(), "uploads");
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
-
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadsDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-  }
-});
-
-const upload = multer({ 
-  storage: storage,
-  limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB limit
-  },
-  fileFilter: (req, file, cb) => {
-    // Accept images and PDFs
-    if (file.mimetype.startsWith('image/') || file.mimetype === 'application/pdf') {
-      cb(null, true);
-    } else {
-      cb(new Error('Only images and PDF files are allowed'));
-    }
-  }
-});
 
 // Add CORS headers for uploads
 app.use('/uploads', (req, res, next) => {
@@ -79,16 +86,13 @@ app.use((req, res, next) => {
   res.on("finish", () => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
-      }
-
-      log(logLine);
+      logger.info("api_request", {
+        method: req.method,
+        path,
+        statusCode: res.statusCode,
+        durationMs: duration,
+        response: capturedJsonResponse,
+      });
     }
   });
 
@@ -96,14 +100,11 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  const server = await registerRoutes(app, upload);
+  registerAuthRoutes(app);
+  const server = await registerRoutes(app, uploadService);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-
-    res.status(status).json({ message });
-    throw err;
+    apiErrorHandler(err, _req, res, _next);
   });
 
   // importantly only setup vite in development and after
@@ -115,15 +116,12 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on port 5000
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = 5000;
+  const port = parseInt(process.env.PORT ?? "5000", 10);
   server.listen({
     port,
     host: "0.0.0.0",
-    reusePort: true,
   }, () => {
     log(`serving on port ${port}`);
+    logger.info("server_started", { port, env: env.NODE_ENV, uploadProvider: uploadService.provider });
   });
 })();

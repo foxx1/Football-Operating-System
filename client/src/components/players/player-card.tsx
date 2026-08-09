@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { FlagIcon } from "@/components/ui/flag-icon";
 import { countries } from "@/lib/countries";
+import { translateWithParams, useI18n } from "@/contexts/I18nContext";
+import { cn, getDisplayName } from "@/lib/utils";
 import { Player } from "@shared/schema";
 
 interface PlayerCardProps {
@@ -22,6 +24,8 @@ const positionColors = {
 };
 
 export default function PlayerCard({ player, onEdit, onViewProfile }: PlayerCardProps) {
+  const { isRtl, t } = useI18n();
+  const displayName = getDisplayName(player, isRtl);
   const positionColor = positionColors[player.position as keyof typeof positionColors] || positionColors.midfielder;
   const age = player.dateOfBirth ? new Date().getFullYear() - new Date(player.dateOfBirth).getFullYear() : null;
   
@@ -37,7 +41,7 @@ export default function PlayerCard({ player, onEdit, onViewProfile }: PlayerCard
           {/* Avatar and Jersey Number */}
           <div className="relative">
             <Avatar className="w-16 h-16 mx-auto">
-              <AvatarImage src={player.profilePicture || ""} alt={`${player.firstName} ${player.lastName}`} />
+              <AvatarImage src={player.profilePicture || ""} alt={displayName} />
               <AvatarFallback className="bg-primary text-primary-foreground text-lg">
                 {player.firstName[0]}{player.lastName[0]}
               </AvatarFallback>
@@ -52,36 +56,31 @@ export default function PlayerCard({ player, onEdit, onViewProfile }: PlayerCard
           {/* Name and Position */}
           <div>
             <h3 className="font-semibold text-lg text-foreground">
-              {player.firstName} {player.lastName}
+              {displayName}
             </h3>
             <Badge className={positionColor}>
-              {player.position.charAt(0).toUpperCase() + player.position.slice(1)}
+              {t(`position.${player.position}`)}
             </Badge>
           </div>
 
           {/* Stats */}
           <div className="grid grid-cols-2 gap-4 text-sm">
             {age && (
-              <div className="flex items-center space-x-2 text-muted-foreground">
+              <div className={cn("flex items-center text-muted-foreground", isRtl ? "space-x-reverse space-x-2" : "space-x-2")}>
                 <Calendar className="w-4 h-4" />
-                <span>{age} years</span>
+                <span>{translateWithParams(t, "players.years", { age: String(age) })}</span>
               </div>
             )}
             {player.height && (
-              <div className="flex items-center space-x-2 text-muted-foreground">
+              <div className={cn("flex items-center text-muted-foreground", isRtl ? "space-x-reverse space-x-2" : "space-x-2")}>
                 <Ruler className="w-4 h-4" />
                 <span>{player.height}cm</span>
               </div>
             )}
             {player.weight && (
-              <div className="flex items-center space-x-2 text-muted-foreground">
+              <div className={cn("flex items-center text-muted-foreground", isRtl ? "space-x-reverse space-x-2" : "space-x-2")}>
                 <Weight className="w-4 h-4" />
                 <span>{player.weight}kg</span>
-              </div>
-            )}
-            {player.foot && (
-              <div className="text-muted-foreground">
-                <span className="font-medium">Foot:</span> {player.foot}
               </div>
             )}
           </div>
@@ -89,19 +88,19 @@ export default function PlayerCard({ player, onEdit, onViewProfile }: PlayerCard
           {/* Contact Info */}
           <div className="space-y-2 pt-2 border-t border-border">
             {player.email && (
-              <div className="flex items-center justify-center space-x-2 text-sm text-muted-foreground">
+              <div className={cn("flex items-center justify-center text-sm text-muted-foreground", isRtl ? "space-x-reverse space-x-2" : "space-x-2")}>
                 <Mail className="w-3 h-3" />
                 <span className="truncate">{player.email}</span>
               </div>
             )}
             {nationalityCountry && (
-              <div className="flex items-center justify-center space-x-2 text-sm text-muted-foreground">
-                <FlagIcon countryCode={nationalityCountry.code} size="sm" className="mr-2" />
+              <div className={cn("flex items-center justify-center text-sm text-muted-foreground", isRtl ? "space-x-reverse space-x-2" : "space-x-2")}>
+                <FlagIcon countryCode={nationalityCountry.code} size="sm" className={isRtl ? "ml-2" : "mr-2"} />
                 <span>{nationalityCountry.code} - {player.nationality}</span>
               </div>
             )}
             {player.phoneNumber && (
-              <div className="flex items-center justify-center space-x-2 text-sm text-muted-foreground">
+              <div className={cn("flex items-center justify-center text-sm text-muted-foreground", isRtl ? "space-x-reverse space-x-2" : "space-x-2")}>
                 <Phone className="w-3 h-3" />
                 <span>{player.phoneNumber}</span>
               </div>
@@ -109,14 +108,14 @@ export default function PlayerCard({ player, onEdit, onViewProfile }: PlayerCard
           </div>
 
           {/* Actions */}
-          <div className="flex space-x-2 pt-2">
+          <div className={cn("flex pt-2", isRtl ? "space-x-reverse space-x-2" : "space-x-2")}>
             <Button 
               variant="outline" 
               size="sm" 
               className="flex-1"
               onClick={() => onViewProfile?.(player)}
             >
-              View Profile
+              {t("players.viewProfile")}
             </Button>
             <Button 
               variant="default" 
@@ -124,7 +123,7 @@ export default function PlayerCard({ player, onEdit, onViewProfile }: PlayerCard
               className="flex-1"
               onClick={() => onEdit?.(player)}
             >
-              Edit
+              {t("players.edit")}
             </Button>
           </div>
         </div>

@@ -21,16 +21,16 @@ export default function Tactics() {
   const [newFormationType, setNewFormationType] = useState("");
   const { toast } = useToast();
 
-  const { data: teams } = useQuery({
+  const { data: teams = [] } = useQuery<Team[]>({
     queryKey: ["/api/teams"],
   });
 
-  const { data: formations, isLoading } = useQuery({
+  const { data: formations = [], isLoading } = useQuery<TacticalFormation[]>({
     queryKey: ["/api/teams", selectedTeam, "formations"],
     enabled: !!selectedTeam,
   });
 
-  const { data: teamPlayers } = useQuery({
+  const { data: teamPlayers = [] } = useQuery<any[]>({
     queryKey: ["/api/teams", selectedTeam, "players"],
     enabled: !!selectedTeam,
   });

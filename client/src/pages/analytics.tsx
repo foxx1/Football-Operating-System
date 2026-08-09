@@ -37,12 +37,14 @@ import {
   PolarRadiusAxis
 } from "recharts";
 import type { AnalyticsReport, Player } from "@shared/schema";
+import { useI18n } from "@/contexts/I18nContext";
 
 export default function AnalyticsPage() {
   const [selectedPeriod, setSelectedPeriod] = useState<string>("monthly");
   const [selectedType, setSelectedType] = useState<string>("all");
   const [selectedPlayer, setSelectedPlayer] = useState<string>("all");
 
+  const { t, direction } = useI18n();
   const { organizationName, logoUrl, currentSeason } = useSettings();
 
   const { data: reports = [], isLoading } = useQuery<AnalyticsReport[]>({
@@ -450,16 +452,16 @@ export default function AnalyticsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Player Performance Dashboard</h1>
-          <p className="text-gray-600 mt-1">Interactive analytics and performance insights</p>
+          <h1 className="text-3xl font-bold text-gray-900">{t("analytics.title")}</h1>
+          <p className="text-gray-600 mt-1">{t("analytics.description")}</p>
         </div>
         <div className="flex gap-2">
           <Select value={selectedPlayer} onValueChange={setSelectedPlayer}>
             <SelectTrigger className="w-48">
-              <SelectValue placeholder="Select Player" />
+              <SelectValue placeholder={t("analytics.selectPlayer")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Players</SelectItem>
+              <SelectItem value="all">{t("analytics.allPlayers")}</SelectItem>
               {players.map((player: Player) => (
                 <SelectItem key={player.id} value={player.id.toString()}>
                   {player.firstName} {player.lastName}
@@ -471,21 +473,21 @@ export default function AnalyticsPage() {
             <DropdownMenuTrigger asChild>
               <Button className="flex items-center gap-2">
                 <Download className="w-4 h-4" />
-                Export Data
+                {t("analytics.exportData")}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
               <DropdownMenuItem onClick={exportToPDF}>
                 <Download className="w-4 h-4 mr-2" />
-                Export as PDF
+                {t("analytics.exportPdf")}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={exportToCSV}>
                 <Download className="w-4 h-4 mr-2" />
-                Export as CSV
+                {t("analytics.exportCsv")}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={exportChartsAsImages}>
                 <Download className="w-4 h-4 mr-2" />
-                Export Charts as Images
+                {t("analytics.exportCharts")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -496,69 +498,69 @@ export default function AnalyticsPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Goals This Season</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("analytics.kpi.goals")}</CardTitle>
             <Target className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">35</div>
             <Progress value={78} className="mt-2" />
             <p className="text-xs text-muted-foreground mt-1">
-              +12% from last season
+              {t("analytics.kpi.goalsChange")}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Assists</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("analytics.kpi.assists")}</CardTitle>
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">22</div>
             <Progress value={65} className="mt-2" />
             <p className="text-xs text-muted-foreground mt-1">
-              +5% from last season
+              {t("analytics.kpi.assistsChange")}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Fitness Score</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("analytics.kpi.fitness")}</CardTitle>
             <Zap className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">87%</div>
             <Progress value={87} className="mt-2" />
             <p className="text-xs text-muted-foreground mt-1">
-              Excellent condition
+              {t("analytics.kpi.fitnessStatus")}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Minutes Played</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("analytics.kpi.minutes")}</CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">4,830</div>
             <Progress value={92} className="mt-2" />
             <p className="text-xs text-muted-foreground mt-1">
-              High involvement
+              {t("analytics.kpi.minutesStatus")}
             </p>
           </CardContent>
         </Card>
       </div>
 
       {/* Interactive Dashboard */}
-      <Tabs defaultValue="performance" className="w-full">
+      <Tabs defaultValue="performance" className="w-full" dir={direction}>
         <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="performance">Performance</TabsTrigger>
-          <TabsTrigger value="fitness">Fitness</TabsTrigger>
-          <TabsTrigger value="position">Position Analysis</TabsTrigger>
-          <TabsTrigger value="training">Training</TabsTrigger>
-          <TabsTrigger value="comparison">Comparison</TabsTrigger>
+          <TabsTrigger value="performance">{t("analytics.tabs.performance")}</TabsTrigger>
+          <TabsTrigger value="fitness">{t("analytics.tabs.fitness")}</TabsTrigger>
+          <TabsTrigger value="position">{t("analytics.tabs.position")}</TabsTrigger>
+          <TabsTrigger value="training">{t("analytics.tabs.training")}</TabsTrigger>
+          <TabsTrigger value="comparison">{t("analytics.tabs.comparison")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="performance" className="space-y-6">
@@ -566,7 +568,7 @@ export default function AnalyticsPage() {
             {/* Goals & Assists Trend */}
             <Card>
               <CardHeader>
-                <CardTitle>Goals & Assists Trend</CardTitle>
+                <CardTitle>{t("analytics.charts.goalsAssistsTrend")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div id="performance-chart">
@@ -604,7 +606,7 @@ export default function AnalyticsPage() {
             {/* Player Statistics Pie Chart */}
             <Card>
               <CardHeader>
-                <CardTitle>Season Statistics</CardTitle>
+                <CardTitle>{t("analytics.charts.seasonStats")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div id="statistics-chart">
@@ -637,7 +639,7 @@ export default function AnalyticsPage() {
           {/* Minutes Played & Fitness Chart */}
           <Card>
             <CardHeader>
-              <CardTitle>Monthly Performance Trends</CardTitle>
+              <CardTitle>{t("analytics.charts.monthlyTrends")}</CardTitle>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={400}>
@@ -676,7 +678,7 @@ export default function AnalyticsPage() {
             {/* Fitness Radar Chart */}
             <Card>
               <CardHeader>
-                <CardTitle>Fitness Profile</CardTitle>
+                <CardTitle>{t("analytics.charts.fitnessProfile")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div id="fitness-chart">
@@ -704,7 +706,7 @@ export default function AnalyticsPage() {
             {/* Training Intensity */}
             <Card>
               <CardHeader>
-                <CardTitle>Weekly Training Intensity</CardTitle>
+                <CardTitle>{t("analytics.charts.weeklyTraining")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={400}>
@@ -736,7 +738,7 @@ export default function AnalyticsPage() {
         <TabsContent value="position" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Position-Based Performance Analysis</CardTitle>
+              <CardTitle>{t("analytics.charts.positionAnalysis")}</CardTitle>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={400}>
@@ -772,7 +774,7 @@ export default function AnalyticsPage() {
             {/* Training Load Radial Chart */}
             <Card>
               <CardHeader>
-                <CardTitle>Training Load Distribution</CardTitle>
+                <CardTitle>{t("analytics.charts.trainingLoad")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
@@ -798,33 +800,33 @@ export default function AnalyticsPage() {
             {/* Recovery Metrics */}
             <Card>
               <CardHeader>
-                <CardTitle>Recovery Metrics</CardTitle>
+                <CardTitle>{t("analytics.charts.recoveryMetrics")}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
                   <div className="flex justify-between text-sm mb-1">
-                    <span>Sleep Quality</span>
+                    <span>{t("analytics.metrics.sleep")}</span>
                     <span>85%</span>
                   </div>
                   <Progress value={85} />
                 </div>
                 <div>
                   <div className="flex justify-between text-sm mb-1">
-                    <span>Heart Rate Variability</span>
+                    <span>{t("analytics.metrics.hrv")}</span>
                     <span>78%</span>
                   </div>
                   <Progress value={78} />
                 </div>
                 <div>
                   <div className="flex justify-between text-sm mb-1">
-                    <span>Stress Level</span>
+                    <span>{t("analytics.metrics.stress")}</span>
                     <span>35%</span>
                   </div>
                   <Progress value={35} />
                 </div>
                 <div>
                   <div className="flex justify-between text-sm mb-1">
-                    <span>Readiness Score</span>
+                    <span>{t("analytics.metrics.readiness")}</span>
                     <span>92%</span>
                   </div>
                   <Progress value={92} />
@@ -837,7 +839,7 @@ export default function AnalyticsPage() {
         <TabsContent value="comparison" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Team vs Individual Performance</CardTitle>
+              <CardTitle>{t("analytics.charts.teamVsIndividual")}</CardTitle>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={400}>

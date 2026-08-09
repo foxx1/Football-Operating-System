@@ -13,6 +13,8 @@ import { Badge } from "@/components/ui/badge";
 import { insertTeamSchema } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { translateWithParams, useI18n } from "@/contexts/I18nContext";
+import { cn } from "@/lib/utils";
 
 const teamFormSchema = insertTeamSchema.extend({
   name: z.string().min(1, "Team name is required"),
@@ -38,6 +40,7 @@ interface TeamFormProps {
 
 export default function TeamForm({ onSuccess, onCancel }: TeamFormProps) {
   const { toast } = useToast();
+  const { isRtl, t } = useI18n();
   const [showCustomCategory, setShowCustomCategory] = useState(false);
 
   const form = useForm<TeamFormData>({
@@ -63,8 +66,8 @@ export default function TeamForm({ onSuccess, onCancel }: TeamFormProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
       toast({
-        title: "Success",
-        description: "Team created successfully!",
+        title: t("teamForm.createdTitle"),
+        description: t("teamForm.createdDescription"),
       });
       form.reset();
       setShowCustomCategory(false);
@@ -72,8 +75,8 @@ export default function TeamForm({ onSuccess, onCancel }: TeamFormProps) {
     },
     onError: (error: any) => {
       toast({
-        title: "Error",
-        description: error.message || "Failed to create team",
+        title: t("teamForm.errorTitle"),
+        description: error.message || t("teamForm.errorDescription"),
         variant: "destructive",
       });
     },
@@ -98,49 +101,49 @@ export default function TeamForm({ onSuccess, onCancel }: TeamFormProps) {
     switch (category) {
       case 'first_team':
         return {
-          label: 'First Team',
+          label: t("teamCategory.first_team"),
           description: 'Main competitive squad',
           color: 'bg-blue-100 text-blue-800 border-blue-200'
         };
       case 'reserves':
         return {
-          label: 'Reserve Team',
+          label: t("teamCategory.reserves"),
           description: 'Secondary squad and backup players',
           color: 'bg-green-100 text-green-800 border-green-200'
         };
       case 'under_21':
         return {
-          label: 'Under 21',
+          label: t("teamCategory.under_21"),
           description: 'Youth development - Under 21 years',
           color: 'bg-purple-100 text-purple-800 border-purple-200'
         };
       case 'under_19':
         return {
-          label: 'Under 19',
+          label: t("teamCategory.under_19"),
           description: 'Youth development - Under 19 years',
           color: 'bg-indigo-100 text-indigo-800 border-indigo-200'
         };
       case 'under_17':
         return {
-          label: 'Under 17',
+          label: t("teamCategory.under_17"),
           description: 'Youth development - Under 17 years',
           color: 'bg-pink-100 text-pink-800 border-pink-200'
         };
       case 'under_15':
         return {
-          label: 'Under 15',
+          label: t("teamCategory.under_15"),
           description: 'Youth development - Under 15 years',
           color: 'bg-orange-100 text-orange-800 border-orange-200'
         };
       case 'academy_rootgrass':
         return {
-          label: 'Academy - Rootgrass',
+          label: t("teamCategory.academy_rootgrass"),
           description: 'Academy grassroots development',
           color: 'bg-teal-100 text-teal-800 border-teal-200'
         };
       case 'youth':
         return {
-          label: 'Youth Team',
+          label: t("teamCategory.youth"),
           description: 'General youth development squad',
           color: 'bg-amber-100 text-amber-800 border-amber-200'
         };
@@ -159,10 +162,10 @@ export default function TeamForm({ onSuccess, onCancel }: TeamFormProps) {
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           {/* Team Name */}
           <div className="space-y-2">
-            <Label htmlFor="name">Team Name *</Label>
+            <Label htmlFor="name">{t("teamForm.name")}</Label>
             <Input
               id="name"
-              placeholder="e.g., Manchester United, Arsenal FC, Barcelona"
+              placeholder={t("teamForm.namePlaceholder")}
               {...form.register("name")}
               className={form.formState.errors.name ? "border-red-500" : ""}
             />
@@ -173,7 +176,7 @@ export default function TeamForm({ onSuccess, onCancel }: TeamFormProps) {
 
           {/* Team Category */}
           <div className="space-y-2">
-            <Label>Team Category *</Label>
+            <Label>{t("teamForm.category")}</Label>
             <Select
               value={form.watch("category")}
               onValueChange={(value) => {
@@ -185,77 +188,77 @@ export default function TeamForm({ onSuccess, onCancel }: TeamFormProps) {
               }}
             >
               <SelectTrigger className={form.formState.errors.category ? "border-red-500" : ""}>
-                <SelectValue placeholder="Select team category" />
+                <SelectValue placeholder={t("teamForm.categoryPlaceholder")} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="first_team">
-                  <div className="flex items-center space-x-2">
+                  <div className={cn("flex items-center", isRtl ? "space-x-reverse space-x-2" : "space-x-2")}>
                     <Badge className="bg-blue-100 text-blue-800 border-blue-200">
-                      First Team
+                      {t("teamCategory.first_team")}
                     </Badge>
                     <span className="text-sm text-gray-600">Main competitive squad</span>
                   </div>
                 </SelectItem>
                 <SelectItem value="reserves">
-                  <div className="flex items-center space-x-2">
+                  <div className={cn("flex items-center", isRtl ? "space-x-reverse space-x-2" : "space-x-2")}>
                     <Badge className="bg-green-100 text-green-800 border-green-200">
-                      Reserves
+                      {t("teamCategory.reserves")}
                     </Badge>
                     <span className="text-sm text-gray-600">Secondary squad and backup players</span>
                   </div>
                 </SelectItem>
                 <SelectItem value="under_21">
-                  <div className="flex items-center space-x-2">
+                  <div className={cn("flex items-center", isRtl ? "space-x-reverse space-x-2" : "space-x-2")}>
                     <Badge className="bg-purple-100 text-purple-800 border-purple-200">
-                      Under 21
+                      {t("teamCategory.under_21")}
                     </Badge>
                     <span className="text-sm text-gray-600">Youth development - Under 21 years</span>
                   </div>
                 </SelectItem>
                 <SelectItem value="under_19">
-                  <div className="flex items-center space-x-2">
+                  <div className={cn("flex items-center", isRtl ? "space-x-reverse space-x-2" : "space-x-2")}>
                     <Badge className="bg-indigo-100 text-indigo-800 border-indigo-200">
-                      Under 19
+                      {t("teamCategory.under_19")}
                     </Badge>
                     <span className="text-sm text-gray-600">Youth development - Under 19 years</span>
                   </div>
                 </SelectItem>
                 <SelectItem value="under_17">
-                  <div className="flex items-center space-x-2">
+                  <div className={cn("flex items-center", isRtl ? "space-x-reverse space-x-2" : "space-x-2")}>
                     <Badge className="bg-pink-100 text-pink-800 border-pink-200">
-                      Under 17
+                      {t("teamCategory.under_17")}
                     </Badge>
                     <span className="text-sm text-gray-600">Youth development - Under 17 years</span>
                   </div>
                 </SelectItem>
                 <SelectItem value="under_15">
-                  <div className="flex items-center space-x-2">
+                  <div className={cn("flex items-center", isRtl ? "space-x-reverse space-x-2" : "space-x-2")}>
                     <Badge className="bg-orange-100 text-orange-800 border-orange-200">
-                      Under 15
+                      {t("teamCategory.under_15")}
                     </Badge>
                     <span className="text-sm text-gray-600">Youth development - Under 15 years</span>
                   </div>
                 </SelectItem>
                 <SelectItem value="academy_rootgrass">
-                  <div className="flex items-center space-x-2">
+                  <div className={cn("flex items-center", isRtl ? "space-x-reverse space-x-2" : "space-x-2")}>
                     <Badge className="bg-teal-100 text-teal-800 border-teal-200">
-                      Academy - Rootgrass
+                      {t("teamCategory.academy_rootgrass")}
                     </Badge>
                     <span className="text-sm text-gray-600">Academy grassroots development</span>
                   </div>
                 </SelectItem>
                 <SelectItem value="youth">
-                  <div className="flex items-center space-x-2">
+                  <div className={cn("flex items-center", isRtl ? "space-x-reverse space-x-2" : "space-x-2")}>
                     <Badge className="bg-amber-100 text-amber-800 border-amber-200">
-                      Youth Team
+                      {t("teamCategory.youth")}
                     </Badge>
                     <span className="text-sm text-gray-600">General youth development squad</span>
                   </div>
                 </SelectItem>
                 <SelectItem value="custom">
-                  <div className="flex items-center space-x-2">
+                  <div className={cn("flex items-center", isRtl ? "space-x-reverse space-x-2" : "space-x-2")}>
                     <Badge className="bg-gray-100 text-gray-800 border-gray-200">
-                      Custom Category
+                      {t("teamCategory.custom")}
                     </Badge>
                     <span className="text-sm text-gray-600">Define your own team category</span>
                   </div>
@@ -270,17 +273,17 @@ export default function TeamForm({ onSuccess, onCancel }: TeamFormProps) {
           {/* Custom Category Input */}
           {showCustomCategory && (
             <div className="space-y-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <div className="flex items-center space-x-2">
+              <div className={cn("flex items-center", isRtl ? "space-x-reverse space-x-2" : "space-x-2")}>
                 <Label htmlFor="customCategory" className="text-blue-800 font-medium">
-                  Custom Category Name *
+                  {t("teamForm.customName")}
                 </Label>
                 <Badge className="bg-blue-100 text-blue-800 border-blue-300">
-                  Custom
+                  {t("teamCategory.custom")}
                 </Badge>
               </div>
               <Input
                 id="customCategory"
-                placeholder="Type your custom category name here..."
+                placeholder={t("teamForm.customPlaceholder")}
                 {...form.register("customCategory")}
                 className={`${form.formState.errors.customCategory ? "border-red-500" : "border-blue-300"} bg-white`}
                 autoFocus
@@ -290,7 +293,7 @@ export default function TeamForm({ onSuccess, onCancel }: TeamFormProps) {
                 <p className="text-sm text-red-600">{form.formState.errors.customCategory.message}</p>
               )}
               <div className="text-sm text-blue-700">
-                <p className="font-medium mb-2">💡 Quick select or type your own:</p>
+                <p className="font-medium mb-2">{t("teamForm.quickSelect")}</p>
                 <div className="flex flex-wrap gap-2 mb-3">
                   {["Under 13", "Under 11", "Under 9", "Women's Team", "Veterans", "Futsal Team", "Development Squad"].map((category) => (
                     <Button
@@ -309,7 +312,7 @@ export default function TeamForm({ onSuccess, onCancel }: TeamFormProps) {
                   ))}
                 </div>
                 <p className="text-xs text-blue-500">
-                  {form.watch("customCategory")?.length || 0}/50 characters
+                  {translateWithParams(t, "teamForm.characters", { count: String(form.watch("customCategory")?.length || 0) })}
                 </p>
               </div>
             </div>
@@ -317,18 +320,18 @@ export default function TeamForm({ onSuccess, onCancel }: TeamFormProps) {
 
           {/* Description */}
           <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
+            <Label htmlFor="description">{t("teamForm.description")}</Label>
             <Textarea
               id="description"
-              placeholder="Brief description of the team, objectives, or notes..."
+              placeholder={t("teamForm.descriptionPlaceholder")}
               rows={3}
               {...form.register("description")}
             />
-            <p className="text-sm text-gray-500">Optional: Add details about the team's purpose or objectives</p>
+            <p className="text-sm text-gray-500">{t("teamForm.descriptionHelp")}</p>
           </div>
 
           {/* Form Actions */}
-          <div className="flex justify-end space-x-4 pt-4">
+          <div className={cn("flex justify-end pt-4", isRtl ? "space-x-reverse space-x-4" : "space-x-4")}>
             {onCancel && (
               <Button
                 type="button"
@@ -336,7 +339,7 @@ export default function TeamForm({ onSuccess, onCancel }: TeamFormProps) {
                 onClick={onCancel}
                 disabled={createTeamMutation.isPending}
               >
-                Cancel
+                {t("teamForm.cancel")}
               </Button>
             )}
             <Button
@@ -344,7 +347,7 @@ export default function TeamForm({ onSuccess, onCancel }: TeamFormProps) {
               disabled={createTeamMutation.isPending}
               className="min-w-[120px]"
             >
-              {createTeamMutation.isPending ? "Creating..." : "Create Team"}
+              {createTeamMutation.isPending ? t("teamForm.creating") : t("teams.create")}
             </Button>
           </div>
         </form>

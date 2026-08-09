@@ -16,7 +16,7 @@ interface TacticsBoardProps {
 }
 
 export default function TacticsBoard({ formation, players, onSave, onPositionsChange }: TacticsBoardProps) {
-  const [positions, setPositions] = useState(formation.positions || []);
+  const [positions, setPositions] = useState<any[]>(Array.isArray(formation.positions) ? formation.positions : []);
   const [notes, setNotes] = useState(formation.notes || "");
   const [drawingMode, setDrawingMode] = useState<string | null>(null);
   const [drawings, setDrawings] = useState<any[]>([]);
@@ -24,12 +24,12 @@ export default function TacticsBoard({ formation, players, onSave, onPositionsCh
   const svgRef = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
-    setPositions(formation.positions || []);
+    setPositions(Array.isArray(formation.positions) ? formation.positions : []);
     setNotes(formation.notes || "");
   }, [formation]);
 
   const handlePositionDrag = (positionId: string, newX: number, newY: number) => {
-    const updatedPositions = positions.map(pos => 
+    const updatedPositions = positions.map(pos =>
       pos.id === positionId ? { ...pos, x: newX, y: newY } : pos
     );
     setPositions(updatedPositions);
@@ -37,7 +37,7 @@ export default function TacticsBoard({ formation, players, onSave, onPositionsCh
   };
 
   const handlePlayerAssignment = (positionId: string, playerId: string | null) => {
-    const updatedPositions = positions.map(pos => 
+    const updatedPositions = positions.map(pos =>
       pos.id === positionId ? { ...pos, playerId: playerId ? parseInt(playerId) : null } : pos
     );
     setPositions(updatedPositions);
@@ -65,9 +65,9 @@ export default function TacticsBoard({ formation, players, onSave, onPositionsCh
   };
 
   const resetPositions = () => {
-    setPositions(formation.positions || []);
+    setPositions(Array.isArray(formation.positions) ? formation.positions : []);
     setDrawings([]);
-    onPositionsChange?.(formation.positions || []);
+    onPositionsChange?.(Array.isArray(formation.positions) ? formation.positions : []);
   };
 
   const handleSave = () => {
@@ -170,7 +170,7 @@ export default function TacticsBoard({ formation, players, onSave, onPositionsCh
                     return (
                       <div key={pos.id} className="space-y-1">
                         <div className="flex items-center space-x-2">
-                          <div 
+                          <div
                             className="w-3 h-3 rounded-full"
                             style={{ backgroundColor: getPositionColor(pos.position) }}
                           ></div>
@@ -179,14 +179,14 @@ export default function TacticsBoard({ formation, players, onSave, onPositionsCh
                           </span>
                         </div>
                         <Select
-                          value={pos.playerId?.toString() || ""}
-                          onValueChange={(value) => handlePlayerAssignment(pos.id, value || null)}
+                          value={pos.playerId?.toString() || "unassigned"}
+                          onValueChange={(value) => handlePlayerAssignment(pos.id, value === "unassigned" ? null : value)}
                         >
                           <SelectTrigger className="h-8 text-xs">
                             <SelectValue placeholder="Assign player" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Unassigned</SelectItem>
+                            <SelectItem value="unassigned">Unassigned</SelectItem>
                             {players
                               .filter(p => {
                                 const player = p.player || p;
@@ -225,15 +225,15 @@ export default function TacticsBoard({ formation, players, onSave, onPositionsCh
                   <line x1="0" y1="50" x2="100" y2="50" stroke="white" strokeWidth="0.3" />
                   <circle cx="50" cy="50" r="9.15" fill="none" stroke="white" strokeWidth="0.3" />
                   <circle cx="50" cy="50" r="0.3" fill="white" />
-                  
+
                   {/* Goals */}
                   <rect x="35" y="0" width="30" height="5.5" fill="none" stroke="white" strokeWidth="0.3" />
                   <rect x="35" y="94.5" width="30" height="5.5" fill="none" stroke="white" strokeWidth="0.3" />
-                  
+
                   {/* Penalty areas */}
                   <rect x="20" y="0" width="60" height="16.5" fill="none" stroke="white" strokeWidth="0.3" />
                   <rect x="20" y="83.5" width="60" height="16.5" fill="none" stroke="white" strokeWidth="0.3" />
-                  
+
                   {/* 6-yard boxes */}
                   <rect x="35" y="0" width="30" height="5.5" fill="none" stroke="white" strokeWidth="0.3" />
                   <rect x="35" y="94.5" width="30" height="5.5" fill="none" stroke="white" strokeWidth="0.3" />

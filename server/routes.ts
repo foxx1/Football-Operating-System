@@ -1,16 +1,526 @@
-import type { Express } from "express";
+import crypto from "crypto";
+import type { Express, RequestHandler } from "express";
 import { createServer, type Server } from "http";
+import { z } from "zod";
 import { storage } from "./storage";
-import { 
+import { getCurrentUserId, requireAuth, rolePermissions } from "./auth";
+import { registerMatchSquadRoutes } from "./route-modules/match-squads";
+import { registerMeetingRoutes } from "./route-modules/meetings";
+import { registerAdminUserRoutes } from "./route-modules/admin-users";
+import { registerNotificationRoutes } from "./route-modules/notifications";
+import type { UploadService } from "./services/upload-service";
+import {
   insertPlayerSchema, insertTeamSchema, insertTrainingSessionSchema,
   insertSessionAttendanceSchema, insertTacticalFormationSchema, insertPlayerStatsSchema,
-  insertStaffSchema, insertMatchSchema, insertMatchSquadSchema,
+  insertStaffSchema, insertMatchSchema,
   insertAnalyticsReportSchema, insertSystemSettingsSchema,
   insertMonthlyBudgetSchema, insertExpenseSchema, insertPlayerContractSchema,
-  insertPerformanceReactionSchema, insertTacticalBoardSchema
+  insertPerformanceReactionSchema, insertTacticalBoardSchema, employeeRoles,
+  isTechnicalStaffRole,
+  type User
 } from "@shared/schema";
 
-export async function registerRoutes(app: Express, upload?: any): Promise<Server> {
+const employeeInvitationSchema = z.object({
+  role: z.enum(employeeRoles),
+  email: z.string().trim().email().optional().nullable(),
+});
+
+const playerProfileSchema = z.object({
+  firstName: z.string().trim().min(1, "First name is required"),
+  lastName: z.string().trim().min(1, "Last name is required"),
+  firstNameAr: z.string().trim().nullable().optional(),
+  lastNameAr: z.string().trim().nullable().optional(),
+  email: z.string().trim().email("Valid email is required"),
+  phoneNumber: z.string().trim().min(1, "Phone number is required"),
+  nationality: z.string().trim().min(1, "Nationality is required"),
+  dateOfBirth: z.string().trim().min(1, "Date of birth is required"),
+  idNumber: z.string().trim().min(1, "National ID number is required"),
+  profilePicture: z.string().trim().nullable().optional(),
+});
+
+const staffProfileSchema = z.object({
+  firstName: z.string().trim().min(1, "First name is required"),
+  lastName: z.string().trim().min(1, "Last name is required"),
+  firstNameAr: z.string().trim().nullable().optional(),
+  lastNameAr: z.string().trim().nullable().optional(),
+  email: z.string().trim().email("Valid email is required"),
+  phoneNumber: z.string().trim().min(1, "Phone number is required"),
+  nationality: z.string().trim().min(1, "Nationality is required"),
+  idNumber: z.string().trim().min(1, "National ID number is required"),
+  employmentType: z.enum(["full_time", "part_time", "contract", "volunteer"]),
+  startDate: z.string().trim().min(1, "Start date is required"),
+  profilePicture: z.string().trim().nullable().optional(),
+});
+
+function isPlayerProfileComplete(player: Awaited<ReturnType<typeof storage.getPlayers>>[number] | undefined) {
+  return Boolean(
+    player?.firstName &&
+    player.lastName &&
+    player.email &&
+    player.phoneNumber &&
+    player.nationality &&
+    player.dateOfBirth &&
+    player.idNumber,
+  );
+}
+
+function isEmployeeAccountRole(role: string): role is (typeof employeeRoles)[number] {
+  return (employeeRoles as readonly string[]).includes(role);
+}
+
+// Technical staff (coaches, analysts, physio, etc.) can review and edit the
+// player roster, but only club administration can add or remove players.
+const blockTechnicalStaffFromRosterMutation: RequestHandler = async (req, res, next) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ message: "Authentication required" });
+  }
+
+  const user = await storage.getUser(req.session.userId);
+  if (!user) {
+    return res.status(401).json({ message: "Authentication required" });
+  }
+
+  if (isTechnicalStaffRole(user.role)) {
+    return res.status(403).json({ message: "Technical staff can review and edit players, but cannot add or delete them" });
+  }
+
+  next();
+};
+
+function getStaffDepartment(role: (typeof employeeRoles)[number]) {
+  if (role === "physiotherapist") return "medical";
+  if (role === "analyst") return "analysis";
+  if (["kit_manager", "team_manager", "team_administrative"].includes(role)) return "operations";
+  return "coaching";
+}
+
+function isStaffProfileComplete(member: Awaited<ReturnType<typeof storage.getStaff>>[number] | undefined) {
+  return Boolean(
+    member?.firstName &&
+    member.lastName &&
+    member.email &&
+    member.phoneNumber &&
+    member.nationality &&
+    member.idNumber &&
+    member.employmentType &&
+    member.startDate,
+  );
+}
+
+const playerRegistrationFields = [
+  ["firstName", "First name"],
+  ["lastName", "Last name"],
+  ["email", "Email"],
+  ["phoneNumber", "Phone number"],
+  ["nationality", "Nationality"],
+  ["dateOfBirth", "Date of birth"],
+  ["idNumber", "National ID number"],
+] as const;
+
+const staffRegistrationFields = [
+  ["firstName", "First name"],
+  ["lastName", "Last name"],
+  ["email", "Email"],
+  ["phoneNumber", "Phone number"],
+  ["nationality", "Nationality"],
+  ["idNumber", "National ID number"],
+  ["employmentType", "Employment type"],
+  ["startDate", "Employment start date"],
+] as const;
+
+async function getUserRegistrationStatus(user: User) {
+  if (user.role === "player") {
+    const profile = (await storage.getPlayers()).find((player) => player.email?.toLowerCase() === user.email.toLowerCase());
+    const missingFields = playerRegistrationFields
+      .filter(([key]) => !profile?.[key])
+      .map(([, label]) => label);
+    return { type: "player" as const, profileId: profile?.id ?? null, missingFields, isComplete: missingFields.length === 0 };
+  }
+
+  const profile = (await storage.getStaff()).find((member) => member.email.toLowerCase() === user.email.toLowerCase());
+  const missingFields = staffRegistrationFields
+    .filter(([key]) => !profile?.[key])
+    .map(([, label]) => label);
+  return { type: "staff" as const, profileId: profile?.id ?? null, missingFields, isComplete: missingFields.length === 0 };
+}
+
+function isRegistrationAdmin(user: User | undefined) {
+  return user?.role === "club_super_admin" || user?.role === "admin";
+}
+
+// Notifies every player and staff member on a team (who already has a linked
+// user account, matched by email like the rest of the app's identity checks)
+// that a training session was scheduled for their team.
+async function notifyTeamOfTraining(session: Awaited<ReturnType<typeof storage.createTrainingSession>>) {
+  const [teamPlayers, teamStaffMembers, users, team] = await Promise.all([
+    storage.getTeamPlayers(session.teamId),
+    storage.getTeamStaff(session.teamId),
+    storage.getUsers(),
+    storage.getTeam(session.teamId),
+  ]);
+
+  const usersByEmail = new Map(users.map((u) => [u.email.toLowerCase(), u]));
+  const link = `/training/attendance?session=${session.id}`;
+  const title = "New training session scheduled";
+  const message = `${session.title} for ${team?.name ?? "your team"} on ${session.date} at ${session.startTime}`;
+
+  const recipientEmails = [
+    ...teamPlayers.map((tp) => tp.player.email),
+    ...teamStaffMembers.map((ts) => ts.staff.email),
+  ];
+
+  for (const email of recipientEmails) {
+    if (!email) continue;
+    const user = usersByEmail.get(email.toLowerCase());
+    if (!user) continue;
+    await storage.createNotification({
+      userId: user.id,
+      type: "training_scheduled",
+      title,
+      message,
+      link,
+      relatedSessionId: session.id,
+    });
+  }
+}
+
+// Notifies a team's staff when a player requests leave for a training session.
+async function notifyStaffOfLeaveRequest(sessionId: number, player: Awaited<ReturnType<typeof storage.getPlayers>>[number]) {
+  const session = await storage.getTrainingSession(sessionId);
+  if (!session) return;
+
+  const [teamStaffMembers, users] = await Promise.all([
+    storage.getTeamStaff(session.teamId),
+    storage.getUsers(),
+  ]);
+
+  const usersByEmail = new Map(users.map((u) => [u.email.toLowerCase(), u]));
+  const link = `/training/attendance?session=${session.id}`;
+  const title = "Leave request for training";
+  const message = `${player.firstName} ${player.lastName} requested leave for ${session.title} on ${session.date}`;
+
+  for (const ts of teamStaffMembers) {
+    const user = usersByEmail.get(ts.staff.email.toLowerCase());
+    if (!user) continue;
+    await storage.createNotification({
+      userId: user.id,
+      type: "leave_requested",
+      title,
+      message,
+      link,
+      relatedSessionId: session.id,
+    });
+  }
+}
+
+export async function registerRoutes(app: Express, uploadService?: UploadService): Promise<Server> {
+  const upload = uploadService?.middleware;
+  registerMatchSquadRoutes(app);
+  registerMeetingRoutes(app);
+  registerAdminUserRoutes(app);
+  registerNotificationRoutes(app);
+
+  app.get("/api/player/profile", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(getCurrentUserId(req));
+      if (!user || user.role !== "player") {
+        return res.status(403).json({ message: "Player access required" });
+      }
+
+      const normalizedEmail = user.email.toLowerCase();
+      const player = (await storage.getPlayers()).find((candidate) => {
+        return candidate.email?.toLowerCase() === normalizedEmail;
+      });
+
+      res.json({
+        user,
+        player: player ?? null,
+        isComplete: isPlayerProfileComplete(player),
+      });
+    } catch (error) {
+      console.error("Error fetching player profile:", error);
+      res.status(500).json({ message: "Failed to fetch player profile" });
+    }
+  });
+
+  app.post("/api/player/profile", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(getCurrentUserId(req));
+      if (!user || user.role !== "player") {
+        return res.status(403).json({ message: "Player access required" });
+      }
+
+      const profile = playerProfileSchema.parse(req.body);
+      const normalizedEmail = profile.email.toLowerCase();
+      const users = await storage.getUsers();
+      const emailOwner = users.find((candidate) => candidate.email.toLowerCase() === normalizedEmail);
+
+      if (emailOwner && emailOwner.id !== user.id) {
+        return res.status(400).json({ message: "Email is already registered to another user" });
+      }
+
+      await storage.updateUser(user.id, {
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        email: normalizedEmail,
+      });
+
+      const players = await storage.getPlayers();
+      const linkedPlayer = players.find((candidate) => {
+        return candidate.email?.toLowerCase() === user.email.toLowerCase()
+          || candidate.email?.toLowerCase() === normalizedEmail;
+      });
+
+      const playerData = {
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        firstNameAr: profile.firstNameAr || null,
+        lastNameAr: profile.lastNameAr || null,
+        email: normalizedEmail,
+        phoneNumber: profile.phoneNumber,
+        nationality: profile.nationality,
+        dateOfBirth: profile.dateOfBirth,
+        idNumber: profile.idNumber,
+        profilePicture: profile.profilePicture || null,
+        position: linkedPlayer?.position ?? "midfielder",
+      };
+
+      const player = linkedPlayer
+        ? await storage.updatePlayer(linkedPlayer.id, playerData)
+        : await storage.createPlayer(playerData);
+
+      res.json({
+        user: await storage.getUser(user.id),
+        player,
+        isComplete: isPlayerProfileComplete(player),
+      });
+    } catch (error) {
+      console.error("Error saving player profile:", error);
+      res.status(400).json({
+        message: "Invalid player profile data",
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  });
+
+  app.get("/api/staff/profile", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(getCurrentUserId(req));
+      if (!user || !isEmployeeAccountRole(user.role)) {
+        return res.status(403).json({ message: "Employee access required" });
+      }
+
+      const normalizedEmail = user.email.toLowerCase();
+      const member = (await storage.getStaff()).find((candidate) => {
+        return candidate.email.toLowerCase() === normalizedEmail;
+      });
+
+      res.json({
+        user,
+        staff: member ?? null,
+        isComplete: isStaffProfileComplete(member),
+      });
+    } catch (error) {
+      console.error("Error fetching staff profile:", error);
+      res.status(500).json({ message: "Failed to fetch staff profile" });
+    }
+  });
+
+  app.post("/api/staff/profile", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(getCurrentUserId(req));
+      if (!user || !isEmployeeAccountRole(user.role)) {
+        return res.status(403).json({ message: "Employee access required" });
+      }
+
+      const profile = staffProfileSchema.parse(req.body);
+      const normalizedEmail = profile.email.toLowerCase();
+      const users = await storage.getUsers();
+      const emailOwner = users.find((candidate) => candidate.email.toLowerCase() === normalizedEmail);
+      if (emailOwner && emailOwner.id !== user.id) {
+        return res.status(400).json({ message: "Email is already registered to another user" });
+      }
+
+      const allStaff = await storage.getStaff();
+      const emailOwnerStaff = allStaff.find((candidate) => candidate.email.toLowerCase() === normalizedEmail);
+      const linkedStaff = allStaff.find((candidate) => {
+        const candidateEmail = candidate.email.toLowerCase();
+        return candidateEmail === user.email.toLowerCase() || candidateEmail === normalizedEmail;
+      });
+      if (emailOwnerStaff && emailOwnerStaff.id !== linkedStaff?.id) {
+        return res.status(400).json({ message: "Email is already assigned to another employee" });
+      }
+
+      await storage.updateUser(user.id, {
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        email: normalizedEmail,
+      });
+
+      const staffData = {
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        firstNameAr: profile.firstNameAr || null,
+        lastNameAr: profile.lastNameAr || null,
+        email: normalizedEmail,
+        phoneNumber: profile.phoneNumber,
+        nationality: profile.nationality,
+        idNumber: profile.idNumber,
+        employmentType: profile.employmentType,
+        startDate: profile.startDate,
+        profilePicture: profile.profilePicture || null,
+        role: user.role,
+        department: getStaffDepartment(user.role),
+      };
+
+      const member = linkedStaff
+        ? await storage.updateStaff(linkedStaff.id, staffData)
+        : await storage.createStaff(staffData);
+
+      res.json({
+        user: await storage.getUser(user.id),
+        staff: member,
+        isComplete: isStaffProfileComplete(member),
+      });
+    } catch (error) {
+      console.error("Error saving staff profile:", error);
+      res.status(400).json({
+        message: "Invalid staff profile data",
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  });
+
+  app.get("/api/admin/registration-status", requireAuth, async (req, res) => {
+    try {
+      const currentUser = await storage.getUser(getCurrentUserId(req));
+      if (!isRegistrationAdmin(currentUser)) {
+        return res.status(403).json({ message: "Administrator access required" });
+      }
+
+      const accountUsers = (await storage.getUsers()).filter((user) => {
+        return user.role === "player" || isEmployeeAccountRole(user.role);
+      });
+      const statuses = await Promise.all(accountUsers.map(async (user) => {
+        const status = await getUserRegistrationStatus(user);
+        const [latestReminder] = await storage.getRegistrationRemindersForUser(user.id);
+        return {
+          userId: user.id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          role: user.role,
+          ...status,
+          lastReminderAt: latestReminder?.createdAt ?? null,
+        };
+      }));
+
+      res.json(statuses);
+    } catch (error) {
+      console.error("Error fetching registration statuses:", error);
+      res.status(500).json({ message: "Failed to fetch registration statuses" });
+    }
+  });
+
+  app.post("/api/admin/registration-reminders", requireAuth, async (req, res) => {
+    try {
+      const currentUser = await storage.getUser(getCurrentUserId(req));
+      if (!isRegistrationAdmin(currentUser)) {
+        return res.status(403).json({ message: "Administrator access required" });
+      }
+
+      const payload = z.object({ userId: z.coerce.number().int().positive() }).parse(req.body);
+      const targetUser = await storage.getUser(payload.userId);
+      if (!targetUser || (targetUser.role !== "player" && !isEmployeeAccountRole(targetUser.role))) {
+        return res.status(404).json({ message: "Player or staff account not found" });
+      }
+
+      const status = await getUserRegistrationStatus(targetUser);
+      if (status.isComplete) {
+        return res.status(400).json({ message: "Registration is already complete" });
+      }
+
+      const message = `Please complete your registration. Missing information: ${status.missingFields.join(", ")}.`;
+      const reminder = await storage.createRegistrationReminder({
+        targetUserId: targetUser.id,
+        sentBy: currentUser!.id,
+        missingFields: status.missingFields,
+        message,
+      });
+      res.status(201).json(reminder);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "A valid user is required" });
+      }
+      console.error("Error sending registration reminder:", error);
+      res.status(500).json({ message: "Failed to send registration reminder" });
+    }
+  });
+
+  app.get("/api/registration-reminders/me", requireAuth, async (req, res) => {
+    try {
+      const reminders = await storage.getRegistrationRemindersForUser(getCurrentUserId(req));
+      res.json(reminders);
+    } catch (error) {
+      console.error("Error fetching registration reminders:", error);
+      res.status(500).json({ message: "Failed to fetch registration reminders" });
+    }
+  });
+
+  app.get("/api/player/analytics-summary", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(getCurrentUserId(req));
+      if (!user || user.role !== "player") {
+        return res.status(403).json({ message: "Player access required" });
+      }
+
+      const normalizedEmail = user.email.toLowerCase();
+      const player = (await storage.getPlayers()).find((candidate) => {
+        return candidate.email?.toLowerCase() === normalizedEmail;
+      });
+
+      if (!player) {
+        return res.json({
+          player: null,
+          stats: [],
+          totals: {
+            goals: 0,
+            assists: 0,
+            minutesPlayed: 0,
+            averageFitnessScore: 0,
+            averageTechnicalScore: 0,
+            averageTacticalScore: 0,
+            sessionsTracked: 0,
+          },
+        });
+      }
+
+      const stats = await storage.getPlayerStats(player.id);
+      const average = (values: Array<number | null>) => {
+        const validValues = values.filter((value): value is number => typeof value === "number");
+        if (!validValues.length) return 0;
+        return Math.round(validValues.reduce((sum, value) => sum + value, 0) / validValues.length);
+      };
+
+      res.json({
+        player,
+        stats,
+        totals: {
+          goals: stats.reduce((sum, stat) => sum + stat.goals, 0),
+          assists: stats.reduce((sum, stat) => sum + stat.assists, 0),
+          minutesPlayed: stats.reduce((sum, stat) => sum + stat.minutesPlayed, 0),
+          averageFitnessScore: average(stats.map((stat) => stat.fitnessScore)),
+          averageTechnicalScore: average(stats.map((stat) => stat.technicalScore)),
+          averageTacticalScore: average(stats.map((stat) => stat.tacticalScore)),
+          sessionsTracked: stats.length,
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching player analytics summary:", error);
+      res.status(500).json({ message: "Failed to fetch player analytics summary" });
+    }
+  });
+
   // Players
   app.get("/api/players", async (req, res) => {
     try {
@@ -35,7 +545,7 @@ export async function registerRoutes(app: Express, upload?: any): Promise<Server
     }
   });
 
-  app.post("/api/players", async (req, res) => {
+  app.post("/api/players", blockTechnicalStaffFromRosterMutation, async (req, res) => {
     try {
       console.log("POST /api/players - Request body:", JSON.stringify(req.body, null, 2));
       const validatedData = insertPlayerSchema.parse(req.body);
@@ -77,7 +587,7 @@ export async function registerRoutes(app: Express, upload?: any): Promise<Server
     }
   });
 
-  app.delete("/api/players/:id", async (req, res) => {
+  app.delete("/api/players/:id", blockTechnicalStaffFromRosterMutation, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const success = await storage.deletePlayer(id);
@@ -102,13 +612,13 @@ export async function registerRoutes(app: Express, upload?: any): Promise<Server
         const result: { [key: string]: string } = {};
         
         if (files.profilePicture) {
-          result.profilePicture = `/uploads/${files.profilePicture[0].filename}`;
+          result.profilePicture = uploadService!.publicPath(files.profilePicture[0].filename);
         }
         if (files.idDocument) {
-          result.idDocument = `/uploads/${files.idDocument[0].filename}`;
+          result.idDocument = uploadService!.publicPath(files.idDocument[0].filename);
         }
         if (files.contractDocument) {
-          result.contractDocument = `/uploads/${files.contractDocument[0].filename}`;
+          result.contractDocument = uploadService!.publicPath(files.contractDocument[0].filename);
         }
         
         res.json(result);
@@ -125,7 +635,7 @@ export async function registerRoutes(app: Express, upload?: any): Promise<Server
           return res.status(400).json({ message: "No file uploaded" });
         }
         
-        const filePath = `/uploads/${req.file.filename}`;
+        const filePath = uploadService!.publicPath(req.file.filename);
         res.json({ filePath });
       } catch (error) {
         console.error("Single file upload error:", error);
@@ -174,6 +684,130 @@ export async function registerRoutes(app: Express, upload?: any): Promise<Server
       res.status(201).json(team);
     } catch (error) {
       res.status(400).json({ message: "Invalid team data" });
+    }
+  });
+
+  app.post("/api/invitations", requireAuth, blockTechnicalStaffFromRosterMutation, async (req, res) => {
+    try {
+      const userId = getCurrentUserId(req);
+      const teamId = Number(req.body.teamId);
+      const email = req.body.email ? String(req.body.email).trim() : null;
+
+      if (!teamId || Number.isNaN(teamId)) {
+        return res.status(400).json({ message: "teamId is required" });
+      }
+
+      const token = crypto.randomBytes(20).toString("hex");
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + 48);
+
+      const invitation = await storage.createPlayerInvitation({
+        token,
+        teamId,
+        email,
+        invitedBy: userId,
+        expiresAt,
+      });
+
+      const link = `${req.protocol}://${req.get("host")}/invite/${invitation.token}`;
+      res.status(201).json({ link });
+    } catch (error) {
+      console.error("Error creating invitation:", error);
+      res.status(500).json({ message: "Failed to create invitation" });
+    }
+  });
+
+  // Get invitation details by token (public endpoint for signup)
+  app.get("/api/invitations/:token", async (req, res) => {
+    try {
+      const { token } = req.params;
+
+      const invitation = await storage.getPlayerInvitationByToken(token);
+
+      if (!invitation) {
+        return res.status(404).json({ message: "Invalid invitation" });
+      }
+
+      const isExpired = new Date(invitation.expiresAt) < new Date();
+      const isUsed = invitation.usedAt ? true : false;
+
+      if (isExpired || isUsed) {
+        return res.status(400).json({
+          message: isExpired ? "Invitation expired" : "Invitation already used",
+          isExpired,
+          isUsed,
+        });
+      }
+
+      res.json({
+        id: invitation.id,
+        email: invitation.email || "",
+        teamName: invitation.team?.name || "Team",
+        teamId: invitation.teamId,
+        expiresAt: invitation.expiresAt,
+        isExpired: false,
+        isUsed: false,
+      });
+    } catch (error) {
+      console.error("Error fetching invitation:", error);
+      res.status(500).json({ message: "Failed to fetch invitation" });
+    }
+  });
+
+  app.post("/api/employee-invitations", requireAuth, async (req, res) => {
+    try {
+      const { role, email } = employeeInvitationSchema.parse(req.body);
+      const token = crypto.randomBytes(20).toString("hex");
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + 48);
+
+      const invitation = await storage.createEmployeeInvitation({
+        token,
+        role,
+        email: email || null,
+        invitedBy: getCurrentUserId(req),
+        expiresAt,
+      });
+
+      const link = `${req.protocol}://${req.get("host")}/employee-invite/${invitation.token}`;
+      res.status(201).json({ link });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "A valid employee role and email are required" });
+      }
+      console.error("Error creating employee invitation:", error);
+      res.status(500).json({ message: "Failed to create employee invitation" });
+    }
+  });
+
+  app.get("/api/employee-invitations/:token", async (req, res) => {
+    try {
+      const invitation = await storage.getEmployeeInvitationByToken(req.params.token);
+      if (!invitation) {
+        return res.status(404).json({ message: "Invalid invitation" });
+      }
+
+      const isExpired = new Date(invitation.expiresAt) < new Date();
+      const isUsed = Boolean(invitation.usedAt);
+      if (isExpired || isUsed) {
+        return res.status(400).json({
+          message: isExpired ? "Invitation expired" : "Invitation already used",
+          isExpired,
+          isUsed,
+        });
+      }
+
+      res.json({
+        id: invitation.id,
+        email: invitation.email || "",
+        role: invitation.role,
+        expiresAt: invitation.expiresAt,
+        isExpired: false,
+        isUsed: false,
+      });
+    } catch (error) {
+      console.error("Error fetching employee invitation:", error);
+      res.status(500).json({ message: "Failed to fetch employee invitation" });
     }
   });
 
@@ -236,11 +870,49 @@ export async function registerRoutes(app: Express, upload?: any): Promise<Server
   app.get("/api/staff-teams/:staffId", async (req, res) => {
     try {
       const staffId = parseInt(req.params.staffId);
-      // For now, return empty array as we don't have the reverse query implemented
-      // This would need a new storage method to get teams by staff member
-      res.json([]);
+      const staffTeams = await storage.getStaffTeams(staffId);
+      res.json(staffTeams);
     } catch (error) {
       res.status(500).json({ message: "Failed to get staff teams" });
+    }
+  });
+
+  // Teams assigned to the signed-in staff member or player (matched by
+  // email, same as /api/staff/profile and /api/player/profile). Powers
+  // dashboard "Next Up" cards so every card is restricted to the caller's
+  // own team(s) instead of the whole club.
+  app.get("/api/dashboard/my-teams", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(getCurrentUserId(req));
+      if (!user) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const normalizedEmail = user.email.toLowerCase();
+
+      if (user.role === "player") {
+        const player = (await storage.getPlayers()).find(
+          (candidate) => candidate.email?.toLowerCase() === normalizedEmail
+        );
+        if (!player) {
+          return res.json([]);
+        }
+        const playerTeams = await storage.getPlayerTeams(player.id);
+        return res.json(playerTeams.map((pt) => pt.team));
+      }
+
+      const member = (await storage.getStaff()).find(
+        (candidate) => candidate.email.toLowerCase() === normalizedEmail
+      );
+
+      if (!member) {
+        return res.json([]);
+      }
+
+      const staffTeams = await storage.getStaffTeams(member.id);
+      res.json(staffTeams.map((st) => st.team));
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch assigned teams" });
     }
   });
 
@@ -272,6 +944,11 @@ export async function registerRoutes(app: Express, upload?: any): Promise<Server
       const validatedData = insertTrainingSessionSchema.parse(req.body);
       const session = await storage.createTrainingSession(validatedData);
       res.status(201).json(session);
+
+      // Notification delivery shouldn't block or fail session creation.
+      notifyTeamOfTraining(session).catch((error) => {
+        console.error("Failed to send training-scheduled notifications:", error);
+      });
     } catch (error) {
       res.status(400).json({ message: "Invalid training session data" });
     }
@@ -315,11 +992,39 @@ export async function registerRoutes(app: Express, upload?: any): Promise<Server
     }
   });
 
-  app.post("/api/session-attendance", async (req, res) => {
+  app.post("/api/session-attendance", requireAuth, async (req, res) => {
     try {
-      const validatedData = insertSessionAttendanceSchema.parse(req.body);
+      const user = await storage.getUser(getCurrentUserId(req));
+      if (!user) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      let body = req.body;
+      let respondingPlayer: Awaited<ReturnType<typeof storage.getPlayers>>[number] | undefined;
+
+      if (user.role === "player") {
+        const normalizedEmail = user.email.toLowerCase();
+        respondingPlayer = (await storage.getPlayers()).find(
+          (candidate) => candidate.email?.toLowerCase() === normalizedEmail
+        );
+        if (!respondingPlayer) {
+          return res.status(403).json({ message: "Player profile not found" });
+        }
+        // A player can only ever submit their own attendance response.
+        body = { ...body, playerId: respondingPlayer.id };
+      } else if (!rolePermissions[user.role]?.has("schedule_training")) {
+        return res.status(403).json({ message: "Insufficient permissions" });
+      }
+
+      const validatedData = insertSessionAttendanceSchema.parse(body);
       const attendance = await storage.markAttendance(validatedData);
       res.status(201).json(attendance);
+
+      if (validatedData.status === "leave_requested" && respondingPlayer) {
+        notifyStaffOfLeaveRequest(validatedData.sessionId, respondingPlayer).catch((error) => {
+          console.error("Failed to send leave-request notifications:", error);
+        });
+      }
     } catch (error) {
       res.status(400).json({ message: "Invalid attendance data" });
     }
@@ -480,6 +1185,20 @@ export async function registerRoutes(app: Express, upload?: any): Promise<Server
   app.post("/api/matches", async (req, res) => {
     try {
       const validatedData = insertMatchSchema.parse(req.body);
+
+      // Guard against the same fixture being scheduled twice (e.g. a
+      // double form submission) — same team, opponent, date, and kickoff.
+      const existingMatches = await storage.getMatches();
+      const isDuplicate = existingMatches.some((m) =>
+        m.homeTeamId === validatedData.homeTeamId &&
+        m.awayTeam.trim().toLowerCase() === validatedData.awayTeam.trim().toLowerCase() &&
+        m.date === validatedData.date &&
+        m.kickoffTime === validatedData.kickoffTime
+      );
+      if (isDuplicate) {
+        return res.status(409).json({ message: "A match against this opponent at this date and time already exists" });
+      }
+
       const match = await storage.createMatch(validatedData);
       res.status(201).json(match);
     } catch (error) {
@@ -557,6 +1276,25 @@ export async function registerRoutes(app: Express, upload?: any): Promise<Server
     }
   });
 
+  // Get specific setting by category and key
+  app.get("/api/settings/:category/:key", async (req, res) => {
+    try {
+      const { category, key } = req.params;
+      const settings = await storage.getSystemSettings();
+      const setting = settings.find(
+        s => s.category === category && s.settingKey === key && s.isActive
+      );
+      
+      if (!setting) {
+        return res.status(404).json({ message: "Setting not found" });
+      }
+      
+      res.json(setting);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch setting" });
+    }
+  });
+
   app.post("/api/settings", async (req, res) => {
     try {
       const validatedData = insertSystemSettingsSchema.parse(req.body);
@@ -589,13 +1327,41 @@ export async function registerRoutes(app: Express, upload?: any): Promise<Server
       const sessions = await storage.getTrainingSessions();
       const staff = await storage.getStaff();
       const matches = await storage.getMatches();
-      
+
       const today = new Date().toISOString().split('T')[0];
       const upcomingSessions = sessions.filter(s => s.date >= today).slice(0, 3);
       const upcomingMatches = matches.filter(m => m.date >= today && m.status === 'scheduled').slice(0, 3);
-      
+
+      // Attendance rate and player count, optionally scoped to a set of teams
+      // (used by the technical staff dashboard to restrict every card to the
+      // teams the signed-in staff member is actually assigned to).
+      const teamIds = typeof req.query.teamIds === "string" && req.query.teamIds.length > 0
+        ? req.query.teamIds.split(",").map(Number).filter(n => !Number.isNaN(n))
+        : undefined;
+
+      const attendanceSessions = teamIds
+        ? sessions.filter(s => teamIds.includes(s.teamId))
+        : sessions;
+      const attendanceRecords = (
+        await Promise.all(attendanceSessions.map(s => storage.getSessionAttendance(s.id)))
+      ).flat();
+      const attendedCount = attendanceRecords.filter(a => a.status === "present" || a.status === "late").length;
+      const attendanceRate = attendanceRecords.length > 0
+        ? Math.round((attendedCount / attendanceRecords.length) * 100)
+        : 0;
+
+      let totalPlayers = players.filter(p => p.isActive).length;
+      if (teamIds) {
+        const teamPlayerLists = await Promise.all(teamIds.map(id => storage.getTeamPlayers(id)));
+        const uniqueActivePlayerIds = new Set<number>();
+        teamPlayerLists.flat().forEach(tp => {
+          if (tp.player?.isActive) uniqueActivePlayerIds.add(tp.playerId);
+        });
+        totalPlayers = uniqueActivePlayerIds.size;
+      }
+
       const stats = {
-        totalPlayers: players.filter(p => p.isActive).length,
+        totalPlayers,
         activeTeams: teams.filter(t => t.isActive).length,
         totalStaff: staff.filter(s => s.isActive).length,
         upcomingMatches: upcomingMatches.length,
@@ -605,10 +1371,11 @@ export async function registerRoutes(app: Express, upload?: any): Promise<Server
           weekAgo.setDate(weekAgo.getDate() - 7);
           return sessionDate >= weekAgo;
         }).length,
+        attendanceRate,
         upcomingSessions: upcomingSessions,
         upcomingFixtures: upcomingMatches
       };
-      
+
       res.json(stats);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch dashboard stats" });
@@ -622,8 +1389,7 @@ export async function registerRoutes(app: Express, upload?: any): Promise<Server
         return res.status(400).json({ message: "No logo file provided" });
       }
 
-      // Generate the public URL for the uploaded logo
-      const logoUrl = `/uploads/${req.file.filename}`;
+      const logoUrl = uploadService!.publicPath(req.file.filename);
       
       res.json({ 
         message: "Logo uploaded successfully",
@@ -1588,6 +2354,18 @@ export async function registerRoutes(app: Express, upload?: any): Promise<Server
     }
   });
 
+  // Registered before the "/:playerId" route below so "leaderboard" is never
+  // matched as a playerId (Express matches routes in registration order).
+  app.get("/api/achievements/leaderboard", async (req, res) => {
+    try {
+      const leaderboard = await storage.getAchievementLeaderboard();
+      res.json(leaderboard);
+    } catch (error) {
+      console.error("Error fetching achievement leaderboard:", error);
+      res.status(500).json({ error: "Failed to fetch achievement leaderboard" });
+    }
+  });
+
   app.get("/api/achievements/:playerId", async (req, res) => {
     try {
       const playerId = parseInt(req.params.playerId);
@@ -1603,22 +2381,12 @@ export async function registerRoutes(app: Express, upload?: any): Promise<Server
     try {
       const playerId = parseInt(req.params.playerId);
       const { achievementTypeId, value, eventType, eventId } = req.body;
-      
+
       const progress = await storage.updateAchievementProgress(playerId, achievementTypeId, value, eventType, eventId);
       res.json(progress);
     } catch (error) {
       console.error("Error updating achievement progress:", error);
       res.status(500).json({ error: "Failed to update achievement progress" });
-    }
-  });
-
-  app.get("/api/achievements/leaderboard", async (req, res) => {
-    try {
-      const leaderboard = await storage.getAchievementLeaderboard();
-      res.json(leaderboard);
-    } catch (error) {
-      console.error("Error fetching achievement leaderboard:", error);
-      res.status(500).json({ error: "Failed to fetch achievement leaderboard" });
     }
   });
 

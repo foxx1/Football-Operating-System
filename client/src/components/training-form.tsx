@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -8,19 +9,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { insertTrainingSessionSchema, type TrainingSession } from "@shared/schema";
+import { insertTrainingSessionSchema, type TrainingSession, type Staff, type Team } from "@shared/schema";
 import { z } from "zod";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useI18n } from "@/contexts/I18nContext";
 import TrainingImageUpload from "./training-image-upload";
-import { 
-  Calendar, 
-  Clock, 
-  MapPin, 
-  Users, 
-  Activity, 
-  Target, 
-  Shield, 
+import {
+  Calendar,
+  Clock,
+  MapPin,
+  Users,
+  Activity,
+  Target,
+  Shield,
   Zap,
   Heart,
   Dumbbell,
@@ -32,14 +34,20 @@ import {
 interface TrainingFormProps {
   session?: TrainingSession;
   onSuccess: () => void;
+  prefillData?: Partial<TrainingSession>;
 }
 
-export default function TrainingForm({ session, onSuccess }: TrainingFormProps) {
+export default function TrainingForm({ session, onSuccess, prefillData }: TrainingFormProps) {
   const { toast } = useToast();
+  const { t, direction } = useI18n();
   const isEditing = !!session;
 
-  const { data: teams = [] } = useQuery({
+  const { data: teams = [] } = useQuery<Team[]>({
     queryKey: ["/api/teams"],
+  });
+
+  const { data: staffMembers = [] } = useQuery<Staff[]>({
+    queryKey: ["/api/staff"],
   });
 
   // Create a modified schema that converts maxParticipants string to number
@@ -86,21 +94,21 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      title: session?.title || "",
+      title: session?.title || prefillData?.title || "",
       description: session?.description || "",
       sessionType: session?.sessionType || "",
-      date: session?.date || "",
-      startTime: session?.startTime || "",
+      date: session?.date || prefillData?.date || "",
+      startTime: session?.startTime || prefillData?.startTime || "",
       duration: session?.duration || 90,
       location: session?.location || "",
-      teamId: session?.teamId || 1,
-      coachId: session?.coachId || 1,
+      teamId: session?.teamId, // Will be set by useEffect
+      coachId: session?.coachId, // Will be set by useEffect
       maxParticipants: session?.maxParticipants || undefined,
       fitnessDuration: session?.fitnessDuration || undefined,
       mainPartDuration: session?.mainPartDuration || undefined,
       goalkeepingDuration: session?.goalkeepingDuration || undefined,
       specificWorkDuration: session?.specificWorkDuration || undefined,
-      
+
       // Fitness Section
       fitnessAerobic: session?.fitnessAerobic || "",
       fitnessStrength: session?.fitnessStrength || "",
@@ -115,7 +123,7 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
       fitnessSpeed: session?.fitnessSpeed || "",
       fitnessPower: session?.fitnessPower || "",
       fitnessOther: session?.fitnessOther || "",
-      
+
       // Main Part Section
       mainTechnical: session?.mainTechnical || "",
       mainTactical: session?.mainTactical || "",
@@ -124,7 +132,7 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
       mainTransition: session?.mainTransition || "",
       mainSetPieces: session?.mainSetPieces || "",
       mainFinishing: session?.mainFinishing || "",
-      
+
       // Goalkeeper Section
       gkHandling: session?.gkHandling || "",
       gkShotStopping: session?.gkShotStopping || "",
@@ -138,7 +146,7 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
       gkDiving: session?.gkDiving || "",
       gkThrowing: session?.gkThrowing || "",
       gkKicking: session?.gkKicking || "",
-      
+
       // Specific Work Section
       specificIndividual: session?.specificIndividual || "",
       specificPosition: session?.specificPosition || "",
@@ -152,65 +160,77 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
       specificPressing: session?.specificPressing || "",
       specificCounterAttack: session?.specificCounterAttack || "",
       specificMental: session?.specificMental || "",
-      
+
       // Training Image
       trainingImageUrl: session?.trainingImageUrl || "",
       trainingImageType: session?.trainingImageType || "",
       trainingImageName: session?.trainingImageName || "",
-      
+
       // Section-specific images
       fitnessImageUrl: session?.fitnessImageUrl || "",
       fitnessImageType: session?.fitnessImageType || "",
       fitnessImageName: session?.fitnessImageName || "",
-      
+
       goalkeepingImageUrl: session?.goalkeepingImageUrl || "",
       goalkeepingImageType: session?.goalkeepingImageType || "",
       goalkeepingImageName: session?.goalkeepingImageName || "",
-      
+
       specificWorkImageUrl: session?.specificWorkImageUrl || "",
       specificWorkImageType: session?.specificWorkImageType || "",
       specificWorkImageName: session?.specificWorkImageName || "",
-      
+
       notes: session?.notes || "",
       status: session?.status || "scheduled",
     },
   });
 
+  // Set default team and coach when data loads
+  useEffect(() => {
+    if (!session) {
+      if (teams.length > 0 && !form.getValues("teamId")) {
+        form.setValue("teamId", teams[0].id);
+      }
+      if (staffMembers.length > 0 && !form.getValues("coachId")) {
+        form.setValue("coachId", staffMembers[0].id);
+      }
+    }
+  }, [teams, staffMembers, session, form]);
+
   const createSessionMutation = useMutation({
-    mutationFn: (data: any) => 
+    mutationFn: (data: any) =>
       apiRequest("POST", "/api/training-sessions", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/training-sessions"] });
       toast({
-        title: "Success",
-        description: "Training session created successfully",
+        title: t("training.form.toast.createdTitle"),
+        description: t("training.form.toast.createdDescription"),
       });
       onSuccess();
     },
     onError: () => {
       toast({
-        title: "Error",
-        description: "Failed to create training session",
+        title: t("training.form.toast.errorTitle"),
+        description: t("training.form.toast.errorDescription.create"),
         variant: "destructive",
       });
     },
   });
 
   const updateSessionMutation = useMutation({
-    mutationFn: (data: any) => 
+    mutationFn: (data: any) =>
       apiRequest("PUT", `/api/training-sessions/${session?.id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/training-sessions"] });
       toast({
-        title: "Success",
-        description: "Training session updated successfully",
+        title: t("training.form.toast.updatedTitle"),
+        description: t("training.form.toast.updatedDescription"),
       });
       onSuccess();
     },
     onError: () => {
       toast({
-        title: "Error",
-        description: "Failed to update training session",
+        title: t("training.form.toast.errorTitle"),
+        description: t("training.form.toast.errorDescription.update"),
         variant: "destructive",
       });
     },
@@ -227,15 +247,13 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
   const isSubmitting = createSessionMutation.isPending || updateSessionMutation.isPending;
 
   return (
-    <div className="w-full p-2 space-y-4 max-h-[90vh] overflow-y-auto">
+    <div dir={direction} className="w-full p-2 space-y-4 max-h-[90vh] overflow-y-auto">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">
-            {isEditing ? "Edit Training Session" : "Create New Training Session"}
+            {isEditing ? t("training.editTrainingSession") : t("training.form.createTitle")}
           </h2>
-          <p className="text-muted-foreground">
-            Design a comprehensive training session with structured sections
-          </p>
+          <p className="text-muted-foreground">{t("training.form.subtitle")}</p>
         </div>
       </div>
 
@@ -246,10 +264,10 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Calendar className="h-5 w-5" />
-                Basic Information
+                {t("training.form.basicInformation")}
               </CardTitle>
               <CardDescription>
-                Set the fundamental details for your training session
+                {t("training.form.basicInfoDescription")}
               </CardDescription>
             </CardHeader>
             <CardContent className="p-4">
@@ -260,9 +278,9 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                   name="title"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Session Title *</FormLabel>
+                      <FormLabel>{t("training.form.sessionTitle")}</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., Pre-Season Fitness Training" {...field} />
+                        <Input placeholder={t("training.form.titlePlaceholder")} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -274,19 +292,19 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                   name="sessionType"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Session Type *</FormLabel>
+                      <FormLabel>{t("training.form.sessionTypeLabel")}</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select session type" />
+                            <SelectValue placeholder={t("training.form.sessionTypePlaceholder")} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="fitness">Fitness</SelectItem>
-                          <SelectItem value="technical">Technical</SelectItem>
-                          <SelectItem value="tactical">Tactical</SelectItem>
-                          <SelectItem value="match_prep">Match Preparation</SelectItem>
-                          <SelectItem value="recovery">Recovery</SelectItem>
+                          <SelectItem value="fitness">{t("training.sessionType.fitness")}</SelectItem>
+                          <SelectItem value="technical">{t("training.sessionType.technical")}</SelectItem>
+                          <SelectItem value="tactical">{t("training.sessionType.tactical")}</SelectItem>
+                          <SelectItem value="match_prep">{t("training.sessionType.match_prep")}</SelectItem>
+                          <SelectItem value="recovery">{t("training.sessionType.recovery")}</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -302,7 +320,7 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                   name="date"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Date *</FormLabel>
+                      <FormLabel>{t("training.form.dateLabel")}</FormLabel>
                       <FormControl>
                         <Input type="date" {...field} />
                       </FormControl>
@@ -316,7 +334,7 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                   name="startTime"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Start Time *</FormLabel>
+                      <FormLabel>{t("training.form.startTimeLabel")}</FormLabel>
                       <FormControl>
                         <Input type="time" {...field} />
                       </FormControl>
@@ -330,9 +348,9 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                   name="duration"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Total Duration (minutes) *</FormLabel>
+                      <FormLabel>{t("training.form.durationLabel")}</FormLabel>
                       <FormControl>
-                        <Input type="number" min="30" max="180" placeholder="90" {...field} />
+                        <Input type="number" min="30" max="180" placeholder={t("training.form.durationPlaceholder")} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -347,9 +365,9 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                   name="location"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Location *</FormLabel>
+                      <FormLabel>{t("training.form.locationLabel")}</FormLabel>
                       <FormControl>
-                        <Input placeholder="Training ground" {...field} />
+                        <Input placeholder={t("training.form.locationPlaceholder")} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -361,9 +379,9 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                   name="maxParticipants"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Max Participants</FormLabel>
+                      <FormLabel>{t("training.form.maxParticipantsLabel")}</FormLabel>
                       <FormControl>
-                        <Input type="number" min="1" max="30" placeholder="25" {...field} />
+                        <Input type="number" min="1" max="30" placeholder={t("training.form.maxParticipantsPlaceholder")} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -378,19 +396,23 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                   name="teamId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Team *</FormLabel>
-                      <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString()}>
+                      <FormLabel>{t("training.form.teamLabel")}</FormLabel>
+                      <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString() || ""}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select team" />
+                            <SelectValue placeholder={t("training.form.teamPlaceholder")} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {teams.map((team: any) => (
-                            <SelectItem key={team.id} value={team.id.toString()}>
-                              {team.name}
-                            </SelectItem>
-                          ))}
+                          {teams.length > 0 ? (
+                            teams.map((team: any) => (
+                              <SelectItem key={team.id} value={team.id.toString()}>
+                                {team.name}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem value="no-teams" disabled>{t("training.form.noTeamsFound")}</SelectItem>
+                          )}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -403,17 +425,23 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                   name="coachId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Coach *</FormLabel>
-                      <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString()}>
+                      <FormLabel>{t("training.form.coachLabel")}</FormLabel>
+                      <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString() || ""}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select coach" />
+                            <SelectValue placeholder={t("training.form.coachPlaceholder")} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="1">Head Coach</SelectItem>
-                          <SelectItem value="2">Assistant Coach</SelectItem>
-                          <SelectItem value="3">Fitness Coach</SelectItem>
+                          {staffMembers.length > 0 ? (
+                            staffMembers.map((staff) => (
+                              <SelectItem key={staff.id} value={staff.id.toString()}>
+                                {staff.firstName} {staff.lastName}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem value="no-staff" disabled>{t("training.form.noStaffFound")}</SelectItem>
+                          )}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -429,12 +457,12 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                   name="description"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Description</FormLabel>
+                      <FormLabel>{t("training.form.descriptionLabel")}</FormLabel>
                       <FormControl>
-                        <Textarea 
-                          placeholder="Brief overview of the session objectives..."
+                        <Textarea
+                          placeholder={t("training.form.descriptionPlaceholder")}
                           rows={3}
-                          {...field} 
+                          {...field}
                         />
                       </FormControl>
                       <FormMessage />
@@ -454,7 +482,7 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                   name="maxParticipants"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Max Participants</FormLabel>
+                      <FormLabel>{t("training.form.maxParticipantsLabel")}</FormLabel>
                       <FormControl>
                         <Input type="number" min="1" max="30" {...field} />
                       </FormControl>
@@ -462,18 +490,18 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={form.control}
                   name="description"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Description</FormLabel>
+                      <FormLabel>{t("training.form.descriptionLabel")}</FormLabel>
                       <FormControl>
-                        <Textarea 
-                          placeholder="Brief overview of the session objectives..."
+                        <Textarea
+                          placeholder={t("training.form.descriptionPlaceholder")}
                           rows={3}
-                          {...field} 
+                          {...field}
                         />
                       </FormControl>
                       <FormMessage />
@@ -491,9 +519,9 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                   }}
                   currentImage={
                     form.watch("trainingImageUrl") ? {
-                      url: form.watch("trainingImageUrl"),
-                      type: form.watch("trainingImageType"),
-                      name: form.watch("trainingImageName")
+                      url: form.watch("trainingImageUrl") || "",
+                      type: form.watch("trainingImageType") || "",
+                      name: form.watch("trainingImageName") || ""
                     } : undefined
                   }
                 />
@@ -504,29 +532,27 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
           {/* Training Sections */}
           <Card>
             <CardHeader>
-              <CardTitle>Training Structure</CardTitle>
-              <CardDescription>
-                Design your training session with detailed sections for comprehensive planning
-              </CardDescription>
+              <CardTitle>{t("training.trainingStructure")}</CardTitle>
+              <CardDescription>{t("training.form.structureDescription")}</CardDescription>
             </CardHeader>
             <CardContent className="p-4">
               <Tabs defaultValue="fitness" className="w-full" orientation="horizontal">
-                <TabsList className="grid w-full grid-cols-4 mb-6">
+                  <TabsList className="grid w-full grid-cols-4 mb-6">
                   <TabsTrigger value="fitness" className="flex items-center gap-2">
                     <Heart className="h-4 w-4" />
-                    Fitness
+                    {t("training.fitness")}
                   </TabsTrigger>
                   <TabsTrigger value="main" className="flex items-center gap-2">
                     <Target className="h-4 w-4" />
-                    Main Part
+                    {t("training.form.tabs.main")}
                   </TabsTrigger>
                   <TabsTrigger value="goalkeeper" className="flex items-center gap-2">
                     <Shield className="h-4 w-4" />
-                    Goalkeeper
+                    {t("training.goalkeeperTraining")}
                   </TabsTrigger>
                   <TabsTrigger value="specific" className="flex items-center gap-2">
                     <Star className="h-4 w-4" />
-                    Specific Work
+                    {t("training.specificWork")}
                   </TabsTrigger>
                 </TabsList>
 
@@ -540,13 +566,13 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                         <FormItem>
                           <FormLabel className="flex items-center gap-2">
                             <Activity className="h-4 w-4" />
-                            Aerobic Training
+                            {t("training.form.fitness.aerobicLabel")}
                           </FormLabel>
                           <FormControl>
-                            <Textarea 
-                              placeholder="Aerobic exercises, running drills, cardio work..."
+                            <Textarea
+                              placeholder={t("training.form.fitness.aerobicPlaceholder")}
                               rows={3}
-                              {...field} 
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage />
@@ -561,13 +587,13 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                         <FormItem>
                           <FormLabel className="flex items-center gap-2">
                             <Dumbbell className="h-4 w-4" />
-                            Strength Training
+                            {t("training.form.fitness.strengthLabel")}
                           </FormLabel>
                           <FormControl>
-                            <Textarea 
-                              placeholder="Strength exercises, weight training, resistance work..."
+                            <Textarea
+                              placeholder={t("training.form.fitness.strengthPlaceholder")}
                               rows={3}
-                              {...field} 
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage />
@@ -582,13 +608,13 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                         <FormItem>
                           <FormLabel className="flex items-center gap-2">
                             <Timer className="h-4 w-4" />
-                            Endurance Training
+                            {t("training.form.fitness.enduranceLabel")}
                           </FormLabel>
                           <FormControl>
-                            <Textarea 
-                              placeholder="Endurance drills, stamina building, long runs..."
+                            <Textarea
+                              placeholder={t("training.form.fitness.endurancePlaceholder")}
                               rows={3}
-                              {...field} 
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage />
@@ -603,13 +629,13 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                         <FormItem>
                           <FormLabel className="flex items-center gap-2">
                             <TrendingUp className="h-4 w-4" />
-                            Fitness Tests
+                            {t("training.form.fitness.testsLabel")}
                           </FormLabel>
                           <FormControl>
-                            <Textarea 
-                              placeholder="Fitness assessments, benchmark tests, measurements..."
+                            <Textarea
+                              placeholder={t("training.form.fitness.testsPlaceholder")}
                               rows={3}
-                              {...field} 
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage />
@@ -622,12 +648,12 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                       name="fitnessRecovery"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Recovery Work</FormLabel>
+                          <FormLabel>{t("training.form.fitness.recoveryLabel")}</FormLabel>
                           <FormControl>
-                            <Textarea 
-                              placeholder="Cool down, stretching, recovery exercises..."
+                            <Textarea
+                              placeholder={t("training.form.fitness.recoveryPlaceholder")}
                               rows={3}
-                              {...field} 
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage />
@@ -640,12 +666,12 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                       name="fitnessTapering"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Tapering</FormLabel>
+                          <FormLabel>{t("training.form.fitness.taperingLabel")}</FormLabel>
                           <FormControl>
-                            <Textarea 
-                              placeholder="Tapering protocols, load reduction..."
+                            <Textarea
+                              placeholder={t("training.form.fitness.taperingPlaceholder")}
                               rows={3}
-                              {...field} 
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage />
@@ -658,12 +684,12 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                       name="fitnessWarmUp"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Warm-Up</FormLabel>
+                          <FormLabel>{t("training.form.fitness.warmupLabel")}</FormLabel>
                           <FormControl>
-                            <Textarea 
-                              placeholder="Dynamic warm-up, activation exercises..."
+                            <Textarea
+                              placeholder={t("training.form.fitness.warmupPlaceholder")}
                               rows={3}
-                              {...field} 
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage />
@@ -676,12 +702,12 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                       name="fitnessCoolDown"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Cool-Down</FormLabel>
+                          <FormLabel>{t("training.form.fitness.cooldownLabel")}</FormLabel>
                           <FormControl>
-                            <Textarea 
-                              placeholder="Static stretching, cool-down routine..."
+                            <Textarea
+                              placeholder={t("training.form.fitness.cooldownPlaceholder")}
                               rows={3}
-                              {...field} 
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage />
@@ -694,12 +720,12 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                       name="fitnessFlexibility"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Flexibility</FormLabel>
+                          <FormLabel>{t("training.form.fitness.flexibilityLabel")}</FormLabel>
                           <FormControl>
-                            <Textarea 
-                              placeholder="Flexibility training, mobility work..."
+                            <Textarea
+                              placeholder={t("training.form.fitness.flexibilityPlaceholder")}
                               rows={3}
-                              {...field} 
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage />
@@ -712,12 +738,12 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                       name="fitnessAgility"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Agility</FormLabel>
+                          <FormLabel>{t("training.form.fitness.agilityLabel")}</FormLabel>
                           <FormControl>
-                            <Textarea 
-                              placeholder="Agility ladders, cone drills, quick feet..."
+                            <Textarea
+                              placeholder={t("training.form.fitness.agilityPlaceholder")}
                               rows={3}
-                              {...field} 
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage />
@@ -730,12 +756,12 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                       name="fitnessSpeed"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Speed</FormLabel>
+                          <FormLabel>{t("training.form.fitness.speedLabel")}</FormLabel>
                           <FormControl>
-                            <Textarea 
-                              placeholder="Sprint work, acceleration drills..."
+                            <Textarea
+                              placeholder={t("training.form.fitness.speedPlaceholder")}
                               rows={3}
-                              {...field} 
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage />
@@ -748,12 +774,12 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                       name="fitnessPower"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Power</FormLabel>
+                          <FormLabel>{t("training.form.fitness.powerLabel")}</FormLabel>
                           <FormControl>
-                            <Textarea 
-                              placeholder="Plyometric exercises, explosive movements..."
+                            <Textarea
+                              placeholder={t("training.form.fitness.powerPlaceholder")}
                               rows={3}
-                              {...field} 
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage />
@@ -767,12 +793,12 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                     name="fitnessOther"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Other Fitness Activities</FormLabel>
+                        <FormLabel>{t("training.form.fitness.otherLabel")}</FormLabel>
                         <FormControl>
-                          <Textarea 
-                            placeholder="Additional fitness work, specialized training..."
+                          <Textarea
+                            placeholder={t("training.form.fitness.otherPlaceholder")}
                             rows={2}
-                            {...field} 
+                            {...field}
                           />
                         </FormControl>
                         <FormMessage />
@@ -784,14 +810,16 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                   <div className="mt-6 border-t pt-6">
                     <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                       <Heart className="h-5 w-5" />
-                      Fitness Training Image
+                      {t("training.form.fitnessImageTitle")}
                     </h3>
                     <TrainingImageUpload
-                      value={{
-                        url: form.watch("fitnessImageUrl"),
-                        type: form.watch("fitnessImageType") as "library" | "upload" | "created" | undefined,
-                        name: form.watch("fitnessImageName")
-                      }}
+                      value={
+                        form.watch("fitnessImageUrl") ? {
+                          url: form.watch("fitnessImageUrl") || "",
+                          type: form.watch("fitnessImageType") || "",
+                          name: form.watch("fitnessImageName") || ""
+                        } : undefined
+                      }
                       onChange={(value) => {
                         form.setValue("fitnessImageUrl", value.url);
                         form.setValue("fitnessImageType", value.type);
@@ -809,12 +837,12 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                       name="mainTechnical"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Technical Training</FormLabel>
+                          <FormLabel>{t("training.form.main.technicalLabel")}</FormLabel>
                           <FormControl>
-                            <Textarea 
-                              placeholder="Ball control, passing, shooting technique..."
+                            <Textarea
+                              placeholder={t("training.form.main.technicalPlaceholder")}
                               rows={3}
-                              {...field} 
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage />
@@ -827,12 +855,12 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                       name="mainTactical"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Tactical Training</FormLabel>
+                          <FormLabel>{t("training.form.main.tacticalLabel")}</FormLabel>
                           <FormControl>
-                            <Textarea 
-                              placeholder="Formation work, positioning, tactical awareness..."
+                            <Textarea
+                              placeholder={t("training.form.main.tacticalPlaceholder")}
                               rows={3}
-                              {...field} 
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage />
@@ -845,12 +873,12 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                       name="mainMatchPrep"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Match Preparation</FormLabel>
+                          <FormLabel>{t("training.form.main.matchPrepLabel")}</FormLabel>
                           <FormControl>
-                            <Textarea 
-                              placeholder="Opposition analysis, match scenarios..."
+                            <Textarea
+                              placeholder={t("training.form.main.matchPrepPlaceholder")}
                               rows={3}
-                              {...field} 
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage />
@@ -863,12 +891,12 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                       name="mainPossession"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Possession Training</FormLabel>
+                          <FormLabel>{t("training.form.main.possessionLabel")}</FormLabel>
                           <FormControl>
-                            <Textarea 
-                              placeholder="Possession drills, ball retention, build-up play..."
+                            <Textarea
+                              placeholder={t("training.form.main.possessionPlaceholder")}
                               rows={3}
-                              {...field} 
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage />
@@ -881,12 +909,12 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                       name="mainTransition"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Transition Training</FormLabel>
+                          <FormLabel>{t("training.form.main.transitionLabel")}</FormLabel>
                           <FormControl>
-                            <Textarea 
-                              placeholder="Attack to defense transitions, counter-attacks..."
+                            <Textarea
+                              placeholder={t("training.form.main.transitionPlaceholder")}
                               rows={3}
-                              {...field} 
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage />
@@ -899,12 +927,12 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                       name="mainSetPieces"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Set Pieces</FormLabel>
+                          <FormLabel>{t("training.form.main.setPiecesLabel")}</FormLabel>
                           <FormControl>
-                            <Textarea 
-                              placeholder="Corners, free kicks, throw-ins..."
+                            <Textarea
+                              placeholder={t("training.form.main.setPiecesPlaceholder")}
                               rows={3}
-                              {...field} 
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage />
@@ -913,17 +941,17 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                     />
                   </div>
 
-                  <FormField
-                    control={form.control}
-                    name="mainFinishing"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Finishing Training</FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            placeholder="Goal scoring practice, shooting drills..."
+                    <FormField
+                      control={form.control}
+                      name="mainFinishing"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t("training.form.main.finishingLabel")}</FormLabel>
+                          <FormControl>
+                          <Textarea
+                            placeholder={t("training.form.main.finishingPlaceholder")}
                             rows={2}
-                            {...field} 
+                            {...field}
                           />
                         </FormControl>
                         <FormMessage />
@@ -940,12 +968,12 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                       name="gkHandling"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Handling Exercises</FormLabel>
+                          <FormLabel>{t("training.form.gk.handlingLabel")}</FormLabel>
                           <FormControl>
-                            <Textarea 
-                              placeholder="Catching, handling under pressure, ball security..."
+                            <Textarea
+                              placeholder={t("training.form.gk.handlingPlaceholder")}
                               rows={3}
-                              {...field} 
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage />
@@ -958,12 +986,12 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                       name="gkShotStopping"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Shot Stopping</FormLabel>
+                          <FormLabel>{t("training.form.gk.shotStoppingLabel")}</FormLabel>
                           <FormControl>
-                            <Textarea 
-                              placeholder="Reaction saves, diving, reflexes..."
+                            <Textarea
+                              placeholder={t("training.form.gk.shotStoppingPlaceholder")}
                               rows={3}
-                              {...field} 
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage />
@@ -976,12 +1004,12 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                       name="gkDistribution"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Distribution</FormLabel>
+                          <FormLabel>{t("training.form.gk.distributionLabel")}</FormLabel>
                           <FormControl>
-                            <Textarea 
-                              placeholder="Throwing, kicking, passing accuracy..."
+                            <Textarea
+                              placeholder={t("training.form.gk.distributionPlaceholder")}
                               rows={3}
-                              {...field} 
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage />
@@ -994,12 +1022,12 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                       name="gkFootwork"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Footwork & Positioning</FormLabel>
+                          <FormLabel>{t("training.form.gk.footworkLabel")}</FormLabel>
                           <FormControl>
-                            <Textarea 
-                              placeholder="Positioning, footwork drills, angles..."
+                            <Textarea
+                              placeholder={t("training.form.gk.footworkPlaceholder")}
                               rows={3}
-                              {...field} 
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage />
@@ -1012,12 +1040,12 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                       name="gkCrossing"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Dealing with Crosses</FormLabel>
+                          <FormLabel>{t("training.form.gk.crossingLabel")}</FormLabel>
                           <FormControl>
-                            <Textarea 
-                              placeholder="High balls, claiming crosses, command of area..."
+                            <Textarea
+                              placeholder={t("training.form.gk.crossingPlaceholder")}
                               rows={3}
-                              {...field} 
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage />
@@ -1030,12 +1058,12 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                       name="gkOneOnOne"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>1v1 Situations</FormLabel>
+                          <FormLabel>{t("training.form.gk.oneOnOneLabel")}</FormLabel>
                           <FormControl>
-                            <Textarea 
-                              placeholder="One-on-one scenarios, narrowing angles..."
+                            <Textarea
+                              placeholder={t("training.form.gk.oneOnOnePlaceholder")}
                               rows={3}
-                              {...field} 
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage />
@@ -1048,12 +1076,12 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                       name="gkCommunication"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Communication</FormLabel>
+                          <FormLabel>{t("training.form.gk.communicationLabel")}</FormLabel>
                           <FormControl>
-                            <Textarea 
-                              placeholder="Vocal leadership, organizing defense, calling plays..."
+                            <Textarea
+                              placeholder={t("training.form.gk.communicationPlaceholder")}
                               rows={3}
-                              {...field} 
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage />
@@ -1066,12 +1094,12 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                       name="gkPositioning"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Positioning</FormLabel>
+                          <FormLabel>{t("training.form.gk.positioningLabel")}</FormLabel>
                           <FormControl>
-                            <Textarea 
-                              placeholder="Goal line positioning, reading the game..."
+                            <Textarea
+                              placeholder={t("training.form.gk.positioningPlaceholder")}
                               rows={3}
-                              {...field} 
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage />
@@ -1084,12 +1112,12 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                       name="gkReactions"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Reactions</FormLabel>
+                          <FormLabel>{t("training.form.gk.reactionsLabel")}</FormLabel>
                           <FormControl>
-                            <Textarea 
-                              placeholder="Reaction time training, reflex exercises..."
+                            <Textarea
+                              placeholder={t("training.form.gk.reactionsPlaceholder")}
                               rows={3}
-                              {...field} 
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage />
@@ -1102,12 +1130,12 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                       name="gkDiving"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Diving Techniques</FormLabel>
+                          <FormLabel>{t("training.form.gk.divingLabel")}</FormLabel>
                           <FormControl>
-                            <Textarea 
-                              placeholder="Diving form, low dives, high dives..."
+                            <Textarea
+                              placeholder={t("training.form.gk.divingPlaceholder")}
                               rows={3}
-                              {...field} 
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage />
@@ -1120,12 +1148,12 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                       name="gkThrowing"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Throwing</FormLabel>
+                          <FormLabel>{t("training.form.gk.throwingLabel")}</FormLabel>
                           <FormControl>
-                            <Textarea 
-                              placeholder="Overarm throws, underarm rolls, accuracy..."
+                            <Textarea
+                              placeholder={t("training.form.gk.throwingPlaceholder")}
                               rows={3}
-                              {...field} 
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage />
@@ -1138,12 +1166,12 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                       name="gkKicking"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Kicking</FormLabel>
+                          <FormLabel>{t("training.form.gk.kickingLabel")}</FormLabel>
                           <FormControl>
-                            <Textarea 
-                              placeholder="Goal kicks, punts, drop kicks, accuracy..."
+                            <Textarea
+                              placeholder={t("training.form.gk.kickingPlaceholder")}
                               rows={3}
-                              {...field} 
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage />
@@ -1156,14 +1184,16 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                   <div className="mt-6 border-t pt-6">
                     <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                       <Shield className="h-5 w-5" />
-                      Goalkeeper Training Image
+                      {t("training.form.goalkeepingImageTitle")}
                     </h3>
                     <TrainingImageUpload
-                      value={{
-                        url: form.watch("goalkeepingImageUrl"),
-                        type: form.watch("goalkeepingImageType") as "library" | "upload" | "created" | undefined,
-                        name: form.watch("goalkeepingImageName")
-                      }}
+                      value={
+                        form.watch("goalkeepingImageUrl") ? {
+                          url: form.watch("goalkeepingImageUrl") || "",
+                          type: form.watch("goalkeepingImageType") || "",
+                          name: form.watch("goalkeepingImageName") || ""
+                        } : undefined
+                      }
                       onChange={(value) => {
                         form.setValue("goalkeepingImageUrl", value.url);
                         form.setValue("goalkeepingImageType", value.type);
@@ -1181,12 +1211,12 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                       name="specificIndividual"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Individual Work</FormLabel>
+                          <FormLabel>{t("training.form.specific.individualLabel")}</FormLabel>
                           <FormControl>
-                            <Textarea 
-                              placeholder="Player-specific training, individual development..."
+                            <Textarea
+                              placeholder={t("training.form.specific.individualPlaceholder")}
                               rows={3}
-                              {...field} 
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage />
@@ -1199,12 +1229,12 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                       name="specificPosition"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Position-Specific Training</FormLabel>
+                          <FormLabel>{t("training.form.specific.positionLabel")}</FormLabel>
                           <FormControl>
-                            <Textarea 
-                              placeholder="Defender, midfielder, forward specific work..."
+                            <Textarea
+                              placeholder={t("training.form.specific.positionPlaceholder")}
                               rows={3}
-                              {...field} 
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage />
@@ -1217,12 +1247,12 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                       name="specificInjuryPrev"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Injury Prevention</FormLabel>
+                          <FormLabel>{t("training.form.specific.injuryPrevLabel")}</FormLabel>
                           <FormControl>
-                            <Textarea 
-                              placeholder="Injury prevention exercises, prehab..."
+                            <Textarea
+                              placeholder={t("training.form.specific.injuryPrevPlaceholder")}
                               rows={3}
-                              {...field} 
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage />
@@ -1235,12 +1265,12 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                       name="specificRehab"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Rehabilitation</FormLabel>
+                          <FormLabel>{t("training.form.specific.rehabLabel")}</FormLabel>
                           <FormControl>
-                            <Textarea 
-                              placeholder="Recovery training, return to play protocols..."
+                            <Textarea
+                              placeholder={t("training.form.specific.rehabPlaceholder")}
                               rows={3}
-                              {...field} 
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage />
@@ -1253,12 +1283,12 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                       name="specificYouth"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Youth Development</FormLabel>
+                          <FormLabel>{t("training.form.specific.youthLabel")}</FormLabel>
                           <FormControl>
-                            <Textarea 
-                              placeholder="Age-specific training, skill development..."
+                            <Textarea
+                              placeholder={t("training.form.specific.youthPlaceholder")}
                               rows={3}
-                              {...field} 
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage />
@@ -1271,12 +1301,12 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                       name="specificCondition"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Conditioning</FormLabel>
+                          <FormLabel>{t("training.form.specific.conditionLabel")}</FormLabel>
                           <FormControl>
-                            <Textarea 
-                              placeholder="Specialized conditioning, sport-specific fitness..."
+                            <Textarea
+                              placeholder={t("training.form.specific.conditionPlaceholder")}
                               rows={3}
-                              {...field} 
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage />
@@ -1289,12 +1319,12 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                       name="specificFinishing"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Finishing</FormLabel>
+                          <FormLabel>{t("training.form.specific.finishingLabel")}</FormLabel>
                           <FormControl>
-                            <Textarea 
-                              placeholder="Finishing drills, clinical finishing, composure..."
+                            <Textarea
+                              placeholder={t("training.form.specific.finishingPlaceholder")}
                               rows={3}
-                              {...field} 
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage />
@@ -1307,12 +1337,12 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                       name="specificCrossing"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Crossing</FormLabel>
+                          <FormLabel>{t("training.form.specific.crossingLabel")}</FormLabel>
                           <FormControl>
-                            <Textarea 
-                              placeholder="Crossing technique, delivery, timing..."
+                            <Textarea
+                              placeholder={t("training.form.specific.crossingPlaceholder")}
                               rows={3}
-                              {...field} 
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage />
@@ -1325,12 +1355,12 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                       name="specificDefending"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Defending</FormLabel>
+                          <FormLabel>{t("training.form.specific.defendingLabel")}</FormLabel>
                           <FormControl>
-                            <Textarea 
-                              placeholder="Defensive shape, tackling, marking..."
+                            <Textarea
+                              placeholder={t("training.form.specific.defendingPlaceholder")}
                               rows={3}
-                              {...field} 
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage />
@@ -1343,12 +1373,12 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                       name="specificPressing"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Pressing</FormLabel>
+                          <FormLabel>{t("training.form.specific.pressingLabel")}</FormLabel>
                           <FormControl>
-                            <Textarea 
-                              placeholder="High press, coordinated pressing, triggers..."
+                            <Textarea
+                              placeholder={t("training.form.specific.pressingPlaceholder")}
                               rows={3}
-                              {...field} 
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage />
@@ -1361,12 +1391,12 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                       name="specificCounterAttack"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Counter Attack</FormLabel>
+                          <FormLabel>{t("training.form.specific.counterAttackLabel")}</FormLabel>
                           <FormControl>
-                            <Textarea 
-                              placeholder="Quick transitions, fast breaks, counter-attacking..."
+                            <Textarea
+                              placeholder={t("training.form.specific.counterAttackPlaceholder")}
                               rows={3}
-                              {...field} 
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage />
@@ -1379,12 +1409,12 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                       name="specificMental"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Mental Training</FormLabel>
+                          <FormLabel>{t("training.form.specific.mentalLabel")}</FormLabel>
                           <FormControl>
-                            <Textarea 
-                              placeholder="Concentration, decision making, pressure situations..."
+                            <Textarea
+                              placeholder={t("training.form.specific.mentalPlaceholder")}
                               rows={3}
-                              {...field} 
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage />
@@ -1397,14 +1427,16 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
                   <div className="mt-6 border-t pt-6">
                     <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                       <Star className="h-5 w-5" />
-                      Specific Work Training Image
+                      {t("training.form.specificImageTitle")}
                     </h3>
                     <TrainingImageUpload
-                      value={{
-                        url: form.watch("specificWorkImageUrl"),
-                        type: form.watch("specificWorkImageType") as "library" | "upload" | "created" | undefined,
-                        name: form.watch("specificWorkImageName")
-                      }}
+                      value={
+                        form.watch("specificWorkImageUrl") ? {
+                          url: form.watch("specificWorkImageUrl") || "",
+                          type: form.watch("specificWorkImageType") || "",
+                          name: form.watch("specificWorkImageName") || ""
+                        } : undefined
+                      }
                       onChange={(value) => {
                         form.setValue("specificWorkImageUrl", value.url);
                         form.setValue("specificWorkImageType", value.type);
@@ -1420,20 +1452,20 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
           {/* Additional Notes */}
           <Card>
             <CardHeader>
-              <CardTitle>Additional Notes</CardTitle>
-            </CardHeader>
+                <CardTitle>{t("training.additionalNotes")}</CardTitle>
+              </CardHeader>
             <CardContent className="p-4">
               <FormField
                 control={form.control}
                 name="notes"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Session Notes</FormLabel>
+                    <FormLabel>{t("training.form.notesLabel")}</FormLabel>
                     <FormControl>
-                      <Textarea 
-                        placeholder="Any additional notes, equipment needed, special considerations..."
+                      <Textarea
+                        placeholder={t("training.form.notesPlaceholder")}
                         rows={3}
-                        {...field} 
+                        {...field}
                       />
                     </FormControl>
                     <FormMessage />
@@ -1446,7 +1478,7 @@ export default function TrainingForm({ session, onSuccess }: TrainingFormProps) 
           {/* Submit Button */}
           <div className="flex justify-end gap-4">
             <Button type="submit" disabled={isSubmitting} className="min-w-32">
-              {isSubmitting ? "Saving..." : isEditing ? "Update Session" : "Create Session"}
+              {isSubmitting ? t("training.form.submit.saving") : isEditing ? t("training.form.submit.update") : t("training.form.submit.create")}
             </Button>
           </div>
         </form>

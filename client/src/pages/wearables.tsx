@@ -82,7 +82,7 @@ const mockWearableData = {
       batteryLevel: 85
     },
     {
-      deviceId: "device_002", 
+      deviceId: "device_002",
       playerId: 2,
       provider: "garmin",
       lastSync: "2025-01-01T09:15:00Z",
@@ -157,10 +157,7 @@ export default function WearablesPage() {
 
   const connectDeviceMutation = useMutation({
     mutationFn: async (data: { playerId: number, provider: string, features: string }) => {
-      return await apiRequest("/api/wearable-devices", {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
+      return await apiRequest("POST", "/api/wearable-devices", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/wearable-devices"] });
@@ -232,22 +229,21 @@ export default function WearablesPage() {
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div>
                 <Label>Device Type</Label>
                 <div className="grid grid-cols-1 gap-3 mt-2">
                   {WEARABLE_PROVIDERS.map((provider) => (
-                    <Card 
-                      key={provider.id} 
-                      className={`cursor-pointer transition-colors ${
-                        selectedProvider === provider.id ? 'ring-2 ring-primary' : 'hover:bg-muted/50'
-                      }`}
+                    <Card
+                      key={provider.id}
+                      className={`cursor-pointer transition-colors ${selectedProvider === provider.id ? 'ring-2 ring-primary' : 'hover:bg-muted/50'
+                        }`}
                       onClick={() => setSelectedProvider(provider.id)}
                     >
                       <CardContent className="p-4">
                         <div className="flex items-center space-x-3">
-                          <img 
-                            src={provider.logoUrl} 
+                          <img
+                            src={provider.logoUrl}
                             alt={provider.name}
                             className="w-8 h-8 rounded"
                           />
@@ -276,7 +272,7 @@ export default function WearablesPage() {
                 </div>
               </div>
 
-              <Button 
+              <Button
                 onClick={() => {
                   const provider = WEARABLE_PROVIDERS.find(p => p.id === selectedProvider);
                   if (provider) handleConnectProvider(provider);
@@ -355,13 +351,13 @@ export default function WearablesPage() {
             {mockWearableData.connectedDevices.map((device, index) => {
               const player = (players as Player[]).find((p: Player) => p.id === device.playerId);
               const provider = WEARABLE_PROVIDERS.find(p => p.id === device.provider);
-              
+
               return (
                 <Card key={index}>
                   <CardHeader>
                     <div className="flex items-center space-x-3">
-                      <img 
-                        src={provider?.logoUrl || ""} 
+                      <img
+                        src={provider?.logoUrl || ""}
                         alt={provider?.name || "Device"}
                         className="w-10 h-10 rounded"
                       />
@@ -380,7 +376,7 @@ export default function WearablesPage() {
                         {device.isActive ? "Active" : "Inactive"}
                       </Badge>
                     </div>
-                    
+
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">Battery</span>
                       <div className="flex items-center space-x-2">
@@ -388,12 +384,12 @@ export default function WearablesPage() {
                         <span className="text-sm">{device.batteryLevel}%</span>
                       </div>
                     </div>
-                    
+
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">Last Sync</span>
                       <span className="text-sm">{new Date(device.lastSync).toLocaleString()}</span>
                     </div>
-                    
+
                     <div>
                       <span className="text-sm text-muted-foreground">Features</span>
                       <div className="flex flex-wrap gap-1 mt-1">
@@ -416,7 +412,7 @@ export default function WearablesPage() {
             {mockWearableData.recentActivity.map((activity, index) => {
               const device = mockWearableData.connectedDevices.find(u => u.deviceId === activity.deviceId);
               const provider = WEARABLE_PROVIDERS.find(p => p.id === device?.provider);
-              
+
               return (
                 <Card key={index}>
                   <CardHeader>
@@ -424,8 +420,8 @@ export default function WearablesPage() {
                       <div>
                         <CardTitle className="text-lg">{activity.name}</CardTitle>
                         <CardDescription className="flex items-center space-x-2">
-                          <img 
-                            src={provider?.logoUrl || ""} 
+                          <img
+                            src={provider?.logoUrl || ""}
                             alt={provider?.name || "Device"}
                             className="w-4 h-4"
                           />
@@ -486,7 +482,7 @@ export default function WearablesPage() {
             {mockWearableData.sleepData.map((sleep, index) => {
               const device = mockWearableData.connectedDevices.find(u => u.deviceId === sleep.deviceId);
               const provider = WEARABLE_PROVIDERS.find(p => p.id === device?.provider);
-              
+
               return (
                 <Card key={index}>
                   <CardHeader>
@@ -494,8 +490,8 @@ export default function WearablesPage() {
                       <div>
                         <CardTitle className="text-lg">Sleep Analysis</CardTitle>
                         <CardDescription className="flex items-center space-x-2">
-                          <img 
-                            src={provider?.logoUrl || ""} 
+                          <img
+                            src={provider?.logoUrl || ""}
                             alt={provider?.name || "Device"}
                             className="w-4 h-4"
                           />
@@ -556,7 +552,7 @@ export default function WearablesPage() {
             {mockWearableData.dailyMetrics.map((metrics, index) => {
               const device = mockWearableData.connectedDevices.find(u => u.deviceId === metrics.deviceId);
               const provider = WEARABLE_PROVIDERS.find(p => p.id === device?.provider);
-              
+
               return (
                 <Card key={index}>
                   <CardHeader>
@@ -564,8 +560,8 @@ export default function WearablesPage() {
                       <div>
                         <CardTitle className="text-lg">Daily Health Metrics</CardTitle>
                         <CardDescription className="flex items-center space-x-2">
-                          <img 
-                            src={provider?.logoUrl || ""} 
+                          <img
+                            src={provider?.logoUrl || ""}
                             alt={provider?.name || "Device"}
                             className="w-4 h-4"
                           />

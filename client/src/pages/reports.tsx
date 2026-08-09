@@ -17,15 +17,15 @@ export default function Reports() {
   const [dateRange, setDateRange] = useState<string>("month");
   const [pdfGeneratorOpen, setPdfGeneratorOpen] = useState(false);
 
-  const { data: sessions } = useQuery({
+  const { data: sessions = [] } = useQuery<TrainingSession[]>({
     queryKey: ["/api/training-sessions"],
   });
 
-  const { data: players } = useQuery({
+  const { data: players = [] } = useQuery<Player[]>({
     queryKey: ["/api/players"],
   });
 
-  const { data: teams } = useQuery({
+  const { data: teams = [] } = useQuery<Team[]>({
     queryKey: ["/api/teams"],
   });
 

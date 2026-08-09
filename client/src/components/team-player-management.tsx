@@ -9,6 +9,8 @@ import { Plus, Users, UserPlus, X } from "lucide-react";
 import AddPlayerDialog from "@/components/players/add-player-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { translateWithParams, useI18n } from "@/contexts/I18nContext";
+import { cn } from "@/lib/utils";
 import type { Team, Player } from "@shared/schema";
 
 interface TeamPlayerManagementProps {
@@ -27,6 +29,7 @@ export default function TeamPlayerManagement({ team, isOpen, onClose }: TeamPlay
   const [isAddPlayerOpen, setIsAddPlayerOpen] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const { toast } = useToast();
+  const { isRtl, t } = useI18n();
 
   const { data: teamPlayersData = [], isLoading: playersLoading } = useQuery<any[]>({
     queryKey: [`/api/teams/${team.id}/players`],
@@ -58,8 +61,8 @@ export default function TeamPlayerManagement({ team, isOpen, onClose }: TeamPlay
       queryClient.invalidateQueries({ queryKey: [`/api/teams/${team.id}/players`] });
       queryClient.invalidateQueries({ queryKey: ["/api/players"] });
       toast({
-        title: "Success",
-        description: "Player added to squad successfully",
+        title: t("teamForm.createdTitle"),
+        description: t("teamManage.addedToast"),
       });
     },
     onError: (error: any) => {
@@ -67,8 +70,8 @@ export default function TeamPlayerManagement({ team, isOpen, onClose }: TeamPlay
       toast({
         title: "Error",
         description: isAlreadyAssigned 
-          ? "Player is already on this team" 
-          : "Failed to add player to squad",
+          ? t("teamManage.alreadyAssigned")
+          : t("teamManage.addError"),
         variant: "destructive",
       });
     },
@@ -81,14 +84,14 @@ export default function TeamPlayerManagement({ team, isOpen, onClose }: TeamPlay
       queryClient.invalidateQueries({ queryKey: [`/api/teams/${team.id}/players`] });
       queryClient.invalidateQueries({ queryKey: ["/api/players"] });
       toast({
-        title: "Success",
-        description: "Player removed from squad successfully",
+        title: t("teamForm.createdTitle"),
+        description: t("teamManage.removedToast"),
       });
     },
     onError: () => {
       toast({
-        title: "Error",
-        description: "Failed to remove player from squad",
+        title: t("teamForm.errorTitle"),
+        description: t("teamManage.removeError"),
         variant: "destructive",
       });
     },
@@ -96,14 +99,14 @@ export default function TeamPlayerManagement({ team, isOpen, onClose }: TeamPlay
 
   const formatCategoryName = (category: string) => {
     switch (category.toLowerCase()) {
-      case 'first_team': return 'First Team';
-      case 'reserves': return 'Reserves';
-      case 'under_21': return 'Under 21';
-      case 'under_19': return 'Under 19';
-      case 'under_17': return 'Under 17';
-      case 'under_15': return 'Under 15';
-      case 'academy_rootgrass': return 'Academy - Rootgrass';
-      case 'youth': return 'Youth Team';
+      case 'first_team': return t("teamCategory.first_team");
+      case 'reserves': return t("teamCategory.reserves");
+      case 'under_21': return t("teamCategory.under_21");
+      case 'under_19': return t("teamCategory.under_19");
+      case 'under_17': return t("teamCategory.under_17");
+      case 'under_15': return t("teamCategory.under_15");
+      case 'academy_rootgrass': return t("teamCategory.academy_rootgrass");
+      case 'youth': return t("teamCategory.youth");
       default: return category.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
     }
   };
@@ -126,31 +129,31 @@ export default function TeamPlayerManagement({ team, isOpen, onClose }: TeamPlay
       <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center space-x-3">
+          <DialogTitle className={cn("flex items-center", isRtl ? "space-x-reverse space-x-3" : "space-x-3")}>
             <Users className="w-6 h-6" />
-            <span>Manage Players - {team.name}</span>
+            <span>{translateWithParams(t, "teamManage.title", { teamName: team.name })}</span>
             <Badge className={getCategoryColor(team.category)}>
               {formatCategoryName(team.category)}
             </Badge>
           </DialogTitle>
           <DialogDescription>
-            Add players to {team.name} and manage team squad assignments.
+            {translateWithParams(t, "teamManage.description", { teamName: team.name })}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
           <Tabs defaultValue="current" className="w-full">
             <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="current">Current Squad ({teamPlayers.length})</TabsTrigger>
-              <TabsTrigger value="available">Available Players ({unassignedPlayers.length})</TabsTrigger>
-              <TabsTrigger value="add-new">Add New Player</TabsTrigger>
+              <TabsTrigger value="current">{translateWithParams(t, "teamManage.current", { count: String(teamPlayers.length) })}</TabsTrigger>
+              <TabsTrigger value="available">{translateWithParams(t, "teamManage.available", { count: String(unassignedPlayers.length) })}</TabsTrigger>
+              <TabsTrigger value="add-new">{t("teamManage.addNew")}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="current" className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold">Current Squad</h3>
+                <h3 className="text-lg font-semibold">{t("teamManage.currentTitle")}</h3>
                 <div className="text-sm text-muted-foreground">
-                  {teamPlayers.length} players assigned
+                  {translateWithParams(t, "teamManage.assignedCount", { count: String(teamPlayers.length) })}
                 </div>
               </div>
               
@@ -168,8 +171,8 @@ export default function TeamPlayerManagement({ team, isOpen, onClose }: TeamPlay
                 <Card className="p-8 text-center border-dashed">
                   <div className="text-muted-foreground">
                     <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p className="text-lg font-medium">No players assigned</p>
-                    <p className="text-sm">Add players to build your squad</p>
+                    <p className="text-lg font-medium">{t("teamManage.noAssigned")}</p>
+                    <p className="text-sm">{t("teamManage.noAssignedDescription")}</p>
                   </div>
                 </Card>
               ) : (
@@ -178,7 +181,7 @@ export default function TeamPlayerManagement({ team, isOpen, onClose }: TeamPlay
                     <Card key={player.id} className="hover:shadow-md transition-shadow">
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-3">
+                          <div className={cn("flex items-center", isRtl ? "space-x-reverse space-x-3" : "space-x-3")}>
                             <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
                               <span className="text-sm font-bold">
                                 {player.shirtNumber || '?'}
@@ -189,7 +192,7 @@ export default function TeamPlayerManagement({ team, isOpen, onClose }: TeamPlay
                                 {player.firstName} {player.lastName}
                               </h4>
                               <p className="text-sm text-muted-foreground">
-                                {player.position}
+                                {t(`position.${player.position}`)}
                               </p>
                             </div>
                           </div>
@@ -199,8 +202,8 @@ export default function TeamPlayerManagement({ team, isOpen, onClose }: TeamPlay
                             onClick={() => removePlayerFromSquadMutation.mutate(player.id)}
                             disabled={removePlayerFromSquadMutation.isPending}
                           >
-                            <X className="w-4 h-4 mr-1" />
-                            Remove
+                            <X className={cn("w-4 h-4", isRtl ? "ml-1" : "mr-1")} />
+                            {t("teamManage.remove")}
                           </Button>
                         </div>
                       </CardContent>
@@ -212,9 +215,9 @@ export default function TeamPlayerManagement({ team, isOpen, onClose }: TeamPlay
 
             <TabsContent value="available" className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold">Available Players</h3>
+                <h3 className="text-lg font-semibold">{t("teamManage.availableTitle")}</h3>
                 <div className="text-sm text-muted-foreground">
-                  {unassignedPlayers.length} players available
+                  {translateWithParams(t, "teamManage.availableCount", { count: String(unassignedPlayers.length) })}
                 </div>
               </div>
 
@@ -222,8 +225,8 @@ export default function TeamPlayerManagement({ team, isOpen, onClose }: TeamPlay
                 <Card className="p-8 text-center border-dashed">
                   <div className="text-muted-foreground">
                     <UserPlus className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p className="text-lg font-medium">No available players</p>
-                    <p className="text-sm">All players are already assigned to teams</p>
+                    <p className="text-lg font-medium">{t("teamManage.noAvailable")}</p>
+                    <p className="text-sm">{t("teamManage.noAvailableDescription")}</p>
                   </div>
                 </Card>
               ) : (
@@ -232,7 +235,7 @@ export default function TeamPlayerManagement({ team, isOpen, onClose }: TeamPlay
                     <Card key={player.id} className="hover:shadow-md transition-shadow">
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-3">
+                          <div className={cn("flex items-center", isRtl ? "space-x-reverse space-x-3" : "space-x-3")}>
                             <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
                               <span className="text-sm font-bold">
                                 {player.shirtNumber || '?'}
@@ -243,7 +246,7 @@ export default function TeamPlayerManagement({ team, isOpen, onClose }: TeamPlay
                                 {player.firstName} {player.lastName}
                               </h4>
                               <p className="text-sm text-muted-foreground">
-                                {player.position}
+                                {t(`position.${player.position}`)}
                               </p>
                             </div>
                           </div>
@@ -253,8 +256,8 @@ export default function TeamPlayerManagement({ team, isOpen, onClose }: TeamPlay
                             onClick={() => addPlayerToSquadMutation.mutate(player.id)}
                             disabled={addPlayerToSquadMutation.isPending}
                           >
-                            <Plus className="w-4 h-4 mr-1" />
-                            {addPlayerToSquadMutation.isPending ? 'Adding...' : 'Add to Squad'}
+                            <Plus className={cn("w-4 h-4", isRtl ? "ml-1" : "mr-1")} />
+                            {addPlayerToSquadMutation.isPending ? t("teamManage.adding") : t("teamManage.addToSquad")}
                           </Button>
                         </div>
                       </CardContent>
@@ -266,9 +269,9 @@ export default function TeamPlayerManagement({ team, isOpen, onClose }: TeamPlay
 
             <TabsContent value="add-new" className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold">Add New Player</h3>
+                <h3 className="text-lg font-semibold">{t("teamManage.addNew")}</h3>
                 <Badge variant="outline">
-                  {needsFullContract(team.category) ? 'Full Contract' : 'Simplified Form'}
+                  {needsFullContract(team.category) ? t("teamManage.fullContract") : t("teamManage.simplifiedForm")}
                 </Badge>
               </div>
 
@@ -276,14 +279,14 @@ export default function TeamPlayerManagement({ team, isOpen, onClose }: TeamPlay
                 <CardHeader>
                   <CardTitle className="text-base">
                     {needsFullContract(team.category) 
-                      ? 'Professional Player Registration' 
-                      : 'Youth Player Registration'
+                      ? t("teamManage.professionalRegistration")
+                      : t("teamManage.youthRegistration")
                     }
                   </CardTitle>
                   <div className="text-sm text-muted-foreground">
                     {needsFullContract(team.category) 
-                      ? 'Complete form with contract details and salary information.'
-                      : 'Simplified form for youth players without contract requirements.'
+                      ? t("teamManage.professionalHelp")
+                      : t("teamManage.youthHelp")
                     }
                   </div>
                 </CardHeader>
@@ -293,8 +296,8 @@ export default function TeamPlayerManagement({ team, isOpen, onClose }: TeamPlay
                     className="w-full"
                     size="lg"
                   >
-                    <Plus className="w-5 h-5 mr-2" />
-                    Add New Player
+                    <Plus className={cn("w-5 h-5", isRtl ? "ml-2" : "mr-2")} />
+                    {t("teamManage.addNew")}
                   </Button>
                 </CardContent>
               </Card>
