@@ -1,7 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import MemoryStore from "memorystore";
-import connectPgSimple from "connect-pg-simple";
 import path from "path";
 import fs from "fs";
 import { registerRoutes } from "./routes";
@@ -12,7 +11,6 @@ import { env } from "./env";
 import { registerBackgroundJobs } from "./jobs/job-queue";
 import { logger } from "./logger";
 import { createUploadService } from "./services/upload-service";
-import { pool } from "./db";
 
 const app = express();
 // Railway (and most PaaS) terminate SSL at the load balancer and forward
@@ -34,14 +32,7 @@ if (env.NODE_ENV === "production") {
 app.use(express.json({ limit: "20mb" }));
 app.use(express.urlencoded({ extended: false, limit: "20mb" }));
 
-// user_sessions table already exists in Neon — no createTableIfMissing needed
-const sessionStore = env.DATABASE_URL
-  ? new (connectPgSimple(session))({
-      pool,
-      tableName: "user_sessions",
-      errorLog: (err: Error) => logger.error("session_store_error", { error: err.message }),
-    })
-  : new (MemoryStore(session))({ checkPeriod: 86400000 });
+const sessionStore = new (MemoryStore(session))({ checkPeriod: 86400000 });
 
 app.use(session({
   store: sessionStore,
