@@ -132,13 +132,19 @@ export function registerAuthRoutes(app: Express) {
         await storage.updateUser(user.id, { password });
       }
 
-      req.session.regenerate((error) => {
-        if (error) {
+      req.session.regenerate((regenErr) => {
+        if (regenErr) {
           return res.status(500).json({ message: "Failed to start session" });
         }
 
         req.session.userId = user.id;
-        res.json({ user: sanitizeUser(user) });
+
+        req.session.save((saveErr) => {
+          if (saveErr) {
+            return res.status(500).json({ message: "Failed to save session" });
+          }
+          res.json({ user: sanitizeUser(user) });
+        });
       });
     } catch (error) {
       res.status(400).json({ message: "Invalid login request" });
