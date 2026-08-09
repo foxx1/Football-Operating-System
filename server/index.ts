@@ -1,12 +1,11 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
-import connectPgSimple from "connect-pg-simple";
+import MemoryStore from "memorystore";
 import path from "path";
 import fs from "fs";
 import { registerRoutes } from "./routes";
 import { registerAuthRoutes } from "./auth";
 import { setupVite, serveStatic, log } from "./vite";
-import { pool } from "./db";
 import { apiErrorHandler } from "./api-contracts";
 import { env } from "./env";
 import { registerBackgroundJobs } from "./jobs/job-queue";
@@ -22,13 +21,10 @@ app.set("trust proxy", 1);
 app.use(express.json({ limit: "20mb" }));
 app.use(express.urlencoded({ extended: false, limit: "20mb" }));
 
-const PgSessionStore = connectPgSimple(session);
+const SessionStore = MemoryStore(session);
 
 app.use(session({
-  store: process.env.DATABASE_URL ? new PgSessionStore({
-    pool,
-    createTableIfMissing: true,
-  }) : undefined,
+  store: new SessionStore({ checkPeriod: 86400000 }),
   secret: process.env.SESSION_SECRET || "dev-session-secret-change-me",
   resave: false,
   saveUninitialized: false,
