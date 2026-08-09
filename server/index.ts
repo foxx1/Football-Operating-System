@@ -14,9 +14,11 @@ import { logger } from "./logger";
 import { createUploadService } from "./services/upload-service";
 
 const app = express();
-// Raised from Express's 100kb default because tactical board saves and
-// training session images embed base64 PNG/SVG data URLs (canvas exports,
-// library thumbnails) directly in the JSON body.
+// Railway (and most PaaS) terminate SSL at the load balancer and forward
+// traffic to the app over plain HTTP. Without this, express-session sees
+// the connection as insecure and silently omits the Set-Cookie header when
+// cookie.secure=true, breaking all session-based auth in production.
+app.set("trust proxy", 1);
 app.use(express.json({ limit: "20mb" }));
 app.use(express.urlencoded({ extended: false, limit: "20mb" }));
 
