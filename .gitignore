@@ -16,3 +16,7 @@ uploads/
 # Replit internal state
 .local/
 .replit
+
+# Local dev artifacts
+temp_repo/
+"#"
