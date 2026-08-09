@@ -56,7 +56,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect, type ComponentType } from "react";
-import { isTechnicalStaffRole } from "@shared/schema";
+import { isTechnicalStaffRole, isAdminRole } from "@shared/schema";
 
 type IconType = ComponentType<{ className?: string }>;
 
@@ -120,6 +120,18 @@ const navigationItems: NavItem[] = [
   { href: "/user-control", icon: UserCog, labelKey: "nav.userControl", badge: null, superAdminOnly: true },
 ];
 
+const adminNavigationItems: NavItem[] = [
+  { href: "/admin-dashboard", icon: LayoutGrid, labelKey: "nav.adminDashboard", badge: null },
+  { href: "/players", icon: Users, labelKey: "nav.players", badge: null },
+  { href: "/teams", icon: Shield, labelKey: "nav.teams", badge: null },
+  { href: "/staff", icon: UserCheck, labelKey: "nav.staff", badge: null },
+  { type: "expandable", icon: Calendar, labelKey: "nav.training", badge: null, rootPath: "/training", subItems: trainingSubItems },
+  { href: "/matches", icon: Trophy, labelKey: "nav.matches", badge: null },
+  { href: "/monthly-budgets", icon: Wallet, labelKey: "nav.monthlyBudgets", badge: null },
+  { href: "/reports", icon: FileText, labelKey: "nav.reports", badge: null },
+  { href: "/settings", icon: Settings, labelKey: "nav.settings", badge: null },
+];
+
 // Every technical staffer can review injuries; only medical staff
 // (physiotherapist) gets to record new ones and run the treatment tracker.
 function getTechnicalInjurySubItems(isMedicalStaff: boolean): NavSubItem[] {
@@ -156,6 +168,7 @@ export default function Sidebar() {
   const { isRtl, t } = useI18n();
   const { permissions, user } = useAuth();
   const isTechnicalUser = isTechnicalStaffRole(user?.role);
+  const isAdminUser = isAdminRole(user?.role);
   const technicalNavigationItems = getTechnicalNavigationItems(user?.role === "physiotherapist");
   const playerNavigationItems = [
     { href: "/training", icon: Calendar, labelKey: "nav.training", badge: "2" },
@@ -195,7 +208,7 @@ export default function Sidebar() {
       {/* Logo Header */}
       <div className="relative px-3 py-4 border-b border-sidebar-border/80">
         <div className="flex items-center justify-between gap-2">
-          <Link href={user?.role === "player" ? "/player-dashboard" : isTechnicalUser ? "/technical-staff" : "/"}>
+          <Link href={user?.role === "player" ? "/player-dashboard" : isAdminUser ? "/admin-dashboard" : isTechnicalUser ? "/technical-staff" : "/"}>
             <div className={cn("flex items-center cursor-pointer", isRtl ? "space-x-reverse space-x-3" : "space-x-3")}>
               <div className="w-11 h-11 bg-sidebar-primary text-sidebar-primary-foreground rounded-md flex items-center justify-center flex-shrink-0 shadow-[0_16px_26px_-18px_hsl(var(--sidebar-primary)/0.9)]">
                 {logoUrl ? (
@@ -261,11 +274,21 @@ export default function Sidebar() {
               {t("nav.technicalWorkspace")}
             </p>
           )}
+          {isAdminUser && (
+            <p className={cn(
+              "mb-3 px-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-sidebar-foreground/45 transition-opacity duration-300",
+              isExpanded ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+            )}>
+              {t("nav.adminWorkspace")}
+            </p>
+          )}
           {(user?.role === "player"
             ? playerNavigationItems
-            : isTechnicalUser
-              ? technicalNavigationItems
-            : navigationItems.filter((item) => !("superAdminOnly" in item && item.superAdminOnly) || permissions.canManageRoles)
+            : isAdminUser
+              ? adminNavigationItems
+              : isTechnicalUser
+                ? technicalNavigationItems
+                : navigationItems.filter((item) => !("superAdminOnly" in item && item.superAdminOnly) || permissions.canManageRoles)
           ).map((item) => {
             const Icon = item.icon;
 

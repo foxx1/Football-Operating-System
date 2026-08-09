@@ -46,7 +46,8 @@ import PlayerAnalytics from "@/pages/player-analytics";
 import PlayerSignup from "@/pages/player-signup";
 import EmployeeSignup from "@/pages/employee-signup";
 import TechnicalStaffDashboard from "@/pages/technical-staff-dashboard";
-import { isTechnicalStaffRole } from "@shared/schema";
+import { isTechnicalStaffRole, isAdminRole } from "@shared/schema";
+import AdminDashboard from "@/pages/admin-dashboard";
 import { StaffRegistrationPopup } from "@/components/staff-registration-popup";
 
 function Layout({ children }: { children: React.ReactNode }) {
@@ -96,6 +97,29 @@ function StaffRouter() {
       <Route path="/settings" component={Settings} />
       <Route path="/user-control" component={UserControlPage} />
       <Route component={NotFound} />
+    </Switch>
+  );
+}
+
+function AdminRouter() {
+  return (
+    <Switch>
+      <Route path="/">
+        <Redirect to="/admin-dashboard" />
+      </Route>
+      <Route path="/admin-dashboard" component={AdminDashboard} />
+      <Route path="/players" component={Players} />
+      <Route path="/teams" component={Teams} />
+      <Route path="/staff" component={Staff} />
+      <Route path="/training" component={Training} />
+      <Route path="/training/attendance" component={TrainingAttendance} />
+      <Route path="/matches" component={Matches} />
+      <Route path="/monthly-budgets" component={MonthlyBudgets} />
+      <Route path="/reports" component={Reports} />
+      <Route path="/settings" component={Settings} />
+      <Route>
+        <Redirect to="/admin-dashboard" />
+      </Route>
     </Switch>
   );
 }
@@ -229,9 +253,11 @@ function AuthGate() {
         {user && user.role !== "player" && <StaffRegistrationPopup user={user} />}
         {user?.role === "player"
           ? <PlayerRouter />
-          : isTechnicalStaffRole(user?.role)
-            ? <TechnicalStaffRouter />
-            : <StaffRouter />}
+          : isAdminRole(user?.role)
+            ? <AdminRouter />
+            : isTechnicalStaffRole(user?.role)
+              ? <TechnicalStaffRouter />
+              : <StaffRouter />}
       </Layout>
     </SettingsProvider>
   );

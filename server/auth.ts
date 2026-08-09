@@ -82,6 +82,8 @@ export const rolePermissions: Record<string, Set<string>> = {
   club_super_admin: new Set(["manage_players", "manage_teams", "schedule_training", "view_reports", "manage_tactics", "manage_users", "export_data", "manage_finance", "manage_roles"]),
   head_coach: new Set(["manage_players", "manage_teams", "schedule_training", "view_reports", "manage_tactics", "manage_users", "export_data", "manage_finance"]),
   admin: new Set(["manage_players", "manage_teams", "view_reports", "manage_users", "export_data", "manage_finance"]),
+  team_admin_director: new Set(["manage_players", "manage_teams", "schedule_training", "view_reports", "manage_users", "export_data", "manage_finance"]),
+  team_admin_supervisor: new Set(["manage_players", "manage_teams", "schedule_training", "view_reports", "export_data", "manage_finance"]),
   assistant_coach: new Set(["manage_players", "schedule_training", "view_reports", "manage_tactics"]),
   assistant: new Set(["view_reports"]),
   player: new Set(),

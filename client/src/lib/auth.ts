@@ -64,6 +64,30 @@ export const getRolePermissions = (role: string): AuthPermissions => {
         canManageFinance: true,
         canManageRoles: false,
       };
+    case 'team_admin_director':
+      return {
+        canManagePlayers: true,
+        canManageTeams: true,
+        canScheduleTraining: true,
+        canViewReports: true,
+        canManageTactics: false,
+        canManageUsers: true,
+        canExportData: true,
+        canManageFinance: true,
+        canManageRoles: false,
+      };
+    case 'team_admin_supervisor':
+      return {
+        canManagePlayers: true,
+        canManageTeams: true,
+        canScheduleTraining: true,
+        canViewReports: true,
+        canManageTactics: false,
+        canManageUsers: false,
+        canExportData: true,
+        canManageFinance: true,
+        canManageRoles: false,
+      };
     case 'assistant_coach':
       return {
         canManagePlayers: true,
@@ -194,6 +218,10 @@ export const getRoleDisplayName = (role: string): string => {
       return 'Team Manager';
     case 'team_administrative':
       return 'Team Administrative';
+    case 'team_admin_supervisor':
+      return 'Team Administrative Supervisor';
+    case 'team_admin_director':
+      return 'Team Administrative Director';
     case 'admin':
       return 'Administrator';
     case 'assistant':

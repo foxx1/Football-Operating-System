@@ -858,6 +858,8 @@ export const employeeRoles = [
   "kit_manager",
   "team_manager",
   "team_administrative",
+  "team_admin_supervisor",
+  "team_admin_director",
 ] as const;
 
 export type EmployeeRole = (typeof employeeRoles)[number];
@@ -877,6 +879,18 @@ export type TechnicalStaffRole = (typeof technicalStaffRoles)[number];
 
 export function isTechnicalStaffRole(role: string | null | undefined): role is TechnicalStaffRole {
   return Boolean(role && (technicalStaffRoles as readonly string[]).includes(role));
+}
+
+// Roles that belong in the administrator workspace.
+export const adminRoles = [
+  "team_admin_supervisor",
+  "team_admin_director",
+] as const satisfies readonly EmployeeRole[];
+
+export type AdminRole = (typeof adminRoles)[number];
+
+export function isAdminRole(role: string | null | undefined): role is AdminRole {
+  return Boolean(role && (adminRoles as readonly string[]).includes(role));
 }
 
 // Employee Invitations - Tokens for inviting staff accounts with a fixed role
