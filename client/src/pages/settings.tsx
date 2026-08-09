@@ -329,7 +329,7 @@ export default function SettingsPage() {
                   <Label htmlFor="org-name">Organization Name</Label>
                   <Input
                     id="org-name"
-                    defaultValue={getSettingValue("general", "org_name", "360FOS")}
+                    defaultValue={getSettingValue("general", "org_name", "360 FOS")}
                     onChange={(e) => updateSetting("general", "org_name", e.target.value)}
                   />
                 </div>

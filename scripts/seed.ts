@@ -37,7 +37,7 @@ async function ensureAdmin() {
 
 async function ensureDefaultSettings(updatedBy: number) {
   const settings = [
-    { category: "general", settingKey: "org_name", settingValue: "360FOS", description: "Organization display name" },
+    { category: "general", settingKey: "org_name", settingValue: "360 FOS", description: "Organization display name" },
     { category: "general", settingKey: "current_season", settingValue: "2025-26", description: "Current active season" },
     { category: "general", settingKey: "timezone", settingValue: "Asia/Bahrain", description: "Default timezone" },
     { category: "general", settingKey: "currency", settingValue: "BHD", description: "Default currency" },
