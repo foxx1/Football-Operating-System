@@ -581,17 +581,18 @@ export default function StaffPage() {
             className="pl-10"
           />
         </div>
-        <select
-          value={selectedDepartment}
-          onChange={(e) => setSelectedDepartment(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="all">{t("staff.filterAll")}</option>
-          <option value="coaching">{t("staff.filterCoaching")}</option>
-          <option value="medical">{t("staff.filterMedical")}</option>
-          <option value="analysis">{t("staff.filterAnalysis")}</option>
-          <option value="operations">{t("staff.filterOperations")}</option>
-        </select>
+        <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+          <SelectTrigger className="w-full sm:w-48">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{t("staff.filterAll")}</SelectItem>
+            <SelectItem value="coaching">{t("staff.filterCoaching")}</SelectItem>
+            <SelectItem value="medical">{t("staff.filterMedical")}</SelectItem>
+            <SelectItem value="analysis">{t("staff.filterAnalysis")}</SelectItem>
+            <SelectItem value="operations">{t("staff.filterOperations")}</SelectItem>
+          </SelectContent>
+        </Select>
 
         {/* View Mode Controls */}
         <div className="flex items-center space-x-1 border rounded-md p-1">
