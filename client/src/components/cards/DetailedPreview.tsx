@@ -465,7 +465,7 @@ export default function DetailedPreview({
       // Add footer
       pdf.setFontSize(10);
       pdf.setTextColor(107, 114, 128);
-      pdf.text('ProCoach - Professional Football Management System', 105, 280, { align: 'center' });
+      pdf.text('360FOS - Football Operating System', 105, 280, { align: 'center' });
       pdf.text(`© ${new Date().getFullYear()} ${organizationName}`, 105, 290, { align: 'center' });
       
       const fileName = `${isPlayer ? 'player' : 'staff'}_${person.firstName}_${person.lastName}.pdf`;

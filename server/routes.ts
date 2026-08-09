@@ -1866,7 +1866,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
       const status = {
         status: "operational",
         version: "1.0", 
-        system_name: "ProCoach Wearables API",
+        system_name: "360FOS Wearables API",
         providers: {
           fitbit: { status: "operational", last_check: new Date().toISOString(), connections: 1 },
           garmin: { status: "operational", last_check: new Date().toISOString(), connections: 1 },

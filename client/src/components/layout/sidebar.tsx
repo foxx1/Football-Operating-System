@@ -37,8 +37,8 @@ export default function Sidebar() {
             </svg>
           </div>
           <div>
-            <h1 className="text-xl font-bold text-foreground">ProCoach</h1>
-            <p className="text-sm text-muted-foreground">Team Management</p>
+            <h1 className="text-xl font-bold text-foreground">360FOS</h1>
+            <p className="text-sm text-muted-foreground">Football Operating System</p>
           </div>
         </div>
       </div>

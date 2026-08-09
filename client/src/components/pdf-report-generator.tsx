@@ -48,7 +48,7 @@ export default function PDFReportGeneratorComponent({ onClose }: PDFReportGenera
 
   // Get branding from settings
   const getBranding = (): ReportBranding => ({
-    organizationName: getSettingValue("general", "org_name", "ProCoach Team"),
+    organizationName: getSettingValue("general", "org_name", "360FOS"),
     primaryColor: "#3b82f6",
     secondaryColor: "#e5e7eb",
     season: getSettingValue("general", "current_season", "2024-25"),

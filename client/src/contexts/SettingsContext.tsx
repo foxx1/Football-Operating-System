@@ -48,12 +48,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       try {
         const { locale } = useI18n();
         if (locale === 'ar') {
-          return getSettingValue("general", "org_name_ar", getSettingValue("general", "org_name", "ProCoach Team"));
+          return getSettingValue("general", "org_name_ar", getSettingValue("general", "org_name", "360FOS"));
         }
       } catch (e) {
         // fallback if hook not available
       }
-      return getSettingValue("general", "org_name", "ProCoach Team");
+      return getSettingValue("general", "org_name", "360FOS");
     })(),
     currentSeason: getSettingValue("general", "current_season", "2024-25"),
     logoUrl: getSettingValue("general", "logo_url", ""),
