@@ -128,28 +128,12 @@ export default function SettingsPage() {
       // Create a copy of temp settings to work with
       const settingsToSave = { ...tempSettings };
 
-      // Upload logo first if there's a new logo
-      if (logoFile) {
-        const formData = new FormData();
-        formData.append('logo', logoFile);
-
-        const res = await fetch("/api/upload/logo", {
-          method: "POST",
-          body: formData,
-          credentials: "include",
-        });
-
-        if (!res.ok) {
-          throw new Error(`Failed to upload logo: ${res.statusText}`);
-        }
-
-        const logoResult = await res.json();
-
-        // Add the logo setting to our local object to ensure it gets saved
+      // Save logo as base64 data URL directly — no file upload server needed
+      if (logoFile && logoPreview) {
         settingsToSave['general_logo_url'] = {
           category: "general",
           key: "logo_url",
-          value: logoResult.logoUrl,
+          value: logoPreview,
           description: "Organization logo URL"
         };
       }
