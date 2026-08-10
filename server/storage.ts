@@ -1610,6 +1610,7 @@ export class MemStorage implements IStorage {
       id,
       token: insertInvitation.token,
       role: insertInvitation.role,
+      teamId: insertInvitation.teamId ?? null,
       email: insertInvitation.email ?? null,
       invitedBy: insertInvitation.invitedBy,
       expiresAt: insertInvitation.expiresAt,
