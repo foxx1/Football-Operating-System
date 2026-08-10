@@ -687,6 +687,28 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
     }
   });
 
+  app.put("/api/teams/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const team = await storage.updateTeam(id, req.body);
+      if (!team) return res.status(404).json({ message: "Team not found" });
+      res.json(team);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update team" });
+    }
+  });
+
+  app.delete("/api/teams/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteTeam(id);
+      if (!success) return res.status(404).json({ message: "Team not found" });
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete team" });
+    }
+  });
+
   app.post("/api/invitations", requireAuth, blockTechnicalStaffFromRosterMutation, async (req, res) => {
     try {
       const userId = getCurrentUserId(req);

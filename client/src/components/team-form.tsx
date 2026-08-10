@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { insertTeamSchema } from "@shared/schema";
+import type { Team } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { translateWithParams, useI18n } from "@/contexts/I18nContext";
@@ -34,11 +35,13 @@ const teamFormSchema = insertTeamSchema.extend({
 type TeamFormData = z.infer<typeof teamFormSchema>;
 
 interface TeamFormProps {
+  team?: Team;
   onSuccess?: () => void;
   onCancel?: () => void;
 }
 
-export default function TeamForm({ onSuccess, onCancel }: TeamFormProps) {
+export default function TeamForm({ team, onSuccess, onCancel }: TeamFormProps) {
+  const isEditing = !!team;
   const { toast } = useToast();
   const { isRtl, t } = useI18n();
   const [showCustomCategory, setShowCustomCategory] = useState(false);
@@ -46,31 +49,31 @@ export default function TeamForm({ onSuccess, onCancel }: TeamFormProps) {
   const form = useForm<TeamFormData>({
     resolver: zodResolver(teamFormSchema),
     defaultValues: {
-      name: "",
-      category: "",
+      name: team?.name ?? "",
+      category: team?.category ?? "",
       customCategory: "",
-      description: "",
+      description: team?.description ?? "",
     },
   });
 
-  const createTeamMutation = useMutation({
+  const saveMutation = useMutation({
     mutationFn: (data: TeamFormData) => {
       const finalCategory = data.category === "custom" ? data.customCategory : data.category;
-      const payload = {
-        name: data.name,
-        category: finalCategory,
-        description: data.description,
-      };
-      return apiRequest("POST", "/api/teams", payload);
+      const payload = { name: data.name, category: finalCategory, description: data.description };
+      return isEditing
+        ? apiRequest("PUT", `/api/teams/${team!.id}`, payload)
+        : apiRequest("POST", "/api/teams", payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
       toast({
-        title: t("teamForm.createdTitle"),
-        description: t("teamForm.createdDescription"),
+        title: isEditing ? t("teamForm.updatedTitle") : t("teamForm.createdTitle"),
+        description: isEditing ? t("teamForm.updatedDescription") : t("teamForm.createdDescription"),
       });
-      form.reset();
-      setShowCustomCategory(false);
+      if (!isEditing) {
+        form.reset();
+        setShowCustomCategory(false);
+      }
       onSuccess?.();
     },
     onError: (error: any) => {
@@ -83,18 +86,14 @@ export default function TeamForm({ onSuccess, onCancel }: TeamFormProps) {
   });
 
   const onSubmit = (data: TeamFormData) => {
-    // Additional validation for custom category
     if (data.category === "custom" && !data.customCategory?.trim()) {
       form.setError("customCategory", { message: "Please enter a custom category name" });
       return;
     }
-    
-    // Clean up custom category name (trim whitespace, proper casing)
     if (data.category === "custom" && data.customCategory) {
       data.customCategory = data.customCategory.trim();
     }
-    
-    createTeamMutation.mutate(data);
+    saveMutation.mutate(data);
   };
 
   const getCategoryInfo = (category: string) => {
@@ -337,17 +336,19 @@ export default function TeamForm({ onSuccess, onCancel }: TeamFormProps) {
                 type="button"
                 variant="outline"
                 onClick={onCancel}
-                disabled={createTeamMutation.isPending}
+                disabled={saveMutation.isPending}
               >
                 {t("teamForm.cancel")}
               </Button>
             )}
             <Button
               type="submit"
-              disabled={createTeamMutation.isPending}
+              disabled={saveMutation.isPending}
               className="min-w-[120px]"
             >
-              {createTeamMutation.isPending ? t("teamForm.creating") : t("teams.create")}
+              {saveMutation.isPending
+                ? (isEditing ? t("teamForm.updating") : t("teamForm.creating"))
+                : (isEditing ? t("teamForm.update") : t("teams.create"))}
             </Button>
           </div>
         </form>
