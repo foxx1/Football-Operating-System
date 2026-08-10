@@ -60,7 +60,7 @@ export default function StaffPage() {
   const [deleteRegistrationTarget, setDeleteRegistrationTarget] = useState<RegistrationStatus | null>(null);
   const { toast } = useToast();
   const { currency } = useSettings();
-  const { t } = useI18n();
+  const { t, isRtl } = useI18n();
   const { user } = useAuth();
   const canManageRegistration = user?.role === "club_super_admin" || user?.role === "admin";
 
