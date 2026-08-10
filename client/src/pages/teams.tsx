@@ -13,6 +13,8 @@ import TeamPlayerManagement from "@/components/team-player-management";
 import { translateWithParams, useI18n } from "@/contexts/I18nContext";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/lib/auth";
+import { isAdminRole } from "@shared/schema";
 import type { Team } from "@shared/schema";
 
 export default function Teams() {
@@ -24,6 +26,8 @@ export default function Teams() {
   const [teamToDelete, setTeamToDelete] = useState<Team | null>(null);
   const { isRtl, t } = useI18n();
   const { toast } = useToast();
+  const { user } = useAuth();
+  const canFullEdit = user?.role === 'club_super_admin' || isAdminRole(user?.role);
 
   const { data: teams = [], isLoading: teamsLoading } = useQuery<Team[]>({
     queryKey: ["/api/teams"],
@@ -145,13 +149,15 @@ export default function Teams() {
                   >
                     <Edit className="w-4 h-4 text-muted-foreground" />
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => { e.stopPropagation(); setTeamToDelete(team); }}
-                  >
-                    <Trash2 className="w-4 h-4 text-destructive" />
-                  </Button>
+                  {canFullEdit && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => { e.stopPropagation(); setTeamToDelete(team); }}
+                    >
+                      <Trash2 className="w-4 h-4 text-destructive" />
+                    </Button>
+                  )}
                 </div>
               </div>
             </CardHeader>
@@ -207,6 +213,7 @@ export default function Teams() {
           {teamToEdit && (
             <TeamForm
               team={teamToEdit}
+              nameOnly={!canFullEdit}
               onSuccess={() => setTeamToEdit(null)}
               onCancel={() => setTeamToEdit(null)}
             />

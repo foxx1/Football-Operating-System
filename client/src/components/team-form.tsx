@@ -36,11 +36,12 @@ type TeamFormData = z.infer<typeof teamFormSchema>;
 
 interface TeamFormProps {
   team?: Team;
+  nameOnly?: boolean;
   onSuccess?: () => void;
   onCancel?: () => void;
 }
 
-export default function TeamForm({ team, onSuccess, onCancel }: TeamFormProps) {
+export default function TeamForm({ team, nameOnly = false, onSuccess, onCancel }: TeamFormProps) {
   const isEditing = !!team;
   const { toast } = useToast();
   const { isRtl, t } = useI18n();
@@ -173,8 +174,8 @@ export default function TeamForm({ team, onSuccess, onCancel }: TeamFormProps) {
             )}
           </div>
 
-          {/* Team Category */}
-          <div className="space-y-2">
+          {/* Team Category — hidden in name-only mode */}
+          {!nameOnly && <div className="space-y-2">
             <Label>{t("teamForm.category")}</Label>
             <Select
               value={form.watch("category")}
@@ -267,10 +268,10 @@ export default function TeamForm({ team, onSuccess, onCancel }: TeamFormProps) {
             {form.formState.errors.category && (
               <p className="text-sm text-red-600">{form.formState.errors.category.message}</p>
             )}
-          </div>
+          </div>}
 
           {/* Custom Category Input */}
-          {showCustomCategory && (
+          {!nameOnly && showCustomCategory && (
             <div className="space-y-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
               <div className={cn("flex items-center", isRtl ? "space-x-reverse space-x-2" : "space-x-2")}>
                 <Label htmlFor="customCategory" className="text-blue-800 font-medium">
@@ -318,7 +319,7 @@ export default function TeamForm({ team, onSuccess, onCancel }: TeamFormProps) {
           )}
 
           {/* Description */}
-          <div className="space-y-2">
+          {!nameOnly && <div className="space-y-2">
             <Label htmlFor="description">{t("teamForm.description")}</Label>
             <Textarea
               id="description"
@@ -327,7 +328,7 @@ export default function TeamForm({ team, onSuccess, onCancel }: TeamFormProps) {
               {...form.register("description")}
             />
             <p className="text-sm text-gray-500">{t("teamForm.descriptionHelp")}</p>
-          </div>
+          </div>}
 
           {/* Form Actions */}
           <div className={cn("flex justify-end pt-4", isRtl ? "space-x-reverse space-x-4" : "space-x-4")}>
