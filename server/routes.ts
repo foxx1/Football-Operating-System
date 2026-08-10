@@ -22,6 +22,7 @@ import {
 
 const employeeInvitationSchema = z.object({
   role: z.enum(employeeRoles),
+  teamId: z.number().int().positive().optional().nullable(),
   email: z.string().trim().email().optional().nullable(),
 });
 
@@ -778,7 +779,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
 
   app.post("/api/employee-invitations", requireAuth, async (req, res) => {
     try {
-      const { role, email } = employeeInvitationSchema.parse(req.body);
+      const { role, teamId, email } = employeeInvitationSchema.parse(req.body);
       const token = crypto.randomBytes(20).toString("hex");
       const expiresAt = new Date();
       expiresAt.setHours(expiresAt.getHours() + 48);
@@ -786,6 +787,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
       const invitation = await storage.createEmployeeInvitation({
         token,
         role,
+        teamId: teamId ?? null,
         email: email || null,
         invitedBy: getCurrentUserId(req),
         expiresAt,
@@ -819,10 +821,17 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
         });
       }
 
+      let teamName: string | null = null;
+      if (invitation.teamId) {
+        const team = await storage.getTeam(invitation.teamId);
+        teamName = team?.name ?? null;
+      }
+
       res.json({
         id: invitation.id,
         email: invitation.email || "",
         role: invitation.role,
+        teamName,
         expiresAt: invitation.expiresAt,
         isExpired: false,
         isUsed: false,

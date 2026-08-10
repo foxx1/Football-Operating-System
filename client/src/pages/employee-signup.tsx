@@ -1,20 +1,23 @@
 import { useEffect, useState } from "react";
 import { useLocation, useRoute } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { AlertCircle, CheckCircle, ShieldCheck } from "lucide-react";
+import { AlertCircle, CheckCircle, ShieldCheck, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useClubBranding } from "@/hooks/use-system-settings";
-import { useI18n } from "@/contexts/I18nContext";
+import { useI18n, translateWithParams } from "@/contexts/I18nContext";
+import { cn } from "@/lib/utils";
 import type { EmployeeRole } from "@shared/schema";
 
 interface EmployeeInvitationDetails {
   id: number;
   email: string;
   role: EmployeeRole;
+  teamName: string | null;
   expiresAt: string;
   isExpired: boolean;
   isUsed: boolean;
@@ -72,13 +75,13 @@ export default function EmployeeSignup() {
       return response.json();
     },
     onSuccess: () => {
-      toast({ title: "Account created", description: "You can now sign in with your employee account." });
+      toast({ title: t("employeeSignup.toast.success"), description: t("employeeSignup.toast.successDesc") });
       navigate("/login");
     },
     onError: (signupError) => {
       toast({
-        title: "Signup failed",
-        description: signupError instanceof Error ? signupError.message : "Please check your information and try again.",
+        title: t("employeeSignup.toast.failed"),
+        description: signupError instanceof Error ? signupError.message : t("employeeSignup.toast.failedDesc"),
         variant: "destructive",
       });
     },
@@ -89,11 +92,11 @@ export default function EmployeeSignup() {
     const email = formData.email.trim();
     if (!email || formData.password.length < 6 || formData.password !== formData.confirmPassword) {
       const description = !email
-        ? "Email is required."
+        ? t("employeeSignup.error.emailRequired")
         : formData.password.length < 6
-          ? "Password must be at least 6 characters."
-          : "Passwords do not match.";
-      toast({ title: "Check your details", description, variant: "destructive" });
+          ? t("employeeSignup.error.passwordLength")
+          : t("employeeSignup.error.passwordMatch");
+      toast({ title: t("employeeSignup.error.checkDetails"), description, variant: "destructive" });
       return;
     }
 
@@ -113,23 +116,23 @@ export default function EmployeeSignup() {
   };
 
   if (isLoading) {
-    return <div className="min-h-screen bg-background grid place-items-center p-6 text-sm text-muted-foreground">Loading invitation details...</div>;
+    return <div className="min-h-screen bg-background grid place-items-center p-6 text-sm text-muted-foreground">{t("employeeSignup.loading")}</div>;
   }
 
   if (error || !invitation) {
     return (
-      <div className="min-h-screen bg-background grid place-items-center p-6">
+      <div dir={isRtl ? "rtl" : "ltr"} className="min-h-screen bg-background grid place-items-center p-6">
         <Card className="w-full max-w-md border-red-200 bg-red-50">
           <CardHeader>
-            <div className="flex items-start gap-3">
+            <div className={cn("flex items-start gap-3", isRtl && "flex-row-reverse")}>
               <AlertCircle className="mt-0.5 h-6 w-6 flex-shrink-0 text-red-600" />
               <div>
-                <CardTitle className="text-red-900">Invalid Invitation</CardTitle>
-                <CardDescription className="text-red-700">This employee invitation is invalid, expired, or has already been used.</CardDescription>
+                <CardTitle className="text-red-900">{t("employeeSignup.invalidTitle")}</CardTitle>
+                <CardDescription className="text-red-700">{t("employeeSignup.invalidDesc")}</CardDescription>
               </div>
             </div>
           </CardHeader>
-          <CardContent><Button asChild className="w-full" variant="outline"><a href="/login">Go to Login</a></Button></CardContent>
+          <CardContent><Button asChild className="w-full" variant="outline"><a href="/login">{t("employeeSignup.goToLogin")}</a></Button></CardContent>
         </Card>
       </div>
     );
@@ -141,64 +144,89 @@ export default function EmployeeSignup() {
     <div dir={isRtl ? "rtl" : "ltr"} className="min-h-screen bg-background grid place-items-center p-6">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-3">
-          <div className="flex items-center gap-3 rounded-md border border-border/70 bg-card/70 p-3">
+          {/* Club branding */}
+          <div className={cn("flex items-center gap-3 rounded-md border border-border/70 bg-card/70 p-3", isRtl && "flex-row-reverse")}>
             {logoUrl ? (
               <img src={logoUrl} alt={`${organizationName} logo`} className="h-12 w-12 rounded-md bg-secondary/70 object-contain p-1" />
             ) : (
               <div className="h-12 w-12 rounded-md bg-primary/10 text-primary flex items-center justify-center"><ShieldCheck className="h-6 w-6" /></div>
             )}
             <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Club</p>
-              <h1 className="truncate text-xl font-extrabold leading-tight text-foreground">{brandingLoading ? "Loading club..." : organizationName}</h1>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">{t("employeeSignup.clubLabel")}</p>
+              <h1 className="truncate text-xl font-extrabold leading-tight text-foreground">{brandingLoading ? "..." : organizationName}</h1>
             </div>
           </div>
+
           <div className="h-11 w-11 rounded-md bg-green-100 text-green-700 flex items-center justify-center"><CheckCircle className="h-6 w-6" /></div>
+
           <div>
-            <CardTitle>Complete Your Employee Signup</CardTitle>
-            <CardDescription>Join {organizationName} as {roleLabel}</CardDescription>
+            <CardTitle>{t("employeeSignup.title")}</CardTitle>
+            <CardDescription>{translateWithParams(t, "employeeSignup.subtitle", { org: organizationName, role: roleLabel })}</CardDescription>
           </div>
         </CardHeader>
+
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="rounded-md border border-green-200 bg-green-50 p-4">
-              <div className="text-xs font-semibold uppercase text-green-700">Employee Role</div>
-              <div className="mt-1 text-lg font-semibold text-green-900">{roleLabel}</div>
+            {/* Role + Team info card */}
+            <div className="rounded-md border border-green-200 bg-green-50 p-4 space-y-3">
+              <div>
+                <div className="text-xs font-semibold uppercase text-green-700">{t("employeeSignup.roleLabel")}</div>
+                <div className="mt-1 text-lg font-semibold text-green-900">{roleLabel}</div>
+              </div>
+              {invitation.teamName && (
+                <div>
+                  <div className="text-xs font-semibold uppercase text-green-700">{t("employeeSignup.teamLabel")}</div>
+                  <div className={cn("mt-1 flex items-center gap-2", isRtl && "flex-row-reverse justify-end")}>
+                    <Users className="h-4 w-4 text-green-700" />
+                    <Badge className="bg-green-100 text-green-800 border-green-300 text-sm font-semibold">{invitation.teamName}</Badge>
+                  </div>
+                </div>
+              )}
             </div>
 
+            {/* Email */}
             <div className="space-y-2">
-              <Label htmlFor="employee-email">Email Address</Label>
+              <Label htmlFor="employee-email">{t("employeeSignup.emailLabel")}</Label>
               <Input
                 id="employee-email"
                 type="email"
                 value={formData.email}
                 onChange={(event) => setFormData((current) => ({ ...current, email: event.target.value }))}
-                placeholder="employee@example.com"
+                placeholder={t("employeeSignup.emailPlaceholder")}
                 required
                 disabled={signupMutation.isPending || Boolean(invitation.email)}
                 className={invitation.email ? "bg-muted" : undefined}
               />
-              {invitation.email && <p className="text-xs text-muted-foreground">Locked to this invitation</p>}
+              {invitation.email && <p className="text-xs text-muted-foreground">{t("employeeSignup.emailLocked")}</p>}
             </div>
 
+            {/* Password */}
             <div className="space-y-2">
-              <Label htmlFor="employee-password">Password</Label>
+              <Label htmlFor="employee-password">{t("employeeSignup.passwordLabel")}</Label>
               <div className="relative">
                 <Input id="employee-password" type={showPassword ? "text" : "password"} value={formData.password} onChange={(event) => setFormData((current) => ({ ...current, password: event.target.value }))} required disabled={signupMutation.isPending} />
-                <button type="button" onClick={() => setShowPassword((visible) => !visible)} className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">{showPassword ? "Hide" : "Show"}</button>
+                <button type="button" onClick={() => setShowPassword((visible) => !visible)} className={cn("absolute top-1/2 -translate-y-1/2 text-xs text-muted-foreground", isRtl ? "left-3" : "right-3")}>
+                  {showPassword ? t("employeeSignup.passwordHide") : t("employeeSignup.passwordShow")}
+                </button>
               </div>
-              <p className="text-xs text-muted-foreground">Minimum 6 characters</p>
+              <p className="text-xs text-muted-foreground">{t("employeeSignup.passwordHint")}</p>
             </div>
 
+            {/* Confirm Password */}
             <div className="space-y-2">
-              <Label htmlFor="employee-confirm-password">Confirm Password</Label>
+              <Label htmlFor="employee-confirm-password">{t("employeeSignup.confirmLabel")}</Label>
               <div className="relative">
                 <Input id="employee-confirm-password" type={showConfirmPassword ? "text" : "password"} value={formData.confirmPassword} onChange={(event) => setFormData((current) => ({ ...current, confirmPassword: event.target.value }))} required disabled={signupMutation.isPending} />
-                <button type="button" onClick={() => setShowConfirmPassword((visible) => !visible)} className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">{showConfirmPassword ? "Hide" : "Show"}</button>
+                <button type="button" onClick={() => setShowConfirmPassword((visible) => !visible)} className={cn("absolute top-1/2 -translate-y-1/2 text-xs text-muted-foreground", isRtl ? "left-3" : "right-3")}>
+                  {showConfirmPassword ? t("employeeSignup.passwordHide") : t("employeeSignup.passwordShow")}
+                </button>
               </div>
             </div>
 
-            <Button type="submit" className="w-full" disabled={signupMutation.isPending}>{signupMutation.isPending ? "Creating Account..." : "Complete Signup"}</Button>
-            <p className="text-center text-xs text-muted-foreground">Your role-specific dashboard will be connected separately.</p>
+            <Button type="submit" className="w-full" disabled={signupMutation.isPending}>
+              {signupMutation.isPending ? t("employeeSignup.submitting") : t("employeeSignup.submit")}
+            </Button>
+            <p className="text-center text-xs text-muted-foreground">{t("employeeSignup.footerNote")}</p>
           </form>
         </CardContent>
       </Card>

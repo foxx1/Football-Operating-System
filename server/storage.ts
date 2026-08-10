@@ -1678,6 +1678,7 @@ export class DatabaseStorage implements IStorage {
         id SERIAL PRIMARY KEY,
         token TEXT NOT NULL UNIQUE,
         role TEXT NOT NULL,
+        team_id INTEGER,
         email TEXT,
         invited_by INTEGER NOT NULL REFERENCES users(id),
         expires_at TIMESTAMP NOT NULL,
@@ -1685,6 +1686,7 @@ export class DatabaseStorage implements IStorage {
         created_at TIMESTAMP NOT NULL DEFAULT NOW()
       )
     `);
+    await db.execute(sql`ALTER TABLE employee_invitations ADD COLUMN IF NOT EXISTS team_id INTEGER`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS employee_invitations_token_idx ON employee_invitations(token)`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS employee_invitations_invited_by_idx ON employee_invitations(invited_by)`);
   }

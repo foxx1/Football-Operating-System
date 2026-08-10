@@ -898,6 +898,7 @@ export const employeeInvitations = pgTable("employee_invitations", {
   id: serial("id").primaryKey(),
   token: text("token").notNull().unique(),
   role: text("role").$type<EmployeeRole>().notNull(),
+  teamId: integer("team_id").references(() => teams.id),
   email: text("email"),
   invitedBy: integer("invited_by").references(() => users.id).notNull(),
   expiresAt: timestamp("expires_at").notNull(),

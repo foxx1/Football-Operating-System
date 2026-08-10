@@ -46,6 +46,7 @@ export default function StaffPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isInviteEmployeeOpen, setIsInviteEmployeeOpen] = useState(false);
   const [inviteEmployeeRole, setInviteEmployeeRole] = useState<EmployeeRole | "">("");
+  const [inviteEmployeeTeamId, setInviteEmployeeTeamId] = useState<number | null>(null);
   const [inviteEmployeeEmail, setInviteEmployeeEmail] = useState("");
   const [generatedEmployeeInviteLink, setGeneratedEmployeeInviteLink] = useState("");
   const [isEmployeeInviteLinkCopied, setIsEmployeeInviteLinkCopied] = useState(false);
@@ -102,6 +103,7 @@ export default function StaffPage() {
   const createEmployeeInvitationMutation = useMutation({
     mutationFn: () => apiRequest("POST", "/api/employee-invitations", {
       role: inviteEmployeeRole,
+      teamId: inviteEmployeeTeamId ?? undefined,
       email: inviteEmployeeEmail.trim() || undefined,
     }),
     onSuccess: (result) => {
@@ -117,15 +119,15 @@ export default function StaffPage() {
       }
 
       toast({
-        title: "Invite link generated",
+        title: t("invite.toast.generated"),
         description: inviteEmployeeEmail.trim()
-          ? `Email simulation logged for ${inviteEmployeeEmail.trim()}.`
-          : "The employee invitation is ready to share.",
+          ? translateWithParams(t, "invite.toast.emailSimulated", { email: inviteEmployeeEmail.trim() })
+          : t("invite.toast.ready"),
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Unable to create invitation",
+        title: t("invite.toast.error"),
         description: error.message,
         variant: "destructive",
       });
@@ -211,8 +213,8 @@ export default function StaffPage() {
   const handleGenerateEmployeeInviteLink = () => {
     if (!inviteEmployeeRole) {
       toast({
-        title: "Employee role required",
-        description: "Select a role before generating the employee invitation.",
+        title: t("invite.toast.roleRequired"),
+        description: t("invite.toast.roleRequiredDesc"),
         variant: "destructive",
       });
       return;
@@ -225,11 +227,11 @@ export default function StaffPage() {
     try {
       await navigator.clipboard.writeText(generatedEmployeeInviteLink);
       setIsEmployeeInviteLinkCopied(true);
-      toast({ title: "Invite link copied" });
+      toast({ title: t("invite.toast.copied") });
     } catch {
       toast({
-        title: "Unable to copy link",
-        description: "Select and copy the generated link manually.",
+        title: t("invite.toast.copyFailed"),
+        description: t("invite.toast.copyFailedDesc"),
         variant: "destructive",
       });
     }
@@ -345,26 +347,30 @@ export default function StaffPage() {
           setIsInviteEmployeeOpen(open);
           if (!open) {
             setInviteEmployeeRole("");
+            setInviteEmployeeTeamId(null);
             setInviteEmployeeEmail("");
             setGeneratedEmployeeInviteLink("");
             setIsEmployeeInviteLinkCopied(false);
           }
         }}
       >
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-lg" dir={isRtl ? "rtl" : "ltr"}>
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className={cn("flex items-center gap-2", isRtl ? "flex-row-reverse justify-end" : "")}>
               <Link2 className="h-5 w-5 text-primary" />
-              Invite Employee via Link
+              {t("invite.title")}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-5">
-            <p className="text-sm leading-6 text-muted-foreground">
-              Generate a secure 48-hour registration link. The selected employee role is locked to this invitation.
+            <p className="text-sm leading-6 text-muted-foreground text-start">
+              {t("invite.subtitle")}
             </p>
 
+            {/* Role */}
             <div className="space-y-2">
-              <Label htmlFor="invite-employee-role">Employee Role <span className="text-destructive">*</span></Label>
+              <Label htmlFor="invite-employee-role" className="flex items-center gap-1">
+                {t("invite.roleLabel")} <span className="text-destructive">*</span>
+              </Label>
               <Select
                 value={inviteEmployeeRole}
                 onValueChange={(value: EmployeeRole) => {
@@ -373,7 +379,7 @@ export default function StaffPage() {
                 }}
               >
                 <SelectTrigger id="invite-employee-role">
-                  <SelectValue placeholder="Select an employee role" />
+                  <SelectValue placeholder={t("invite.rolePlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
                   {employeeRoles.map((role) => (
@@ -381,13 +387,41 @@ export default function StaffPage() {
                   ))}
                 </SelectContent>
               </Select>
-              {!inviteEmployeeRole && <p className="text-xs text-muted-foreground">A role is required to generate an invitation.</p>}
+              {!inviteEmployeeRole && <p className="text-xs text-muted-foreground">{t("invite.roleRequiredNote")}</p>}
             </div>
 
+            {/* Team (required before generating) */}
             <div className="space-y-2">
-              <Label htmlFor="invite-employee-email">Employee email <span className="font-normal text-muted-foreground">(optional)</span></Label>
+              <Label htmlFor="invite-employee-team" className="flex items-center gap-1">
+                {t("invite.teamLabel")} <span className="text-destructive">*</span>
+              </Label>
+              <Select
+                value={inviteEmployeeTeamId ? String(inviteEmployeeTeamId) : ""}
+                onValueChange={(value) => {
+                  setInviteEmployeeTeamId(value ? Number(value) : null);
+                  setGeneratedEmployeeInviteLink("");
+                }}
+              >
+                <SelectTrigger id="invite-employee-team">
+                  <SelectValue placeholder={t("invite.teamPlaceholder")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {(teams as Team[]).map((team) => (
+                    <SelectItem key={team.id} value={String(team.id)}>{team.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">{t("invite.teamHelp")}</p>
+            </div>
+
+            {/* Email */}
+            <div className="space-y-2">
+              <Label htmlFor="invite-employee-email" className="flex items-center gap-1">
+                {t("invite.emailLabel")}
+                <span className="font-normal text-muted-foreground">({t("invite.emailOptional")})</span>
+              </Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Mail className={cn("absolute top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground", isRtl ? "right-3" : "left-3")} />
                 <Input
                   id="invite-employee-email"
                   type="email"
@@ -396,28 +430,28 @@ export default function StaffPage() {
                     setInviteEmployeeEmail(event.target.value);
                     setGeneratedEmployeeInviteLink("");
                   }}
-                  placeholder="employee@example.com"
-                  className="pl-10"
+                  placeholder={t("invite.emailPlaceholder")}
+                  className={isRtl ? "pr-10" : "pl-10"}
                 />
               </div>
-              <p className="text-xs text-muted-foreground">When provided, the invite can only be accepted with this email.</p>
+              <p className="text-xs text-muted-foreground">{t("invite.emailHelp")}</p>
             </div>
 
             <Button
               onClick={handleGenerateEmployeeInviteLink}
-              disabled={!inviteEmployeeRole || createEmployeeInvitationMutation.isPending}
+              disabled={!inviteEmployeeRole || !inviteEmployeeTeamId || createEmployeeInvitationMutation.isPending}
               className="w-full"
             >
-              <Link2 className="mr-2 h-4 w-4" />
-              {createEmployeeInvitationMutation.isPending ? "Generating..." : "Generate Link"}
+              <Link2 className={cn("h-4 w-4", isRtl ? "ms-2" : "me-2")} />
+              {createEmployeeInvitationMutation.isPending ? t("invite.generating") : t("invite.generate")}
             </Button>
 
             {generatedEmployeeInviteLink && (
               <div className="space-y-2 rounded-md border border-primary/20 bg-primary/[0.06] p-4">
-                <Label htmlFor="generated-employee-invite-link">Generated invitation link</Label>
+                <Label htmlFor="generated-employee-invite-link">{t("invite.generatedLabel")}</Label>
                 <div className="flex gap-2">
                   <Input id="generated-employee-invite-link" value={generatedEmployeeInviteLink} readOnly className="font-mono text-xs" />
-                  <Button variant="outline" size="icon" onClick={handleCopyEmployeeInviteLink} aria-label="Copy invitation link">
+                  <Button variant="outline" size="icon" onClick={handleCopyEmployeeInviteLink} aria-label={t("invite.copyAria")}>
                     {isEmployeeInviteLinkCopied ? <Check className="h-4 w-4 text-primary" /> : <Copy className="h-4 w-4" />}
                   </Button>
                 </div>
