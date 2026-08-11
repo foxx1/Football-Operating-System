@@ -22,6 +22,7 @@ import { InteractiveCalendar } from "@/components/dashboard/interactive-calendar
 import { useSettings } from "@/contexts/SettingsContext";
 import { useAuth, getRoleDisplayName } from "@/lib/auth";
 import { translateWithParams, useI18n } from "@/contexts/I18nContext";
+import { useMyDisplayName } from "@/hooks/use-my-display-name";
 import { cn } from "@/lib/utils";
 import { useInjuries } from "@/lib/injuries";
 import { isTechnicalStaffRole, type Team, type TrainingSession } from "@shared/schema";
@@ -43,6 +44,7 @@ export default function TechnicalStaffDashboard() {
   const { user } = useAuth();
   const { t, isRtl, locale } = useI18n();
   const dateLocale = locale === "ar" ? ar : enUS;
+  const { firstName: greetingName } = useMyDisplayName();
 
   // Every card on this dashboard is restricted to the team(s) the signed-in
   // staff member is assigned to (via the team_staff assignment), not the
@@ -83,7 +85,7 @@ export default function TechnicalStaffDashboard() {
   const workspaceGroup = getWorkspaceGroup(user.role, t);
   const greetingPeriod = getGreetingPeriod(new Date().getHours());
   const greeting = translateWithParams(t, `technicalStaff.dashboard.greeting.${greetingPeriod}`, {
-    name: user.firstName,
+    name: greetingName || user.firstName,
   });
 
   const quickActions = [

@@ -1021,6 +1021,48 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
     }
   });
 
+  // Display name for the signed-in user, including the Arabic name recorded
+  // on their player/staff record if one exists. Unlike /api/staff/profile
+  // (gated to invite-based employee roles for the registration flow), this
+  // is read-only and open to every non-player role, so legacy accounts
+  // (admin, club_super_admin, assistant) get their Arabic name on dashboard
+  // greetings too.
+  app.get("/api/dashboard/my-name", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(getCurrentUserId(req));
+      if (!user) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const normalizedEmail = user.email.toLowerCase();
+
+      if (user.role === "player") {
+        const player = (await storage.getPlayers()).find(
+          (candidate) => candidate.email?.toLowerCase() === normalizedEmail
+        );
+        return res.json({
+          firstName: player?.firstName ?? user.firstName,
+          lastName: player?.lastName ?? user.lastName,
+          firstNameAr: player?.firstNameAr ?? null,
+          lastNameAr: player?.lastNameAr ?? null,
+        });
+      }
+
+      const member = (await storage.getStaff()).find(
+        (candidate) => candidate.email.toLowerCase() === normalizedEmail
+      );
+
+      res.json({
+        firstName: member?.firstName ?? user.firstName,
+        lastName: member?.lastName ?? user.lastName,
+        firstNameAr: member?.firstNameAr ?? null,
+        lastNameAr: member?.lastNameAr ?? null,
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch display name" });
+    }
+  });
+
   // Admin training session creation (simplified — only Date, Time, Venue, TeamId)
   app.post("/api/admin/training-sessions", requireAuth, async (req, res) => {
     try {

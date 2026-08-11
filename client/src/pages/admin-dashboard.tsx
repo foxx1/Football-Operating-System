@@ -24,6 +24,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useAuth, getRoleDisplayName } from "@/lib/auth";
 import { useI18n } from "@/contexts/I18nContext";
+import { useMyDisplayName } from "@/hooks/use-my-display-name";
 import { cn } from "@/lib/utils";
 import type { Player, Team, TrainingSession } from "@shared/schema";
 
@@ -49,6 +50,7 @@ export default function AdminDashboard() {
   const { user } = useAuth();
   const { t, isRtl, locale } = useI18n();
   const dateLocale = locale === "ar" ? ar : enUS;
+  const { firstName: greetingName } = useMyDisplayName();
 
   const { data: stats } = useQuery<{
     totalPlayers: number;
@@ -64,7 +66,7 @@ export default function AdminDashboard() {
 
   const roleName = getRoleDisplayName(user.role);
   const greetingPeriod = getGreetingPeriod(new Date().getHours());
-  const greeting = getGreeting(greetingPeriod, user.firstName, isRtl);
+  const greeting = getGreeting(greetingPeriod, greetingName || user.firstName, isRtl);
 
   // Real data: 3 most recently added players
   const recentPlayers = [...players]
