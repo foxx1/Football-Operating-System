@@ -48,6 +48,7 @@ import EmployeeSignup from "@/pages/employee-signup";
 import TechnicalStaffDashboard from "@/pages/technical-staff-dashboard";
 import { isTechnicalStaffRole, isAdminRole } from "@shared/schema";
 import AdminDashboard from "@/pages/admin-dashboard";
+import AdminTraining from "@/pages/admin-training";
 import { StaffRegistrationPopup } from "@/components/staff-registration-popup";
 
 function Layout({ children }: { children: React.ReactNode }) {
@@ -111,11 +112,13 @@ function AdminRouter() {
       <Route path="/players" component={Players} />
       <Route path="/teams" component={Teams} />
       <Route path="/staff" component={Staff} />
-      <Route path="/training" component={Training} />
+      <Route path="/training" component={AdminTraining} />
       <Route path="/training/attendance" component={TrainingAttendance} />
       <Route path="/matches" component={Matches} />
       <Route path="/monthly-budgets" component={MonthlyBudgets} />
       <Route path="/reports" component={Reports} />
+      <Route path="/injuries" component={InjuryList} />
+      <Route path="/injuries/report" component={InjuryReport} />
       <Route path="/settings" component={Settings} />
       <Route>
         <Redirect to="/admin-dashboard" />

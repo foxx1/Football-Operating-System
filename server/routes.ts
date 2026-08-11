@@ -16,7 +16,7 @@ import {
   insertAnalyticsReportSchema, insertSystemSettingsSchema,
   insertMonthlyBudgetSchema, insertExpenseSchema, insertPlayerContractSchema,
   insertPerformanceReactionSchema, insertTacticalBoardSchema, employeeRoles,
-  isTechnicalStaffRole,
+  isTechnicalStaffRole, isAdminRole,
   type User
 } from "@shared/schema";
 
@@ -678,6 +678,16 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
     }
   });
 
+  app.get("/api/teams/:id/staff", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const teamStaff = await storage.getTeamStaff(id);
+      res.json(teamStaff);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch team staff" });
+    }
+  });
+
   app.post("/api/teams", async (req, res) => {
     try {
       const validatedData = insertTeamSchema.parse(req.body);
@@ -947,10 +957,68 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
     }
   });
 
+  // Admin training session creation (simplified — only Date, Time, Venue, TeamId)
+  app.post("/api/admin/training-sessions", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(getCurrentUserId(req));
+      if (!user || !isAdminRole(user.role)) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const { teamId, date, startTime, location } = req.body as {
+        teamId: number; date: string; startTime: string; location: string;
+      };
+      if (!teamId || !date || !startTime || !location) {
+        return res.status(400).json({ message: "teamId, date, startTime, and location are required" });
+      }
+
+      // Use the admin's own staff record as coachId
+      const normalizedEmail = user.email.toLowerCase();
+      const member = (await storage.getStaff()).find(
+        (s) => s.email.toLowerCase() === normalizedEmail
+      );
+
+      let coachId: number;
+      if (member) {
+        coachId = member.id;
+      } else {
+        const teamStaffList = await storage.getTeamStaff(teamId);
+        if (!teamStaffList.length) {
+          return res.status(400).json({ message: "No staff found for this team" });
+        }
+        coachId = teamStaffList[0].staff.id;
+      }
+
+      const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+      const dayOfWeek = dayNames[new Date(date).getDay()];
+
+      const session = await storage.createTrainingSession({
+        title: `Training - ${dayOfWeek}`,
+        sessionType: "tactical",
+        date,
+        startTime,
+        duration: 90,
+        location,
+        teamId,
+        coachId,
+      });
+
+      res.status(201).json(session);
+    } catch (error) {
+      console.error("Error creating admin training session:", error);
+      res.status(500).json({ message: "Failed to create training session" });
+    }
+  });
+
   // Training Sessions
   app.get("/api/training-sessions", async (req, res) => {
     try {
       const sessions = await storage.getTrainingSessions();
+      const teamIdsParam = req.query.teamIds as string | undefined;
+      if (teamIdsParam) {
+        const ids = teamIdsParam.split(",").map(Number).filter(Boolean);
+        return res.json(sessions.filter((s) => ids.includes(s.teamId ?? 0)));
+      }
       res.json(sessions);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch training sessions" });
@@ -1194,6 +1262,11 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.get("/api/matches", async (req, res) => {
     try {
       const matches = await storage.getMatches();
+      const teamIdsParam = req.query.teamIds as string | undefined;
+      if (teamIdsParam) {
+        const ids = teamIdsParam.split(",").map(Number).filter(Boolean);
+        return res.json(matches.filter((m) => ids.includes(m.homeTeamId ?? 0)));
+      }
       res.json(matches);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch matches" });

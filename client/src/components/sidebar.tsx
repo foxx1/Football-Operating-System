@@ -120,15 +120,21 @@ const navigationItems: NavItem[] = [
   { href: "/user-control", icon: UserCog, labelKey: "nav.userControl", badge: null, superAdminOnly: true },
 ];
 
+const adminInjurySubItems: NavSubItem[] = [
+  { href: "/injuries", icon: List, labelKey: "nav.injuryList" },
+  { href: "/injuries/report", icon: ClipboardList, labelKey: "nav.injuryReport" },
+];
+
 const adminNavigationItems: NavItem[] = [
   { href: "/admin-dashboard", icon: LayoutGrid, labelKey: "nav.adminDashboard", badge: null },
-  { href: "/players", icon: Users, labelKey: "nav.players", badge: null },
   { href: "/teams", icon: Shield, labelKey: "nav.teams", badge: null },
+  { href: "/players", icon: Users, labelKey: "nav.players", badge: null },
   { href: "/staff", icon: UserCheck, labelKey: "nav.staff", badge: null },
   { type: "expandable", icon: Calendar, labelKey: "nav.training", badge: null, rootPath: "/training", subItems: trainingSubItems },
   { href: "/matches", icon: Trophy, labelKey: "nav.matches", badge: null },
   { href: "/monthly-budgets", icon: Wallet, labelKey: "nav.monthlyBudgets", badge: null },
   { href: "/reports", icon: FileText, labelKey: "nav.reports", badge: null },
+  { type: "expandable", icon: HeartPulse, labelKey: "nav.injuries", badge: null, rootPath: "/injuries", subItems: adminInjurySubItems },
   { href: "/settings", icon: Settings, labelKey: "nav.settings", badge: null },
 ];
 

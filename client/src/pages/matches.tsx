@@ -12,6 +12,7 @@ import MatchForm from "@/components/match-form";
 import MatchResultForm from "@/components/match-result-form";
 import MatchSquadManager from "@/components/match-squad-manager";
 import { useI18n, translateWithParams } from "@/contexts/I18nContext";
+import { useMyTeams } from "@/hooks/use-my-teams";
 
 interface GoalEvent {
   minute: number;
@@ -30,9 +31,17 @@ export default function MatchesPage() {
   const [squadMatch, setSquadMatch] = useState<Match | null>(null);
   const [resultMatch, setResultMatch] = useState<Match | null>(null);
   const { toast } = useToast();
+  const { teamIds } = useMyTeams();
+  const teamIdsQuery = teamIds.join(",");
 
   const { data: matches = [], isLoading } = useQuery<Match[]>({
-    queryKey: ["/api/matches"],
+    queryKey: ["/api/matches", teamIdsQuery],
+    queryFn: async () => {
+      const url = teamIdsQuery ? `/api/matches?teamIds=${teamIdsQuery}` : "/api/matches";
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Failed to fetch matches");
+      return res.json();
+    },
   });
 
   const filteredMatches = matches.filter((match: Match) => {
