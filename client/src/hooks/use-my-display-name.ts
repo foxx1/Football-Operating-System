@@ -20,8 +20,12 @@ export function useMyDisplayName() {
     enabled: Boolean(user),
   });
 
-  const firstName = (isRtl && data?.firstNameAr) || user?.firstName || "";
-  const lastName = (isRtl && data?.lastNameAr) || user?.lastName || "";
+  // Only switch to the Arabic name once a first name is recorded for it —
+  // otherwise a partially-filled record would mix an Arabic first name with
+  // an English last name.
+  const useArabic = isRtl && Boolean(data?.firstNameAr);
+  const firstName = (useArabic ? data?.firstNameAr : user?.firstName) || "";
+  const lastName = (useArabic ? data?.lastNameAr : user?.lastName) || "";
 
   return { firstName, lastName, fullName: [firstName, lastName].filter(Boolean).join(" ") };
 }

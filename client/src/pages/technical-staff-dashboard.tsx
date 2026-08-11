@@ -44,7 +44,7 @@ export default function TechnicalStaffDashboard() {
   const { user } = useAuth();
   const { t, isRtl, locale } = useI18n();
   const dateLocale = locale === "ar" ? ar : enUS;
-  const { firstName: greetingName } = useMyDisplayName();
+  const { fullName: greetingName } = useMyDisplayName();
 
   // Every card on this dashboard is restricted to the team(s) the signed-in
   // staff member is assigned to (via the team_staff assignment), not the

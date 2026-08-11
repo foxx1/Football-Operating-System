@@ -50,7 +50,7 @@ export default function AdminDashboard() {
   const { user } = useAuth();
   const { t, isRtl, locale } = useI18n();
   const dateLocale = locale === "ar" ? ar : enUS;
-  const { firstName: greetingName } = useMyDisplayName();
+  const { fullName: greetingName } = useMyDisplayName();
 
   const { data: stats } = useQuery<{
     totalPlayers: number;
