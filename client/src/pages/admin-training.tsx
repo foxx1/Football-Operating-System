@@ -54,7 +54,7 @@ interface EditForm {
 export default function AdminTraining() {
   const { t, isRtl } = useI18n();
   const { toast } = useToast();
-  const { teams, teamIds, isLoading: teamsLoading } = useMyTeams();
+  const { teams, isLoading: teamsLoading } = useMyTeams();
 
   const [showAdd, setShowAdd] = useState(false);
   const [editSession, setEditSession] = useState<TrainingSession | null>(null);
@@ -68,19 +68,9 @@ export default function AdminTraining() {
   });
   const [editForm, setEditForm] = useState<EditForm>({ startTime: "", location: "" });
 
-  const teamIdsQuery = teamIds.join(",");
-
+  // Sessions come back already scoped to the administrator's teams.
   const { data: allSessions = [], isLoading: sessionsLoading } = useQuery<TrainingSession[]>({
-    queryKey: ["/api/training-sessions", teamIdsQuery],
-    queryFn: async () => {
-      const url = teamIdsQuery
-        ? `/api/training-sessions?teamIds=${teamIdsQuery}`
-        : "/api/training-sessions";
-      const res = await fetch(url);
-      if (!res.ok) throw new Error("Failed to fetch sessions");
-      return res.json();
-    },
-    enabled: teamIds.length > 0,
+    queryKey: ["/api/training-sessions"],
   });
 
   const sessions = useMemo(() => {

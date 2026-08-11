@@ -26,6 +26,47 @@ const employeeInvitationSchema = z.object({
   email: z.string().trim().email().optional().nullable(),
 });
 
+// Team IDs an administrator is limited to. Administrators (team_admin_supervisor
+// / team_admin_director) only ever see their assigned squads; everyone else
+// (super admin, technical staff, players) gets club-wide visibility, signalled
+// by returning null. An administrator with no assignment yet sees nothing.
+async function getScopedTeamIds(req: { session: { userId?: number } }): Promise<number[] | null> {
+  const userId = req.session?.userId;
+  if (!userId) return null;
+
+  const user = await storage.getUser(userId);
+  if (!user || !isAdminRole(user.role)) return null;
+
+  const normalizedEmail = user.email.toLowerCase();
+  const member = (await storage.getStaff()).find(
+    (candidate) => candidate.email.toLowerCase() === normalizedEmail
+  );
+  if (!member) return [];
+
+  const staffTeams = await storage.getStaffTeams(member.id);
+  return staffTeams.map((st) => st.teamId);
+}
+
+// Player IDs belonging to any of the given teams.
+async function getPlayerIdsForTeams(teamIds: number[]): Promise<Set<number>> {
+  const ids = new Set<number>();
+  for (const teamId of teamIds) {
+    const teamPlayers = await storage.getTeamPlayers(teamId);
+    teamPlayers.forEach((tp) => ids.add(tp.playerId));
+  }
+  return ids;
+}
+
+// Staff IDs belonging to any of the given teams.
+async function getStaffIdsForTeams(teamIds: number[]): Promise<Set<number>> {
+  const ids = new Set<number>();
+  for (const teamId of teamIds) {
+    const teamStaff = await storage.getTeamStaff(teamId);
+    teamStaff.forEach((ts) => ids.add(ts.staffId));
+  }
+  return ids;
+}
+
 const playerProfileSchema = z.object({
   firstName: z.string().trim().min(1, "First name is required"),
   lastName: z.string().trim().min(1, "Last name is required"),
@@ -526,6 +567,11 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.get("/api/players", async (req, res) => {
     try {
       const players = await storage.getPlayers();
+      const scopedTeamIds = await getScopedTeamIds(req);
+      if (scopedTeamIds) {
+        const allowedPlayerIds = await getPlayerIdsForTeams(scopedTeamIds);
+        return res.json(players.filter((player) => allowedPlayerIds.has(player.id)));
+      }
       res.json(players);
     } catch (error) {
       console.error("Error fetching players:", error);
@@ -649,6 +695,10 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.get("/api/teams", async (req, res) => {
     try {
       const teams = await storage.getTeams();
+      const scopedTeamIds = await getScopedTeamIds(req);
+      if (scopedTeamIds) {
+        return res.json(teams.filter((team) => scopedTeamIds.includes(team.id)));
+      }
       res.json(teams);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch teams" });
@@ -690,6 +740,11 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
 
   app.post("/api/teams", async (req, res) => {
     try {
+      // Administrators manage their assigned squads only — they cannot open new ones.
+      const scopedTeamIds = await getScopedTeamIds(req);
+      if (scopedTeamIds) {
+        return res.status(403).json({ message: "Administrators cannot create teams" });
+      }
       const validatedData = insertTeamSchema.parse(req.body);
       const team = await storage.createTeam(validatedData);
       res.status(201).json(team);
@@ -701,6 +756,10 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.put("/api/teams/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
+      const scopedTeamIds = await getScopedTeamIds(req);
+      if (scopedTeamIds && !scopedTeamIds.includes(id)) {
+        return res.status(403).json({ message: "This team is not assigned to you" });
+      }
       const team = await storage.updateTeam(id, req.body);
       if (!team) return res.status(404).json({ message: "Team not found" });
       res.json(team);
@@ -712,6 +771,10 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.delete("/api/teams/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
+      const scopedTeamIds = await getScopedTeamIds(req);
+      if (scopedTeamIds && !scopedTeamIds.includes(id)) {
+        return res.status(403).json({ message: "This team is not assigned to you" });
+      }
       const success = await storage.deleteTeam(id);
       if (!success) return res.status(404).json({ message: "Team not found" });
       res.json({ success: true });
@@ -1014,6 +1077,13 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.get("/api/training-sessions", async (req, res) => {
     try {
       const sessions = await storage.getTrainingSessions();
+
+      // An administrator's scope is enforced here, not taken from the client.
+      const scopedTeamIds = await getScopedTeamIds(req);
+      if (scopedTeamIds) {
+        return res.json(sessions.filter((s) => scopedTeamIds.includes(s.teamId ?? 0)));
+      }
+
       const teamIdsParam = req.query.teamIds as string | undefined;
       if (teamIdsParam) {
         const ids = teamIdsParam.split(",").map(Number).filter(Boolean);
@@ -1202,6 +1272,11 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.get("/api/staff", async (req, res) => {
     try {
       const staff = await storage.getStaff();
+      const scopedTeamIds = await getScopedTeamIds(req);
+      if (scopedTeamIds) {
+        const allowedStaffIds = await getStaffIdsForTeams(scopedTeamIds);
+        return res.json(staff.filter((member) => allowedStaffIds.has(member.id)));
+      }
       res.json(staff);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch staff" });
@@ -1262,6 +1337,13 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.get("/api/matches", async (req, res) => {
     try {
       const matches = await storage.getMatches();
+
+      // An administrator's scope is enforced here, not taken from the client.
+      const scopedTeamIds = await getScopedTeamIds(req);
+      if (scopedTeamIds) {
+        return res.json(matches.filter((m) => scopedTeamIds.includes(m.homeTeamId ?? 0)));
+      }
+
       const teamIdsParam = req.query.teamIds as string | undefined;
       if (teamIdsParam) {
         const ids = teamIdsParam.split(",").map(Number).filter(Boolean);

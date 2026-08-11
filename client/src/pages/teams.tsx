@@ -27,7 +27,10 @@ export default function Teams() {
   const { isRtl, t } = useI18n();
   const { toast } = useToast();
   const { user } = useAuth();
-  const canFullEdit = user?.role === 'club_super_admin' || isAdminRole(user?.role);
+  const isAdminUser = isAdminRole(user?.role);
+  const canFullEdit = user?.role === 'club_super_admin' || isAdminUser;
+  // Administrators only ever manage the squads assigned to them.
+  const canCreateTeam = !isAdminUser;
 
   const { data: teams = [], isLoading: teamsLoading } = useQuery<Team[]>({
     queryKey: ["/api/teams"],
@@ -99,25 +102,34 @@ export default function Teams() {
           <h1 className="text-3xl font-bold text-foreground">{t("teams.title")}</h1>
           <p className="text-muted-foreground">{t("teams.description")}</p>
         </div>
-        <Dialog open={isAddTeamOpen} onOpenChange={setIsAddTeamOpen}>
-          <DialogTrigger asChild>
-            <Button className="action-button bg-primary text-primary-foreground hover:bg-primary/90">
-              <Plus className={cn("w-4 h-4", isRtl ? "ml-2" : "mr-2")} />
-              {t("teams.create")}
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{t("teams.createTitle")}</DialogTitle>
-              <DialogDescription>{t("teams.createDescription")}</DialogDescription>
-            </DialogHeader>
-            <TeamForm
-              onSuccess={() => setIsAddTeamOpen(false)}
-              onCancel={() => setIsAddTeamOpen(false)}
-            />
-          </DialogContent>
-        </Dialog>
+        {canCreateTeam && (
+          <Dialog open={isAddTeamOpen} onOpenChange={setIsAddTeamOpen}>
+            <DialogTrigger asChild>
+              <Button className="action-button bg-primary text-primary-foreground hover:bg-primary/90">
+                <Plus className={cn("w-4 h-4", isRtl ? "ml-2" : "mr-2")} />
+                {t("teams.create")}
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>{t("teams.createTitle")}</DialogTitle>
+                <DialogDescription>{t("teams.createDescription")}</DialogDescription>
+              </DialogHeader>
+              <TeamForm
+                onSuccess={() => setIsAddTeamOpen(false)}
+                onCancel={() => setIsAddTeamOpen(false)}
+              />
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
+
+      {isAdminUser && teams.length === 0 && (
+        <div className="rounded-lg border border-dashed border-border py-16 text-center text-muted-foreground">
+          <Shield className="mx-auto mb-3 h-10 w-10 opacity-40" />
+          <p>{t("teams.noAssignedTeams")}</p>
+        </div>
+      )}
 
       {/* Teams Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
