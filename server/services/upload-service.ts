@@ -1,8 +1,7 @@
 import fs from "fs";
 import path from "path";
 import multer from "multer";
-import { S3Client, DeleteObjectCommand } from "@aws-sdk/client-s3";
-import { Upload } from "@aws-sdk/lib-storage";
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { env } from "../env";
 
 export type UploadProvider = "local" | "object-storage";
@@ -63,17 +62,24 @@ function createR2UploadService(): UploadService {
   const bucket = env.OBJECT_STORAGE_BUCKET!;
   const publicUrl = env.OBJECT_STORAGE_PUBLIC_URL!.replace(/\/$/, "");
 
-  // Custom multer StorageEngine that streams directly to R2
+  // Custom multer StorageEngine that buffers then uploads to R2
   const r2Storage: multer.StorageEngine = {
     _handleFile(_req, file, cb) {
       const key = `${file.fieldname}-${Date.now()}-${Math.round(Math.random() * 1e9)}${path.extname(file.originalname)}`;
-      new Upload({
-        client: s3,
-        params: { Bucket: bucket, Key: key, Body: file.stream, ContentType: file.mimetype },
-      })
-        .done()
-        .then(() => cb(null, { filename: key }))
-        .catch(cb);
+      const chunks: Buffer[] = [];
+      file.stream.on("data", (chunk: Buffer) => chunks.push(chunk));
+      file.stream.on("error", cb);
+      file.stream.on("end", () => {
+        const body = Buffer.concat(chunks);
+        s3.send(new PutObjectCommand({
+          Bucket: bucket,
+          Key: key,
+          Body: body,
+          ContentType: file.mimetype,
+        }))
+          .then(() => cb(null, { filename: key, size: body.length }))
+          .catch(cb);
+      });
     },
     _removeFile(_req, _file, cb) {
       cb(null);
@@ -84,7 +90,7 @@ function createR2UploadService(): UploadService {
     provider: "object-storage",
     publicPath: (filename) => `${publicUrl}/${filename}`,
     deleteFile: (filename) =>
-      s3.send(new DeleteObjectCommand({ Bucket: bucket, Key: filename })),
+      s3.send(new DeleteObjectCommand({ Bucket: bucket, Key: filename })).then(() => {}),
     middleware: multer({
       storage: r2Storage,
       limits: { fileSize: 5 * 1024 * 1024 },

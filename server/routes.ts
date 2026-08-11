@@ -1414,24 +1414,26 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   });
 
   // Logo upload endpoint
-  app.post("/api/upload/logo", upload.single('logo'), async (req, res) => {
-    try {
-      if (!req.file) {
-        return res.status(400).json({ message: "No logo file provided" });
-      }
+  if (upload) {
+    app.post("/api/upload/logo", upload.single('logo'), async (req, res) => {
+      try {
+        if (!req.file) {
+          return res.status(400).json({ message: "No logo file provided" });
+        }
 
-      const logoUrl = uploadService!.publicPath(req.file.filename);
-      
-      res.json({ 
-        message: "Logo uploaded successfully",
-        logoUrl: logoUrl,
-        filename: req.file.filename
-      });
-    } catch (error) {
-      console.error("Error uploading logo:", error);
-      res.status(500).json({ message: "Failed to upload logo" });
-    }
-  });
+        const logoUrl = uploadService!.publicPath(req.file.filename);
+
+        res.json({
+          message: "Logo uploaded successfully",
+          logoUrl: logoUrl,
+          filename: req.file.filename
+        });
+      } catch (error) {
+        console.error("Error uploading logo:", error);
+        res.status(500).json({ message: "Failed to upload logo" });
+      }
+    });
+  }
 
   // Training image library route (for future tactical board integration)
   app.get("/api/training-images/library", async (req, res) => {
