@@ -890,7 +890,8 @@ export const adminRoles = [
 export type AdminRole = (typeof adminRoles)[number];
 
 export function isAdminRole(role: string | null | undefined): role is AdminRole {
-  return Boolean(role && (adminRoles as readonly string[]).includes(role));
+  // Also includes the legacy 'admin' role
+  return Boolean(role && ((adminRoles as readonly string[]).includes(role) || role === "admin"));
 }
 
 // Employee Invitations - Tokens for inviting staff accounts with a fixed role
