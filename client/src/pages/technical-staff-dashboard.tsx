@@ -23,7 +23,7 @@ import { useSettings } from "@/contexts/SettingsContext";
 import { useAuth, getRoleDisplayName } from "@/lib/auth";
 import { translateWithParams, useI18n } from "@/contexts/I18nContext";
 import { cn } from "@/lib/utils";
-import { mockInjuries } from "@/lib/mock-injuries";
+import { useInjuries } from "@/lib/injuries";
 import { isTechnicalStaffRole, type Team, type TrainingSession } from "@shared/schema";
 
 function getWorkspaceGroup(role: string | undefined, t: (key: string) => string) {
@@ -63,6 +63,8 @@ export default function TechnicalStaffDashboard() {
     queryKey: [`/api/dashboard/stats?teamIds=${teamIds.join(",")}`],
     enabled: hasAssignedTeams,
   });
+
+  const { data: injuries = [] } = useInjuries();
 
   const { data: allTrainingSessions = [] } = useQuery<TrainingSession[]>({
     queryKey: ["/api/training-sessions"],
@@ -165,10 +167,10 @@ export default function TechnicalStaffDashboard() {
   ];
 
   const totalInjuries = hasAssignedTeams
-    ? mockInjuries.filter((injury) => teamNames.includes(injury.teamName)).length
+    ? injuries.filter((injury) => teamNames.includes(injury.teamName)).length
     : 0;
   const activeInjuries = hasAssignedTeams
-    ? mockInjuries.filter((injury) => teamNames.includes(injury.teamName) && injury.status !== "available").length
+    ? injuries.filter((injury) => teamNames.includes(injury.teamName) && injury.status !== "available").length
     : 0;
 
   const today = new Date().toISOString().split("T")[0];

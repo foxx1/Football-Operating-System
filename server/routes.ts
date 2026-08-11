@@ -15,6 +15,7 @@ import {
   insertStaffSchema, insertMatchSchema,
   insertAnalyticsReportSchema, insertSystemSettingsSchema,
   insertAnnualBudgetSchema, insertMonthlyBudgetSchema, insertExpenseSchema, insertPlayerContractSchema,
+  insertInjurySchema, insertInjuryTreatmentLogSchema,
   insertPerformanceReactionSchema, insertTacticalBoardSchema, employeeRoles,
   isTechnicalStaffRole, isAdminRole,
   type User
@@ -2192,6 +2193,131 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
     } catch (error) {
       console.error("Error fetching Catapult player data:", error);
       res.status(500).json({ error: "Failed to fetch player data from Catapult" });
+    }
+  });
+
+  // Injuries. Recording an injury and running the treatment tracker is
+  // medical-staff work; everyone else gets read-only access.
+  const requireMedicalStaff: RequestHandler = async (req, res, next) => {
+    const user = await storage.getUser(getCurrentUserId(req));
+    if (!user || (user.role !== "physiotherapist" && !rolePermissions[user.role]?.has("canManageUsers"))) {
+      return res.status(403).json({ message: "Only medical staff can modify injury records" });
+    }
+    next();
+  };
+
+  app.get("/api/injuries", async (req, res) => {
+    try {
+      const allInjuries = await storage.getInjuries();
+
+      // Administrators only see injuries for players in their squads.
+      const scopedTeamIds = await getScopedTeamIds(req);
+      if (scopedTeamIds) {
+        return res.json(
+          allInjuries.filter((i) => i.teamId != null && scopedTeamIds.includes(i.teamId))
+        );
+      }
+
+      res.json(allInjuries);
+    } catch (error) {
+      console.error("Error fetching injuries:", error);
+      res.status(500).json({ message: "Failed to fetch injuries" });
+    }
+  });
+
+  app.get("/api/injuries/:id", async (req, res) => {
+    try {
+      const injury = await storage.getInjury(parseInt(req.params.id));
+      if (!injury) return res.status(404).json({ message: "Injury not found" });
+
+      const scopedTeamIds = await getScopedTeamIds(req);
+      if (scopedTeamIds && (injury.teamId == null || !scopedTeamIds.includes(injury.teamId))) {
+        return res.status(403).json({ message: "This injury is outside your assigned teams" });
+      }
+
+      res.json(injury);
+    } catch (error) {
+      console.error("Error fetching injury:", error);
+      res.status(500).json({ message: "Failed to fetch injury" });
+    }
+  });
+
+  app.post("/api/injuries", requireAuth, requireMedicalStaff, async (req, res) => {
+    try {
+      const validatedData = insertInjurySchema.parse({
+        ...req.body,
+        createdBy: getCurrentUserId(req),
+      });
+      const injury = await storage.createInjury(validatedData);
+      res.status(201).json(injury);
+    } catch (error) {
+      console.error("Error creating injury:", error);
+      res.status(400).json({
+        message: "Invalid injury data",
+        details: error instanceof Error ? error.message : String(error),
+      });
+    }
+  });
+
+  app.patch("/api/injuries/:id", requireAuth, requireMedicalStaff, async (req, res) => {
+    try {
+      const validatedData = insertInjurySchema.partial().parse(req.body);
+      const injury = await storage.updateInjury(parseInt(req.params.id), validatedData);
+      if (!injury) return res.status(404).json({ message: "Injury not found" });
+      res.json(injury);
+    } catch (error) {
+      console.error("Error updating injury:", error);
+      res.status(400).json({ message: "Invalid injury data" });
+    }
+  });
+
+  app.delete("/api/injuries/:id", requireAuth, requireMedicalStaff, async (req, res) => {
+    try {
+      const success = await storage.deleteInjury(parseInt(req.params.id));
+      if (!success) return res.status(404).json({ message: "Injury not found" });
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting injury:", error);
+      res.status(500).json({ message: "Failed to delete injury" });
+    }
+  });
+
+  app.get("/api/injuries/:id/treatments", async (req, res) => {
+    try {
+      const logs = await storage.getInjuryTreatmentLogs(parseInt(req.params.id));
+      res.json(logs);
+    } catch (error) {
+      console.error("Error fetching treatment logs:", error);
+      res.status(500).json({ message: "Failed to fetch treatment logs" });
+    }
+  });
+
+  app.post("/api/injuries/:id/treatments", requireAuth, requireMedicalStaff, async (req, res) => {
+    try {
+      const validatedData = insertInjuryTreatmentLogSchema.parse({
+        ...req.body,
+        injuryId: parseInt(req.params.id),
+        createdBy: getCurrentUserId(req),
+      });
+      const log = await storage.createInjuryTreatmentLog(validatedData);
+      res.status(201).json(log);
+    } catch (error) {
+      console.error("Error creating treatment log:", error);
+      res.status(400).json({
+        message: "Invalid treatment log data",
+        details: error instanceof Error ? error.message : String(error),
+      });
+    }
+  });
+
+  app.delete("/api/injuries/treatments/:logId", requireAuth, requireMedicalStaff, async (req, res) => {
+    try {
+      const success = await storage.deleteInjuryTreatmentLog(parseInt(req.params.logId));
+      if (!success) return res.status(404).json({ message: "Treatment log not found" });
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting treatment log:", error);
+      res.status(500).json({ message: "Failed to delete treatment log" });
     }
   });
 

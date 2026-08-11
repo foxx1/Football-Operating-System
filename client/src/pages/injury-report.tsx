@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -25,57 +25,143 @@ import {
 import { translateWithParams, useI18n } from "@/contexts/I18nContext";
 import { translateBodyPart } from "@/components/body-map-selector";
 import { cn } from "@/lib/utils";
+import { useInjuries, type Injury } from "@/lib/injuries";
 
-// Mock report data. `part`/`month` are translation-key fragments (bodyPart.*,
-// month.short.*), not display text — they're translated at render time.
-const injuryByBodyPart = [
-  { part: "Hamstring", count: 8, percentage: 24 },
-  { part: "Knee", count: 6, percentage: 18 },
-  { part: "Ankle", count: 5, percentage: 15 },
-  { part: "Groin", count: 4, percentage: 12 },
-  { part: "Thigh", count: 3, percentage: 9 },
-  { part: "Calf", count: 3, percentage: 9 },
-  { part: "Shin", count: 2, percentage: 6 },
-  { part: "Other", count: 2, percentage: 6 },
-];
+const MONTH_KEYS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
 
-const monthlyTrend = [
-  { month: "jan", injuries: 2 },
-  { month: "feb", injuries: 3 },
-  { month: "mar", injuries: 1 },
-  { month: "apr", injuries: 4 },
-  { month: "may", injuries: 5 },
-  { month: "jun", injuries: 6 },
-  { month: "jul", injuries: 3 },
-];
+const SEVERITY_STYLES = {
+  mild: { color: "text-emerald-400", bg: "bg-emerald-500" },
+  moderate: { color: "text-amber-400", bg: "bg-amber-500" },
+  severe: { color: "text-rose-400", bg: "bg-rose-500" },
+} as const;
 
-const injuryBySeverity = {
-  mild: { count: 12, percentage: 36, color: "text-emerald-400", bg: "bg-emerald-500" },
-  moderate: { count: 14, percentage: 42, color: "text-amber-400", bg: "bg-amber-500" },
-  severe: { count: 7, percentage: 21, color: "text-rose-400", bg: "bg-rose-500" },
+// Body parts are recorded with a side prefix ("Left Hamstring"); the report
+// groups on the trailing anatomical word, which is also the bodyPart.* key.
+const genericBodyPart = (bodyPart: string) => bodyPart.trim().split(/\s+/).pop() || "Other";
+
+const recoveryDays = (injury: Injury) => {
+  if (!injury.expectedReturn) return null;
+  const days = Math.round(
+    (new Date(injury.expectedReturn).getTime() - new Date(injury.injuryDate).getTime()) /
+      (1000 * 60 * 60 * 24)
+  );
+  return days > 0 ? days : null;
 };
 
-const recurrenceData = [
-  { player: "Ahmed Hassan", injury: "Hamstring Strain", occurrences: 3, lastDate: "2026-06-15" },
-  { player: "Mohamed Ali", injury: "Ankle Sprain", occurrences: 2, lastDate: "2026-05-10" },
-  { player: "Omar Fathy", injury: "Groin Pull", occurrences: 2, lastDate: "2026-07-01" },
-];
-
-const teamBreakdown = [
-  { team: "First Team", total: 15, active: 4, recovered: 11, avgRecovery: 18 },
-  { team: "Reserves", total: 10, active: 2, recovered: 8, avgRecovery: 14 },
-  { team: "Youth", total: 8, active: 1, recovered: 7, avgRecovery: 12 },
-];
+const average = (values: number[]) =>
+  values.length ? values.reduce((sum, v) => sum + v, 0) / values.length : 0;
 
 export default function InjuryReport() {
   const [period, setPeriod] = useState("season");
   const { t, locale } = useI18n();
 
-  const totalInjuries = 33;
-  const avgRecoveryDays = 15.3;
-  const recurrenceRate = 18;
+  const { data: injuries = [] } = useInjuries();
 
-  const maxMonthlyInjuries = Math.max(...monthlyTrend.map((m) => m.injuries));
+  // Everything below is derived from the live injury records.
+  const periodInjuries = useMemo(() => {
+    if (period === "year" || period === "season") return injuries;
+    const cutoff = new Date();
+    cutoff.setMonth(cutoff.getMonth() - (period === "month" ? 1 : 3));
+    return injuries.filter((i) => new Date(i.injuryDate) >= cutoff);
+  }, [injuries, period]);
+
+  const totalInjuries = periodInjuries.length;
+
+  const injuryByBodyPart = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const injury of periodInjuries) {
+      const part = genericBodyPart(injury.bodyPart);
+      counts.set(part, (counts.get(part) ?? 0) + 1);
+    }
+    return Array.from(counts.entries())
+      .map(([part, count]) => ({
+        part,
+        count,
+        percentage: totalInjuries ? Math.round((count / totalInjuries) * 100) : 0,
+      }))
+      .sort((a, b) => b.count - a.count);
+  }, [periodInjuries, totalInjuries]);
+
+  const monthlyTrend = useMemo(() => {
+    const now = new Date();
+    return Array.from({ length: 7 }, (_, offset) => {
+      const date = new Date(now.getFullYear(), now.getMonth() - (6 - offset), 1);
+      return {
+        month: MONTH_KEYS[date.getMonth()],
+        injuries: periodInjuries.filter((injury) => {
+          const d = new Date(injury.injuryDate);
+          return d.getFullYear() === date.getFullYear() && d.getMonth() === date.getMonth();
+        }).length,
+      };
+    });
+  }, [periodInjuries]);
+
+  const injuryBySeverity = useMemo(() => {
+    const build = (severity: keyof typeof SEVERITY_STYLES) => {
+      const count = periodInjuries.filter((i) => i.severity === severity).length;
+      return {
+        count,
+        percentage: totalInjuries ? Math.round((count / totalInjuries) * 100) : 0,
+        ...SEVERITY_STYLES[severity],
+      };
+    };
+    return { mild: build("mild"), moderate: build("moderate"), severe: build("severe") };
+  }, [periodInjuries, totalInjuries]);
+
+  // A player with the same injury type logged more than once is a recurrence.
+  const recurrenceData = useMemo(() => {
+    const groups = new Map<string, { player: string; injury: string; occurrences: number; lastDate: string }>();
+    for (const injury of periodInjuries) {
+      const key = `${injury.playerId}|${injury.injuryType}`;
+      const existing = groups.get(key);
+      if (existing) {
+        existing.occurrences += 1;
+        if (injury.injuryDate > existing.lastDate) existing.lastDate = injury.injuryDate;
+      } else {
+        groups.set(key, {
+          player: injury.playerName,
+          injury: injury.injuryType,
+          occurrences: 1,
+          lastDate: injury.injuryDate,
+        });
+      }
+    }
+    return Array.from(groups.values())
+      .filter((entry) => entry.occurrences > 1)
+      .sort((a, b) => b.occurrences - a.occurrences);
+  }, [periodInjuries]);
+
+  const teamBreakdown = useMemo(() => {
+    const teams = new Map<string, Injury[]>();
+    for (const injury of periodInjuries) {
+      const list = teams.get(injury.teamName) ?? [];
+      list.push(injury);
+      teams.set(injury.teamName, list);
+    }
+    return Array.from(teams.entries())
+      .map(([team, teamInjuries]) => ({
+        team,
+        total: teamInjuries.length,
+        active: teamInjuries.filter((i) => i.status !== "available").length,
+        recovered: teamInjuries.filter((i) => i.status === "available").length,
+        avgRecovery: Math.round(
+          average(teamInjuries.map(recoveryDays).filter((d): d is number => d != null))
+        ),
+      }))
+      .sort((a, b) => b.total - a.total);
+  }, [periodInjuries]);
+
+  const avgRecoveryDays = useMemo(() => {
+    const days = periodInjuries.map(recoveryDays).filter((d): d is number => d != null);
+    return Math.round(average(days) * 10) / 10;
+  }, [periodInjuries]);
+
+  const recurrenceRate = useMemo(() => {
+    const recurring = recurrenceData.reduce((sum, entry) => sum + entry.occurrences, 0);
+    return totalInjuries ? Math.round((recurring / totalInjuries) * 100) : 0;
+  }, [recurrenceData, totalInjuries]);
+
+  const maxMonthlyInjuries = Math.max(1, ...monthlyTrend.map((m) => m.injuries));
 
   return (
     <div className="p-6 space-y-6 max-w-[1400px] mx-auto">

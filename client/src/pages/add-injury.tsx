@@ -18,6 +18,7 @@ import {
 import type { Player, Team } from "@shared/schema";
 import { useI18n } from "@/contexts/I18nContext";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { ar, enUS } from "date-fns/locale";
@@ -87,27 +88,47 @@ export default function AddInjury() {
 
     setIsSubmitting(true);
 
-    // Simulate API call (until backend endpoint is created)
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    try {
+      await apiRequest("POST", "/api/injuries", {
+        playerId: Number(formData.playerId),
+        injuryType: formData.injuryType,
+        bodyPart: formData.bodyPart,
+        severity: formData.severity,
+        injuryDate: format(injuryDate, "yyyy-MM-dd"),
+        expectedReturn: expectedReturnDate ? format(expectedReturnDate, "yyyy-MM-dd") : null,
+        mechanism: formData.mechanism || null,
+        treatment: formData.treatment || null,
+        notes: formData.notes || null,
+      });
 
-    toast({
-      title: t("injury.add.toastSuccessTitle"),
-      description: t("injury.add.toastSuccessDesc"),
-    });
+      queryClient.invalidateQueries({ queryKey: ["/api/injuries"] });
 
-    // Reset form
-    setFormData({
-      playerId: "",
-      injuryType: "",
-      bodyPart: "",
-      severity: "",
-      mechanism: "",
-      treatment: "",
-      notes: "",
-    });
-    setInjuryDate(new Date());
-    setExpectedReturnDate(undefined);
-    setIsSubmitting(false);
+      toast({
+        title: t("injury.add.toastSuccessTitle"),
+        description: t("injury.add.toastSuccessDesc"),
+      });
+
+      // Reset form
+      setFormData({
+        playerId: "",
+        injuryType: "",
+        bodyPart: "",
+        severity: "",
+        mechanism: "",
+        treatment: "",
+        notes: "",
+      });
+      setInjuryDate(new Date());
+      setExpectedReturnDate(undefined);
+    } catch (error) {
+      toast({
+        title: t("injury.add.toastMissingTitle"),
+        description: error instanceof Error ? error.message : String(error),
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (

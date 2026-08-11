@@ -5,6 +5,7 @@ import {
   wearableDevices, wearableData, performanceMetrics, monthlyBudgets, expenses, playerContracts,
   performanceReactions, annualBudgets,
   tacticalBoards, playerInvitations, employeeInvitations, registrationReminders,
+  injuries, injuryTreatmentLogs,
   type User, type InsertUser, type Player, type InsertPlayer,
   type Team, type InsertTeam, type TeamPlayer, type InsertTeamPlayer,
   type TeamStaff, type InsertTeamStaff,
@@ -28,7 +29,9 @@ import {
   type PlayerInvitation, type InsertPlayerInvitation,
   type EmployeeInvitation, type InsertEmployeeInvitation,
   type RegistrationReminder, type InsertRegistrationReminder,
-  type Notification, type InsertNotification
+  type Notification, type InsertNotification,
+  type Injury, type InsertInjury, type InjuryWithPlayer,
+  type InjuryTreatmentLog, type InsertInjuryTreatmentLog
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, sql, desc } from "drizzle-orm";
@@ -154,6 +157,16 @@ export interface IStorage {
   getPerformanceMetrics(playerId?: number, metricType?: string): Promise<PerformanceMetrics[]>;
   createPerformanceMetrics(metrics: InsertPerformanceMetrics): Promise<PerformanceMetrics>;
   getPlayerPerformanceTrends(playerId: number, days: number): Promise<PerformanceMetrics[]>;
+
+  // Injuries
+  getInjuries(): Promise<InjuryWithPlayer[]>;
+  getInjury(id: number): Promise<InjuryWithPlayer | undefined>;
+  createInjury(injury: InsertInjury): Promise<Injury>;
+  updateInjury(id: number, injury: Partial<InsertInjury>): Promise<Injury | undefined>;
+  deleteInjury(id: number): Promise<boolean>;
+  getInjuryTreatmentLogs(injuryId: number): Promise<InjuryTreatmentLog[]>;
+  createInjuryTreatmentLog(log: InsertInjuryTreatmentLog): Promise<InjuryTreatmentLog>;
+  deleteInjuryTreatmentLog(id: number): Promise<boolean>;
 
   // Annual Budget Management
   getAnnualBudgets(): Promise<AnnualBudget[]>;
@@ -974,6 +987,101 @@ export class MemStorage implements IStorage {
     };
     this.staff.set(id, staffMember);
     return staffMember;
+  }
+
+  // Injuries
+  private injuries = new Map<number, Injury>();
+  private injuryTreatmentLogs = new Map<number, InjuryTreatmentLog>();
+  private nextInjuryId = 1;
+  private nextInjuryTreatmentLogId = 1;
+
+  private decorateInjury(injury: Injury): InjuryWithPlayer {
+    const player = this.players.get(injury.playerId);
+    const membership = Array.from(this.teamPlayers.values()).find(
+      (tp) => tp.playerId === injury.playerId
+    );
+    const team = membership ? this.teams.get(membership.teamId) : undefined;
+    const logsForInjury = Array.from(this.injuryTreatmentLogs.values())
+      .filter((log) => log.injuryId === injury.id)
+      .sort((a, b) => b.date.localeCompare(a.date));
+    return {
+      ...injury,
+      playerName: player ? `${player.firstName} ${player.lastName}` : "Unknown player",
+      teamName: team?.name ?? "Unassigned",
+      teamId: team?.id ?? null,
+      treatmentCount: logsForInjury.length,
+      latestTreatment: logsForInjury[0]
+        ? { date: logsForInjury[0].date, treatmentType: logsForInjury[0].treatmentType }
+        : null,
+    };
+  }
+
+  async getInjuries(): Promise<InjuryWithPlayer[]> {
+    return Array.from(this.injuries.values())
+      .sort((a, b) => b.injuryDate.localeCompare(a.injuryDate))
+      .map((injury) => this.decorateInjury(injury));
+  }
+
+  async getInjury(id: number): Promise<InjuryWithPlayer | undefined> {
+    const injury = this.injuries.get(id);
+    return injury ? this.decorateInjury(injury) : undefined;
+  }
+
+  async createInjury(injury: InsertInjury): Promise<Injury> {
+    const id = this.nextInjuryId++;
+    const created: Injury = {
+      ...injury,
+      id,
+      status: injury.status ?? "recovering",
+      expectedReturn: injury.expectedReturn ?? null,
+      mechanism: injury.mechanism ?? null,
+      treatment: injury.treatment ?? null,
+      notes: injury.notes ?? null,
+      createdBy: injury.createdBy ?? null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.injuries.set(id, created);
+    return created;
+  }
+
+  async updateInjury(id: number, injury: Partial<InsertInjury>): Promise<Injury | undefined> {
+    const existing = this.injuries.get(id);
+    if (!existing) return undefined;
+    const updated: Injury = { ...existing, ...injury, updatedAt: new Date() };
+    this.injuries.set(id, updated);
+    return updated;
+  }
+
+  async deleteInjury(id: number): Promise<boolean> {
+    for (const [logId, log] of this.injuryTreatmentLogs.entries()) {
+      if (log.injuryId === id) this.injuryTreatmentLogs.delete(logId);
+    }
+    return this.injuries.delete(id);
+  }
+
+  async getInjuryTreatmentLogs(injuryId: number): Promise<InjuryTreatmentLog[]> {
+    return Array.from(this.injuryTreatmentLogs.values())
+      .filter((log) => log.injuryId === injuryId)
+      .sort((a, b) => b.date.localeCompare(a.date));
+  }
+
+  async createInjuryTreatmentLog(log: InsertInjuryTreatmentLog): Promise<InjuryTreatmentLog> {
+    const id = this.nextInjuryTreatmentLogId++;
+    const created: InjuryTreatmentLog = {
+      ...log,
+      id,
+      medicineCourse: log.medicineCourse ?? null,
+      notes: log.notes ?? null,
+      createdBy: log.createdBy ?? null,
+      createdAt: new Date(),
+    };
+    this.injuryTreatmentLogs.set(id, created);
+    return created;
+  }
+
+  async deleteInjuryTreatmentLog(id: number): Promise<boolean> {
+    return this.injuryTreatmentLogs.delete(id);
   }
 
   // Annual Budget Management
@@ -2482,6 +2590,144 @@ export class DatabaseStorage implements IStorage {
       .where(eq(expenses.id, id))
       .returning();
     return updated || undefined;
+  }
+
+  // Injuries
+  private injuryTablesReady = false;
+  private async ensureInjuryTables(): Promise<void> {
+    if (this.injuryTablesReady) return;
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS injuries (
+        id SERIAL PRIMARY KEY,
+        player_id INTEGER NOT NULL REFERENCES players(id),
+        injury_type TEXT NOT NULL,
+        severity TEXT NOT NULL,
+        body_part TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'recovering',
+        injury_date DATE NOT NULL,
+        expected_return DATE,
+        mechanism TEXT,
+        treatment TEXT,
+        notes TEXT,
+        created_by INTEGER REFERENCES users(id),
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+      )
+    `);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS injury_treatment_logs (
+        id SERIAL PRIMARY KEY,
+        injury_id INTEGER NOT NULL REFERENCES injuries(id),
+        date DATE NOT NULL,
+        treatment_type TEXT NOT NULL,
+        medicine_course TEXT,
+        notes TEXT,
+        created_by INTEGER REFERENCES users(id),
+        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+      )
+    `);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS injuries_player_id_idx ON injuries(player_id)`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS injuries_status_idx ON injuries(status)`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS injury_treatment_logs_injury_id_idx ON injury_treatment_logs(injury_id)`);
+    this.injuryTablesReady = true;
+  }
+
+  // Injuries are always rendered with the player and squad they belong to, so
+  // the join happens once here rather than in every caller.
+  private async selectInjuriesWithPlayer(): Promise<InjuryWithPlayer[]> {
+    const rows = await db
+      .select()
+      .from(injuries)
+      .leftJoin(players, eq(injuries.playerId, players.id))
+      .leftJoin(teamPlayers, eq(teamPlayers.playerId, injuries.playerId))
+      .leftJoin(teams, eq(teamPlayers.teamId, teams.id))
+      .orderBy(desc(injuries.injuryDate));
+
+    const logs = await db
+      .select({
+        injuryId: injuryTreatmentLogs.injuryId,
+        date: injuryTreatmentLogs.date,
+        treatmentType: injuryTreatmentLogs.treatmentType,
+      })
+      .from(injuryTreatmentLogs)
+      .orderBy(desc(injuryTreatmentLogs.date));
+
+    const treatmentCounts = new Map<number, number>();
+    const latestTreatments = new Map<number, { date: string; treatmentType: string }>();
+    for (const log of logs) {
+      treatmentCounts.set(log.injuryId, (treatmentCounts.get(log.injuryId) ?? 0) + 1);
+      // Rows arrive newest-first, so the first one seen per injury is the latest.
+      if (!latestTreatments.has(log.injuryId)) {
+        latestTreatments.set(log.injuryId, { date: log.date, treatmentType: log.treatmentType });
+      }
+    }
+
+    return rows.map((row) => ({
+      ...row.injuries,
+      playerName: row.players
+        ? `${row.players.firstName} ${row.players.lastName}`
+        : "Unknown player",
+      teamName: row.teams?.name ?? "Unassigned",
+      teamId: row.teams?.id ?? null,
+      treatmentCount: treatmentCounts.get(row.injuries.id) ?? 0,
+      latestTreatment: latestTreatments.get(row.injuries.id) ?? null,
+    }));
+  }
+
+  async getInjuries(): Promise<InjuryWithPlayer[]> {
+    await this.ensureInjuryTables();
+    return await this.selectInjuriesWithPlayer();
+  }
+
+  async getInjury(id: number): Promise<InjuryWithPlayer | undefined> {
+    await this.ensureInjuryTables();
+    const all = await this.selectInjuriesWithPlayer();
+    return all.find((injury) => injury.id === id);
+  }
+
+  async createInjury(injury: InsertInjury): Promise<Injury> {
+    await this.ensureInjuryTables();
+    const [created] = await db.insert(injuries).values(injury).returning();
+    return created;
+  }
+
+  async updateInjury(id: number, injury: Partial<InsertInjury>): Promise<Injury | undefined> {
+    await this.ensureInjuryTables();
+    const [updated] = await db
+      .update(injuries)
+      .set({ ...injury, updatedAt: new Date() })
+      .where(eq(injuries.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteInjury(id: number): Promise<boolean> {
+    await this.ensureInjuryTables();
+    // Treatment logs reference the injury, so they go first.
+    await db.delete(injuryTreatmentLogs).where(eq(injuryTreatmentLogs.injuryId, id));
+    const result = await db.delete(injuries).where(eq(injuries.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async getInjuryTreatmentLogs(injuryId: number): Promise<InjuryTreatmentLog[]> {
+    await this.ensureInjuryTables();
+    return await db
+      .select()
+      .from(injuryTreatmentLogs)
+      .where(eq(injuryTreatmentLogs.injuryId, injuryId))
+      .orderBy(desc(injuryTreatmentLogs.date));
+  }
+
+  async createInjuryTreatmentLog(log: InsertInjuryTreatmentLog): Promise<InjuryTreatmentLog> {
+    await this.ensureInjuryTables();
+    const [created] = await db.insert(injuryTreatmentLogs).values(log).returning();
+    return created;
+  }
+
+  async deleteInjuryTreatmentLog(id: number): Promise<boolean> {
+    await this.ensureInjuryTables();
+    const result = await db.delete(injuryTreatmentLogs).where(eq(injuryTreatmentLogs.id, id));
+    return (result.rowCount ?? 0) > 0;
   }
 
   // Annual Budget Management

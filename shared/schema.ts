@@ -384,6 +384,47 @@ export const systemSettings = pgTable("system_settings", {
   };
 });
 
+// Injury Records. Team association is derived through the player's squad
+// membership, so an injury is always scoped with the player it belongs to.
+export const injuries = pgTable("injuries", {
+  id: serial("id").primaryKey(),
+  playerId: integer("player_id").references(() => players.id).notNull(),
+  injuryType: text("injury_type").notNull(),
+  severity: text("severity").notNull(), // mild, moderate, severe
+  bodyPart: text("body_part").notNull(),
+  status: text("status").notNull().default("recovering"), // recovering, out, available
+  injuryDate: date("injury_date").notNull(),
+  expectedReturn: date("expected_return"),
+  mechanism: text("mechanism"),
+  treatment: text("treatment"),
+  notes: text("notes"),
+  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    playerIdIdx: index("injuries_player_id_idx").on(table.playerId),
+    statusIdx: index("injuries_status_idx").on(table.status),
+    injuryDateIdx: index("injuries_injury_date_idx").on(table.injuryDate),
+  };
+});
+
+// Running course-of-care log kept by medical staff against an injury.
+export const injuryTreatmentLogs = pgTable("injury_treatment_logs", {
+  id: serial("id").primaryKey(),
+  injuryId: integer("injury_id").references(() => injuries.id).notNull(),
+  date: date("date").notNull(),
+  treatmentType: text("treatment_type").notNull(),
+  medicineCourse: text("medicine_course"),
+  notes: text("notes"),
+  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    injuryIdIdx: index("injury_treatment_logs_injury_id_idx").on(table.injuryId),
+  };
+});
+
 // Annual Budget Management (Fiscal Year Allocations)
 export const annualBudgets = pgTable("annual_budgets", {
   id: serial("id").primaryKey(),
@@ -1056,6 +1097,17 @@ export const insertTerraWebhookLogSchema = createInsertSchema(terraWebhookLogs).
   createdAt: true,
 });
 
+export const insertInjurySchema = createInsertSchema(injuries).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertInjuryTreatmentLogSchema = createInsertSchema(injuryTreatmentLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertAnnualBudgetSchema = createInsertSchema(annualBudgets).omit({
   id: true,
   createdAt: true,
@@ -1155,6 +1207,22 @@ export type MatchSquad = typeof matchSquads.$inferSelect;
 
 export type InsertAnalyticsReport = z.infer<typeof insertAnalyticsReportSchema>;
 export type AnalyticsReport = typeof analyticsReports.$inferSelect;
+
+export type InsertInjury = z.infer<typeof insertInjurySchema>;
+export type Injury = typeof injuries.$inferSelect;
+
+export type InsertInjuryTreatmentLog = z.infer<typeof insertInjuryTreatmentLogSchema>;
+export type InjuryTreatmentLog = typeof injuryTreatmentLogs.$inferSelect;
+
+// An injury enriched with the player and squad it belongs to, which is what
+// every injury screen actually renders.
+export type InjuryWithPlayer = Injury & {
+  playerName: string;
+  teamName: string;
+  teamId: number | null;
+  treatmentCount: number;
+  latestTreatment: { date: string; treatmentType: string } | null;
+};
 
 export type InsertAnnualBudget = z.infer<typeof insertAnnualBudgetSchema>;
 export type AnnualBudget = typeof annualBudgets.$inferSelect;

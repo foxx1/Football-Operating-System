@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { mockInjuries } from "@/lib/mock-injuries";
+import { useInjuries } from "@/lib/injuries";
 import type { Match, MatchSquad, Player, TeamPlayer } from "@shared/schema";
 
 type TeamPlayerWithPlayer = TeamPlayer & { player: Player };
@@ -46,11 +46,12 @@ export default function MatchSquadManager({ match }: MatchSquadManagerProps) {
     queryFn: () => apiRequest("GET", `/api/teams/${match.homeTeamId}/players`),
   });
 
-  // Injuries don't have a real backend yet, so this mirrors the same
-  // mock-injuries lookup used on the dashboard's Total Injuries card.
+  const { data: injuries = [] } = useInjuries();
+
+  // Players carrying an active injury are flagged when picking the squad.
   const injuredPlayerIds = useMemo(
-    () => new Set(mockInjuries.filter((injury) => injury.status !== "available").map((injury) => injury.playerId)),
-    [],
+    () => new Set(injuries.filter((injury) => injury.status !== "available").map((injury) => injury.playerId)),
+    [injuries],
   );
 
   const assignedPlayerIds = useMemo(() => new Set(squad.map((item) => item.playerId)), [squad]);

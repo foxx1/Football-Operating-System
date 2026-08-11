@@ -32,7 +32,7 @@ import type { Player, Team } from "@shared/schema";
 import { translateWithParams, useI18n } from "@/contexts/I18nContext";
 import { cn } from "@/lib/utils";
 import { BodyPartPreview, SEVERITY_COLORS, translateBodyPart } from "@/components/body-map-selector";
-import { getDaysRemaining, mockInjuries, severityConfig, statusConfig, type InjuryStatus, type MockInjury, type Severity } from "@/lib/mock-injuries";
+import { getDaysRemaining, severityConfig, statusConfig, useInjuries, type Injury, type InjuryStatus, type Severity } from "@/lib/injuries";
 
 export default function InjuryList() {
   // Cards on the injury report page deep-link here with these params
@@ -47,14 +47,16 @@ export default function InjuryList() {
   const [severityFilter, setSeverityFilter] = useState(urlParams.get("severity") ?? "all");
   const [bodyPartFilter, setBodyPartFilter] = useState(urlParams.get("bodyPart") ?? "");
   const [activeOnly, setActiveOnly] = useState(initialStat === "active");
-  const [selectedInjury, setSelectedInjury] = useState<MockInjury | null>(null);
+  const [selectedInjury, setSelectedInjury] = useState<Injury | null>(null);
   const { t, isRtl, locale } = useI18n();
 
   const { data: teams = [] } = useQuery<Team[]>({
     queryKey: ["/api/teams"],
   });
 
-  const filteredInjuries = mockInjuries.filter((injury) => {
+  const { data: injuries = [], isLoading } = useInjuries();
+
+  const filteredInjuries = injuries.filter((injury) => {
     const matchesSearch =
       injury.playerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       injury.injuryType.toLowerCase().includes(searchTerm.toLowerCase());
@@ -67,10 +69,10 @@ export default function InjuryList() {
   });
 
   const stats = {
-    totalInjuries: mockInjuries.length,
-    activeInjuries: mockInjuries.filter((i) => i.status !== "available").length,
-    severeCount: mockInjuries.filter((i) => i.severity === "severe").length,
-    recovering: mockInjuries.filter((i) => i.status === "recovering").length,
+    totalInjuries: injuries.length,
+    activeInjuries: injuries.filter((i) => i.status !== "available").length,
+    severeCount: injuries.filter((i) => i.severity === "severe").length,
+    recovering: injuries.filter((i) => i.status === "recovering").length,
   };
 
   const isAllClear = teamFilter === "all" && statusFilter === "all" && severityFilter === "all" && !bodyPartFilter && !activeOnly;
@@ -243,7 +245,7 @@ export default function InjuryList() {
           <CardDescription>
             {translateWithParams(t, "injury.list.showingCount", {
               shown: String(filteredInjuries.length),
-              total: String(mockInjuries.length),
+              total: String(injuries.length),
             })}
             {" · "}
             {t("injury.list.viewDetailsHint")}
@@ -401,7 +403,9 @@ export default function InjuryList() {
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">{t("injury.list.expectedReturnLabel")}</p>
-                      <p className="font-medium">{formatDate(selectedInjury.expectedReturn)}</p>
+                      <p className="font-medium">
+                        {selectedInjury.expectedReturn ? formatDate(selectedInjury.expectedReturn) : "—"}
+                      </p>
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">{t("injury.list.statusLabel")}</p>

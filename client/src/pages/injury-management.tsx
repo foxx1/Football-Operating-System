@@ -26,17 +26,17 @@ import { translateWithParams, useI18n } from "@/contexts/I18nContext";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { BodyPartPreview, SEVERITY_COLORS, translateBodyPart } from "@/components/body-map-selector";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
   getDaysRemaining,
-  mockInjuries,
-  mockTreatmentLogs,
   severityConfig,
   statusConfig,
   treatmentTypes,
+  useInjuries,
+  useInjuryTreatments,
+  type Injury,
   type InjuryStatus,
-  type MockInjury,
-  type TreatmentLogEntry,
-} from "@/lib/mock-injuries";
+} from "@/lib/injuries";
 
 const daysSinceInjury = (injuryDate: string) => {
   const now = new Date();
@@ -50,14 +50,9 @@ export default function InjuryManagement() {
   const dateLocale = locale === "ar" ? ar : enUS;
   const { toast } = useToast();
 
-  // Session-local copy: statuses updated and treatment entries logged here
-  // don't persist to the shared mock dataset (no backend yet), same as the
-  // rest of the injury module.
-  const [injuries, setInjuries] = useState<MockInjury[]>(() => mockInjuries.map((i) => ({ ...i })));
-  const [logsByInjury, setLogsByInjury] = useState<Record<number, TreatmentLogEntry[]>>(() =>
-    Object.fromEntries(mockInjuries.map((i) => [i.id, mockTreatmentLogs[i.id] ? [...mockTreatmentLogs[i.id]] : []]))
-  );
+  const { data: injuries = [] } = useInjuries();
   const [managingId, setManagingId] = useState<number | null>(null);
+  const { data: managingLogs = [] } = useInjuryTreatments(managingId);
   const [logDate, setLogDate] = useState<Date | undefined>(new Date());
   const [logType, setLogType] = useState("");
   const [logMedicine, setLogMedicine] = useState("");
@@ -67,13 +62,12 @@ export default function InjuryManagement() {
   const activeInjuries = injuries.filter((i) => i.status !== "available");
   const visibleInjuries = activeInjuries.filter((i) => caseFilter === "all" || i.status === caseFilter);
   const managingInjury = injuries.find((i) => i.id === managingId) ?? null;
-  const managingLogs = managingId ? logsByInjury[managingId] ?? [] : [];
 
   const stats = {
     activeCases: activeInjuries.length,
     out: activeInjuries.filter((i) => i.status === "out").length,
     recovering: activeInjuries.filter((i) => i.status === "recovering").length,
-    totalLogged: Object.values(logsByInjury).reduce((sum, logs) => sum + logs.length, 0),
+    totalLogged: injuries.reduce((sum, injury) => sum + injury.treatmentCount, 0),
   };
 
   const casesRef = useRef<HTMLDivElement>(null);
@@ -88,12 +82,12 @@ export default function InjuryManagement() {
     setLogNotes("");
   };
 
-  const openManage = (injury: MockInjury) => {
+  const openManage = (injury: Injury) => {
     setManagingId(injury.id);
     resetLogForm();
   };
 
-  const handleAddLog = () => {
+  const handleAddLog = async () => {
     if (!managingInjury) return;
     if (!logType) {
       toast({
@@ -104,37 +98,52 @@ export default function InjuryManagement() {
       return;
     }
 
-    const entry: TreatmentLogEntry = {
-      id: Date.now(),
-      date: (logDate ?? new Date()).toISOString().slice(0, 10),
-      treatmentType: logType,
-      medicineCourse: logMedicine.trim(),
-      notes: logNotes.trim(),
-    };
+    try {
+      await apiRequest("POST", `/api/injuries/${managingInjury.id}/treatments`, {
+        date: (logDate ?? new Date()).toISOString().slice(0, 10),
+        treatmentType: logType,
+        medicineCourse: logMedicine.trim() || null,
+        notes: logNotes.trim() || null,
+      });
 
-    setLogsByInjury((prev) => ({
-      ...prev,
-      [managingInjury.id]: [entry, ...(prev[managingInjury.id] ?? [])],
-    }));
+      queryClient.invalidateQueries({ queryKey: [`/api/injuries/${managingInjury.id}/treatments`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/injuries"] });
 
-    toast({
-      title: t("injury.manage.toastLogAddedTitle"),
-      description: translateWithParams(t, "injury.manage.toastLogAddedDesc", { player: managingInjury.playerName }),
-    });
+      toast({
+        title: t("injury.manage.toastLogAddedTitle"),
+        description: translateWithParams(t, "injury.manage.toastLogAddedDesc", { player: managingInjury.playerName }),
+      });
 
-    resetLogForm();
+      resetLogForm();
+    } catch (error) {
+      toast({
+        title: t("injury.manage.toastMissingTypeTitle"),
+        description: error instanceof Error ? error.message : String(error),
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleStatusChange = (status: InjuryStatus) => {
+  const handleStatusChange = async (status: InjuryStatus) => {
     if (!managingInjury) return;
-    setInjuries((prev) => prev.map((i) => (i.id === managingInjury.id ? { ...i, status } : i)));
-    toast({
-      title: t("injury.manage.toastStatusUpdatedTitle"),
-      description: translateWithParams(t, "injury.manage.toastStatusUpdatedDesc", {
-        player: managingInjury.playerName,
-        status: t(statusConfig[status].label),
-      }),
-    });
+    try {
+      await apiRequest("PATCH", `/api/injuries/${managingInjury.id}`, { status });
+      queryClient.invalidateQueries({ queryKey: ["/api/injuries"] });
+
+      toast({
+        title: t("injury.manage.toastStatusUpdatedTitle"),
+        description: translateWithParams(t, "injury.manage.toastStatusUpdatedDesc", {
+          player: managingInjury.playerName,
+          status: t(statusConfig[status].label),
+        }),
+      });
+    } catch (error) {
+      toast({
+        title: t("injury.manage.toastStatusUpdatedTitle"),
+        description: error instanceof Error ? error.message : String(error),
+        variant: "destructive",
+      });
+    }
   };
 
   const formatDate = (value: string) => new Date(value).toLocaleDateString(locale === "ar" ? "ar-EG" : "en-US");
@@ -248,8 +257,7 @@ export default function InjuryManagement() {
             const severity = severityConfig[injury.severity];
             const status = statusConfig[injury.status];
             const StatusIcon = status.icon;
-            const logs = logsByInjury[injury.id] ?? [];
-            const latestLog = logs[0];
+            const latestLog = injury.latestTreatment;
 
             return (
               <Card key={injury.id} className="border-border/50 overflow-hidden">
@@ -288,9 +296,9 @@ export default function InjuryManagement() {
                     ) : (
                       <p className="text-muted-foreground">{t("injury.manage.noTreatmentLogs")}</p>
                     )}
-                    {logs.length > 1 && (
+                    {injury.treatmentCount > 1 && (
                       <p className="text-muted-foreground">
-                        {translateWithParams(t, "injury.manage.moreEntries", { count: String(logs.length - 1) })}
+                        {translateWithParams(t, "injury.manage.moreEntries", { count: String(injury.treatmentCount - 1) })}
                       </p>
                     )}
                   </div>
