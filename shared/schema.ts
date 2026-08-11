@@ -388,6 +388,8 @@ export const systemSettings = pgTable("system_settings", {
 export const annualBudgets = pgTable("annual_budgets", {
   id: serial("id").primaryKey(),
   fiscalYear: text("fiscal_year").notNull().unique(), // e.g., "2025-26"
+  // Owning squad. NULL means a club-wide budget, visible only to club super admins.
+  teamId: integer("team_id").references(() => teams.id),
   seasonStartDate: date("season_start_date"),
   seasonEndDate: date("season_end_date"),
   totalBudget: decimal("total_budget", { precision: 12, scale: 2 }).notNull(),
@@ -416,6 +418,8 @@ export const monthlyBudgets = pgTable("monthly_budgets", {
   id: serial("id").primaryKey(),
   month: text("month").notNull(), // YYYY-MM format
   annualBudgetId: integer("annual_budget_id").references(() => annualBudgets.id),
+  // Owning squad. NULL means a club-wide budget, visible only to club super admins.
+  teamId: integer("team_id").references(() => teams.id),
   seasonStartDate: date("season_start_date"),
   seasonEndDate: date("season_end_date"),
   budgetName: text("budget_name").notNull(),

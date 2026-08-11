@@ -2199,6 +2199,16 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.get("/api/budgets", async (req, res) => {
     try {
       const budgets = await storage.getMonthlyBudgets();
+
+      // Administrators see budgets owned by their squads. Club-wide budgets
+      // (team_id NULL) stay with the club super admin.
+      const scopedTeamIds = await getScopedTeamIds(req);
+      if (scopedTeamIds) {
+        return res.json(
+          budgets.filter((b) => b.teamId != null && scopedTeamIds.includes(b.teamId))
+        );
+      }
+
       res.json(budgets);
     } catch (error) {
       console.error("Error fetching budgets:", error);
@@ -2374,6 +2384,54 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
     } catch (error) {
       console.error("Error fetching salary summary:", error);
       res.status(500).json({ error: "Failed to fetch salary summary" });
+    }
+  });
+
+  // Payroll detail + salary summary. The budgets pages call these paths
+  // directly; without them the request fell through to the SPA catch-all and
+  // every salary total rendered as 0.
+  app.get("/api/payroll/:month", async (req, res) => {
+    try {
+      const payroll = await storage.getPayrollDetails(req.params.month);
+
+      // Administrators only see payroll for the squads assigned to them.
+      const scopedTeamIds = await getScopedTeamIds(req);
+      if (scopedTeamIds) {
+        const allowedStaffIds = await getStaffIdsForTeams(scopedTeamIds);
+        const allowedPlayerIds = await getPlayerIdsForTeams(scopedTeamIds);
+        return res.json({
+          staff: payroll.staff.filter((s) => allowedStaffIds.has(s.id)),
+          players: payroll.players.filter((p) => allowedPlayerIds.has(p.id)),
+        });
+      }
+
+      res.json(payroll);
+    } catch (error) {
+      console.error("Error fetching payroll details:", error);
+      res.status(500).json({ message: "Failed to fetch payroll details" });
+    }
+  });
+
+  app.get("/api/salary-summary/:month", async (req, res) => {
+    try {
+      const payroll = await storage.getPayrollDetails(req.params.month);
+      let staffList = payroll.staff;
+      let playerList = payroll.players;
+
+      const scopedTeamIds = await getScopedTeamIds(req);
+      if (scopedTeamIds) {
+        const allowedStaffIds = await getStaffIdsForTeams(scopedTeamIds);
+        const allowedPlayerIds = await getPlayerIdsForTeams(scopedTeamIds);
+        staffList = staffList.filter((s) => allowedStaffIds.has(s.id));
+        playerList = playerList.filter((p) => allowedPlayerIds.has(p.id));
+      }
+
+      const staffTotal = staffList.reduce((sum, s) => sum + Number(s.salary || 0), 0);
+      const playersTotal = playerList.reduce((sum, p) => sum + Number(p.monthlySalary || 0), 0);
+      res.json({ staff: staffTotal, players: playersTotal, total: staffTotal + playersTotal });
+    } catch (error) {
+      console.error("Error fetching salary summary:", error);
+      res.status(500).json({ message: "Failed to fetch salary summary" });
     }
   });
 

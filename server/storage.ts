@@ -995,6 +995,7 @@ export class MemStorage implements IStorage {
       ...insertBudget,
       id,
       notes: insertBudget.notes ?? null,
+      teamId: insertBudget.teamId ?? null,
       seasonStartDate: insertBudget.seasonStartDate ?? null,
       seasonEndDate: insertBudget.seasonEndDate ?? null,
       status: insertBudget.status ?? "active",
@@ -1419,6 +1420,7 @@ export class MemStorage implements IStorage {
       notes: budget.notes ?? null,
       approvedBy: budget.approvedBy ?? null,
       annualBudgetId: budget.annualBudgetId ?? null,
+      teamId: budget.teamId ?? null,
       seasonStartDate: budget.seasonStartDate ?? null,
       seasonEndDate: budget.seasonEndDate ?? null,
       status: budget.status ?? "active",
@@ -1690,6 +1692,29 @@ export class DatabaseStorage implements IStorage {
     await db.execute(sql`ALTER TABLE employee_invitations ADD COLUMN IF NOT EXISTS team_id INTEGER`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS employee_invitations_token_idx ON employee_invitations(token)`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS employee_invitations_invited_by_idx ON employee_invitations(invited_by)`);
+  }
+
+  // Budgets gained an owning team after launch. Existing rows keep team_id
+  // NULL, which means "club-wide" and stays visible to club super admins only.
+  private budgetTeamColumnReady = false;
+  private async ensureBudgetTeamColumns(): Promise<void> {
+    if (this.budgetTeamColumnReady) return;
+    // Each statement is guarded so a table that does not exist yet on a given
+    // environment cannot take down every budget read.
+    const statements = [
+      sql`ALTER TABLE monthly_budgets ADD COLUMN IF NOT EXISTS team_id INTEGER`,
+      sql`ALTER TABLE annual_budgets ADD COLUMN IF NOT EXISTS team_id INTEGER`,
+      sql`CREATE INDEX IF NOT EXISTS monthly_budgets_team_id_idx ON monthly_budgets(team_id)`,
+      sql`CREATE INDEX IF NOT EXISTS annual_budgets_team_id_idx ON annual_budgets(team_id)`,
+    ];
+    for (const statement of statements) {
+      try {
+        await db.execute(statement);
+      } catch (error) {
+        console.error("Budget team_id migration step skipped:", error);
+      }
+    }
+    this.budgetTeamColumnReady = true;
   }
 
   private async ensureRegistrationRemindersTable(): Promise<void> {
@@ -2372,20 +2397,24 @@ export class DatabaseStorage implements IStorage {
 
   // Budget Management
   async getMonthlyBudgets(): Promise<MonthlyBudget[]> {
+    await this.ensureBudgetTeamColumns();
     return await db.select().from(monthlyBudgets).orderBy(monthlyBudgets.month);
   }
 
   async getMonthlyBudget(id: number): Promise<MonthlyBudget | undefined> {
+    await this.ensureBudgetTeamColumns();
     const [budget] = await db.select().from(monthlyBudgets).where(eq(monthlyBudgets.id, id));
     return budget || undefined;
   }
 
   async getMonthlyBudgetByMonth(month: string): Promise<MonthlyBudget | undefined> {
+    await this.ensureBudgetTeamColumns();
     const [budget] = await db.select().from(monthlyBudgets).where(eq(monthlyBudgets.month, month));
     return budget || undefined;
   }
 
   async createMonthlyBudget(budget: InsertMonthlyBudget): Promise<MonthlyBudget> {
+    await this.ensureBudgetTeamColumns();
     const [created] = await db
       .insert(monthlyBudgets)
       .values(budget)
@@ -2457,20 +2486,24 @@ export class DatabaseStorage implements IStorage {
 
   // Annual Budget Management
   async getAnnualBudgets(): Promise<AnnualBudget[]> {
+    await this.ensureBudgetTeamColumns();
     return await db.select().from(annualBudgets);
   }
 
   async getAnnualBudget(id: number): Promise<AnnualBudget | undefined> {
+    await this.ensureBudgetTeamColumns();
     const [budget] = await db.select().from(annualBudgets).where(eq(annualBudgets.id, id));
     return budget || undefined;
   }
 
   async getAnnualBudgetByYear(fiscalYear: string): Promise<AnnualBudget | undefined> {
+    await this.ensureBudgetTeamColumns();
     const [budget] = await db.select().from(annualBudgets).where(eq(annualBudgets.fiscalYear, fiscalYear));
     return budget || undefined;
   }
 
   async createAnnualBudget(budget: InsertAnnualBudget): Promise<AnnualBudget> {
+    await this.ensureBudgetTeamColumns();
     const [created] = await db
       .insert(annualBudgets)
       .values(budget)
