@@ -14,7 +14,7 @@ import {
   insertSessionAttendanceSchema, insertTacticalFormationSchema, insertPlayerStatsSchema,
   insertStaffSchema, insertMatchSchema,
   insertAnalyticsReportSchema, insertSystemSettingsSchema,
-  insertMonthlyBudgetSchema, insertExpenseSchema, insertPlayerContractSchema,
+  insertAnnualBudgetSchema, insertMonthlyBudgetSchema, insertExpenseSchema, insertPlayerContractSchema,
   insertPerformanceReactionSchema, insertTacticalBoardSchema, employeeRoles,
   isTechnicalStaffRole, isAdminRole,
   type User
@@ -2192,6 +2192,62 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
     } catch (error) {
       console.error("Error fetching Catapult player data:", error);
       res.status(500).json({ error: "Failed to fetch player data from Catapult" });
+    }
+  });
+
+  // Annual Budgets API endpoints. The year-budgets page calls these; without
+  // them the requests fell through to the SPA catch-all and the page rendered
+  // no budget at all.
+  app.get("/api/annual-budgets", async (req, res) => {
+    try {
+      const budgets = await storage.getAnnualBudgets();
+
+      const scopedTeamIds = await getScopedTeamIds(req);
+      if (scopedTeamIds) {
+        return res.json(
+          budgets.filter((b) => b.teamId != null && scopedTeamIds.includes(b.teamId))
+        );
+      }
+
+      res.json(budgets);
+    } catch (error) {
+      console.error("Error fetching annual budgets:", error);
+      res.status(500).json({ error: "Failed to fetch annual budgets" });
+    }
+  });
+
+  app.get("/api/annual-budgets/:id", async (req, res) => {
+    try {
+      const budget = await storage.getAnnualBudget(parseInt(req.params.id));
+      if (!budget) return res.status(404).json({ error: "Annual budget not found" });
+      res.json(budget);
+    } catch (error) {
+      console.error("Error fetching annual budget:", error);
+      res.status(500).json({ error: "Failed to fetch annual budget" });
+    }
+  });
+
+  app.post("/api/annual-budgets", async (req, res) => {
+    try {
+      const validatedData = insertAnnualBudgetSchema.parse(req.body);
+      const budget = await storage.createAnnualBudget(validatedData);
+      res.status(201).json(budget);
+    } catch (error) {
+      console.error("Error creating annual budget:", error);
+      res.status(400).json({
+        error: "Invalid annual budget data",
+        details: error instanceof Error ? error.message : String(error),
+      });
+    }
+  });
+
+  app.get("/api/budgets/:budgetId/monthly-breakdown", async (req, res) => {
+    try {
+      const breakdown = await storage.getMonthlyBudgetBreakdown(parseInt(req.params.budgetId));
+      res.json(breakdown);
+    } catch (error) {
+      console.error("Error fetching monthly breakdown:", error);
+      res.status(500).json({ error: "Failed to fetch monthly breakdown" });
     }
   });
 
