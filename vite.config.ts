@@ -8,7 +8,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["icon-192.png", "icon-512.png"],
+      includeAssets: ["favicon.ico", "icon-16.png", "icon-32.png", "icon-128.png", "icon-180.png", "icon-192.png", "icon-512.png"],
       manifest: {
         name: "360 FOS — Football Operating System",
         short_name: "360 FOS",
@@ -20,6 +20,7 @@ export default defineConfig({
         scope: "/",
         start_url: "/",
         icons: [
+          { src: "icon-128.png", sizes: "128x128", type: "image/png" },
           { src: "icon-192.png", sizes: "192x192", type: "image/png" },
           { src: "icon-512.png", sizes: "512x512", type: "image/png" },
           { src: "icon-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
