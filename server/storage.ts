@@ -97,6 +97,7 @@ export interface IStorage {
 
   // Player Stats
   getPlayerStats(playerId: number): Promise<PlayerStats[]>;
+  getAllPlayerStats(): Promise<PlayerStats[]>;
   createPlayerStats(stats: InsertPlayerStats): Promise<PlayerStats>;
   updatePlayerStats(id: number, stats: Partial<InsertPlayerStats>): Promise<PlayerStats | undefined>;
 
@@ -332,6 +333,8 @@ export class MemStorage implements IStorage {
       firstName: "System",
       lastName: "Admin",
       email: adminEmail,
+      phoneNumber: null,
+      avatar: null,
       createdAt: new Date(),
     };
     this.users.set(admin.id, admin);
@@ -345,6 +348,8 @@ export class MemStorage implements IStorage {
       firstName: "Marcus",
       lastName: "Thompson",
       email: "marcus.thompson@procoach.com",
+      phoneNumber: null,
+      avatar: null,
       createdAt: new Date(),
     };
     this.users.set(coach.id, coach);
@@ -446,6 +451,8 @@ export class MemStorage implements IStorage {
       lastName: insertUser.lastName,
       email: insertUser.email,
       role: insertUser.role ?? "assistant",
+      phoneNumber: insertUser.phoneNumber ?? null,
+      avatar: insertUser.avatar ?? null,
       createdAt: new Date()
     };
     this.users.set(id, user);
@@ -916,6 +923,10 @@ export class MemStorage implements IStorage {
   async getPlayerStats(playerId: number): Promise<PlayerStats[]> {
     return Array.from(this.playerStats.values())
       .filter(s => s.playerId === playerId);
+  }
+
+  async getAllPlayerStats(): Promise<PlayerStats[]> {
+    return Array.from(this.playerStats.values());
   }
 
   async createPlayerStats(insertStats: InsertPlayerStats): Promise<PlayerStats> {
@@ -2164,6 +2175,10 @@ export class DatabaseStorage implements IStorage {
 
   async getPlayerStats(playerId: number): Promise<PlayerStats[]> {
     return await db.select().from(playerStats).where(eq(playerStats.playerId, playerId));
+  }
+
+  async getAllPlayerStats(): Promise<PlayerStats[]> {
+    return await db.select().from(playerStats);
   }
 
   async createPlayerStats(insertStats: InsertPlayerStats): Promise<PlayerStats> {

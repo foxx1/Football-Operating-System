@@ -12,8 +12,7 @@ import { AlertCircle, Activity, Heart, Zap, Users, TrendingUp, Watch, Smartphone
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from "recharts";
-import type { Player } from "@shared/schema";
+import type { Player, WearableDevice, WearableData } from "@shared/schema";
 
 // Custom wearable device provider configurations
 const WEARABLE_PROVIDERS = [
@@ -69,94 +68,39 @@ const WEARABLE_PROVIDERS = [
   }
 ];
 
-// Mock wearable device data for demonstration
-const mockWearableData = {
-  connectedDevices: [
-    {
-      deviceId: "device_001",
-      playerId: 1,
-      provider: "fitbit",
-      lastSync: "2025-01-01T10:30:00Z",
-      features: "steps,heart_rate,sleep,calories",
-      isActive: true,
-      batteryLevel: 85
-    },
-    {
-      deviceId: "device_002",
-      playerId: 2,
-      provider: "garmin",
-      lastSync: "2025-01-01T09:15:00Z",
-      features: "gps,heart_rate,performance,training",
-      isActive: true,
-      batteryLevel: 92
-    }
-  ],
-  recentActivity: [
-    {
-      deviceId: "device_001",
-      name: "Morning Run",
-      type: "running",
-      startTime: "2025-01-01T07:00:00Z",
-      endTime: "2025-01-01T07:45:00Z",
-      calories: 425,
-      distance: 6800,
-      avgHeartRate: 155,
-      maxHeartRate: 178,
-      steps: 8940
-    },
-    {
-      deviceId: "device_002",
-      name: "Strength Training",
-      type: "strength_training",
-      startTime: "2025-01-01T18:00:00Z",
-      endTime: "2025-01-01T19:00:00Z",
-      calories: 320,
-      avgHeartRate: 135,
-      maxHeartRate: 165
-    }
-  ],
-  sleepData: [
-    {
-      deviceId: "device_001",
-      bedtime: "2024-12-31T23:15:00Z",
-      wakeTime: "2025-01-01T07:00:00Z",
-      duration: 420,
-      efficiency: 87.5,
-      deepSleep: 120,
-      remSleep: 95,
-      lightSleep: 205
-    }
-  ],
-  dailyMetrics: [
-    {
-      deviceId: "device_001",
-      date: "2025-01-01",
-      steps: 12450,
-      calories: 2340,
-      activeMinutes: 85,
-      restingHeartRate: 62,
-      hrv: 45.2,
-      vo2Max: 52.1
-    }
-  ]
-};
+function average(values: number[]): number | null {
+  if (values.length === 0) return null;
+  return values.reduce((sum, v) => sum + v, 0) / values.length;
+}
+
+function numericValue(entry: WearableData): number | null {
+  const parsed = Number(entry.value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+const ACTIVITY_TYPES = ["steps", "distance", "calories"];
+const SLEEP_TYPES = ["sleep"];
 
 export default function WearablesPage() {
   const [selectedPlayerId, setSelectedPlayerId] = useState("");
   const [selectedProvider, setSelectedProvider] = useState("");
   const [isConnectDialogOpen, setIsConnectDialogOpen] = useState(false);
 
-  // Fetch players and wearable devices
-  const { data: players = [] } = useQuery({
+  // Fetch players, connected devices, and any synced data
+  const { data: players = [] } = useQuery<Player[]>({
     queryKey: ["/api/players"],
   });
 
-  const { data: wearableDevices = [] } = useQuery({
+  const { data: wearableDevices = [] } = useQuery<WearableDevice[]>({
     queryKey: ["/api/wearable-devices"],
   });
 
+  const { data: wearableData = [] } = useQuery<WearableData[]>({
+    queryKey: ["/api/wearable-data"],
+  });
+
   const connectDeviceMutation = useMutation({
-    mutationFn: async (data: { playerId: number, provider: string, features: string }) => {
+    mutationFn: async (data: { playerId: number; deviceType: string; deviceModel: string; deviceId: string }) => {
       return await apiRequest("POST", "/api/wearable-devices", data);
     },
     onSuccess: () => {
@@ -175,8 +119,9 @@ export default function WearablesPage() {
 
     connectDeviceMutation.mutate({
       playerId: parseInt(selectedPlayerId),
-      provider: provider.id,
-      features: provider.features.join(","),
+      deviceType: provider.id,
+      deviceModel: provider.displayName,
+      deviceId: `${provider.id}-${selectedPlayerId}-${Date.now()}`,
     });
   };
 
@@ -304,21 +249,25 @@ export default function WearablesPage() {
                 <Watch className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{mockWearableData.connectedDevices.length}</div>
+                <div className="text-2xl font-bold">{wearableDevices.length}</div>
                 <p className="text-xs text-muted-foreground">
-                  {mockWearableData.connectedDevices.filter(d => d.isActive).length} active
+                  {wearableDevices.filter(d => d.isActive).length} active
                 </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Daily Steps</CardTitle>
+                <CardTitle className="text-sm font-medium">Avg Daily Steps</CardTitle>
                 <Activity className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">12,450</div>
-                <p className="text-xs text-muted-foreground">+12% from yesterday</p>
+                {(() => {
+                  const avg = average(wearableData.filter(d => d.dataType === "steps").map(numericValue).filter((v): v is number => v !== null));
+                  return avg !== null
+                    ? <div className="text-2xl font-bold">{Math.round(avg).toLocaleString()}</div>
+                    : <div className="text-sm text-muted-foreground">No data synced yet</div>;
+                })()}
               </CardContent>
             </Card>
 
@@ -328,32 +277,43 @@ export default function WearablesPage() {
                 <Heart className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">155 bpm</div>
-                <p className="text-xs text-muted-foreground">During activity</p>
+                {(() => {
+                  const avg = average(wearableData.filter(d => d.dataType === "heart_rate").map(numericValue).filter((v): v is number => v !== null));
+                  return avg !== null
+                    ? <div className="text-2xl font-bold">{Math.round(avg)} bpm</div>
+                    : <div className="text-sm text-muted-foreground">No data synced yet</div>;
+                })()}
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Sleep Quality</CardTitle>
+                <CardTitle className="text-sm font-medium">Sleep Records</CardTitle>
                 <Zap className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">87.5%</div>
-                <p className="text-xs text-muted-foreground">Sleep efficiency</p>
+                <div className="text-2xl font-bold">{wearableData.filter(d => SLEEP_TYPES.includes(d.dataType)).length}</div>
+                <p className="text-xs text-muted-foreground">Synced entries</p>
               </CardContent>
             </Card>
           </div>
         </TabsContent>
 
         <TabsContent value="devices" className="space-y-4">
+          {wearableDevices.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center text-muted-foreground">
+                No wearable devices connected yet. Use "Connect Device" to link a player's device.
+              </CardContent>
+            </Card>
+          ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {mockWearableData.connectedDevices.map((device, index) => {
-              const player = (players as Player[]).find((p: Player) => p.id === device.playerId);
-              const provider = WEARABLE_PROVIDERS.find(p => p.id === device.provider);
+            {wearableDevices.map((device) => {
+              const player = players.find((p: Player) => p.id === device.playerId);
+              const provider = WEARABLE_PROVIDERS.find(p => p.id === device.deviceType);
 
               return (
-                <Card key={index}>
+                <Card key={device.id}>
                   <CardHeader>
                     <div className="flex items-center space-x-3">
                       <img
@@ -362,7 +322,7 @@ export default function WearablesPage() {
                         className="w-10 h-10 rounded"
                       />
                       <div>
-                        <CardTitle className="text-lg">{provider?.displayName}</CardTitle>
+                        <CardTitle className="text-lg">{device.deviceModel}</CardTitle>
                         <CardDescription>
                           {player ? `${player.firstName} ${player.lastName}` : 'Unknown Player'}
                         </CardDescription>
@@ -378,234 +338,173 @@ export default function WearablesPage() {
                     </div>
 
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Battery</span>
-                      <div className="flex items-center space-x-2">
-                        <Progress value={device.batteryLevel} className="w-16" />
-                        <span className="text-sm">{device.batteryLevel}%</span>
-                      </div>
-                    </div>
-
-                    <div className="flex justify-between items-center">
                       <span className="text-sm text-muted-foreground">Last Sync</span>
-                      <span className="text-sm">{new Date(device.lastSync).toLocaleString()}</span>
+                      <span className="text-sm">
+                        {device.lastSyncAt ? new Date(device.lastSyncAt).toLocaleString() : "Never"}
+                      </span>
                     </div>
 
-                    <div>
-                      <span className="text-sm text-muted-foreground">Features</span>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {device.features.split(',').map((feature: string) => (
-                          <Badge key={feature} variant="outline" className="text-xs">
-                            {feature.replace('_', ' ')}
-                          </Badge>
-                        ))}
+                    {provider && (
+                      <div>
+                        <span className="text-sm text-muted-foreground">Features</span>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {provider.features.map((feature: string) => (
+                            <Badge key={feature} variant="outline" className="text-xs">
+                              {feature.replace('_', ' ')}
+                            </Badge>
+                          ))}
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </CardContent>
                 </Card>
               );
             })}
           </div>
+          )}
         </TabsContent>
 
         <TabsContent value="activity" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {mockWearableData.recentActivity.map((activity, index) => {
-              const device = mockWearableData.connectedDevices.find(u => u.deviceId === activity.deviceId);
-              const provider = WEARABLE_PROVIDERS.find(p => p.id === device?.provider);
-
+          {(() => {
+            const records = wearableData.filter(d => ACTIVITY_TYPES.includes(d.dataType));
+            if (records.length === 0) {
               return (
-                <Card key={index}>
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle className="text-lg">{activity.name}</CardTitle>
-                        <CardDescription className="flex items-center space-x-2">
-                          <img
-                            src={provider?.logoUrl || ""}
-                            alt={provider?.name || "Device"}
-                            className="w-4 h-4"
-                          />
-                          <span>{provider?.displayName}</span>
-                        </CardDescription>
-                      </div>
-                      <Badge variant="outline" className="capitalize">
-                        {activity.type.replace('_', ' ')}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <div className="flex justify-between">
-                          <span className="text-sm text-muted-foreground">Duration</span>
-                          <span className="text-sm font-medium">
-                            {Math.round((new Date(activity.endTime).getTime() - new Date(activity.startTime).getTime()) / 60000)} min
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-sm text-muted-foreground">Calories</span>
-                          <span className="text-sm font-medium">{activity.calories}</span>
-                        </div>
-                        {activity.distance && (
-                          <div className="flex justify-between">
-                            <span className="text-sm text-muted-foreground">Distance</span>
-                            <span className="text-sm font-medium">{(activity.distance / 1000).toFixed(1)} km</span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex justify-between">
-                          <span className="text-sm text-muted-foreground">Avg HR</span>
-                          <span className="text-sm font-medium">{activity.avgHeartRate} bpm</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-sm text-muted-foreground">Max HR</span>
-                          <span className="text-sm font-medium">{activity.maxHeartRate} bpm</span>
-                        </div>
-                        {activity.steps && (
-                          <div className="flex justify-between">
-                            <span className="text-sm text-muted-foreground">Steps</span>
-                            <span className="text-sm font-medium">{activity.steps.toLocaleString()}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                <Card>
+                  <CardContent className="py-12 text-center text-muted-foreground">
+                    No activity data synced yet.
                   </CardContent>
                 </Card>
               );
-            })}
-          </div>
+            }
+            return (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {records
+                  .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+                  .map((record) => {
+                    const device = wearableDevices.find(d => d.id === record.deviceId);
+                    const player = players.find(p => p.id === record.playerId);
+                    const provider = WEARABLE_PROVIDERS.find(p => p.id === device?.deviceType);
+
+                    return (
+                      <Card key={record.id}>
+                        <CardHeader>
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <CardTitle className="text-lg capitalize">{record.dataType.replace('_', ' ')}</CardTitle>
+                              <CardDescription className="flex items-center space-x-2">
+                                {provider && (
+                                  <img src={provider.logoUrl} alt={provider.name} className="w-4 h-4" />
+                                )}
+                                <span>{player ? `${player.firstName} ${player.lastName}` : 'Unknown Player'}</span>
+                              </CardDescription>
+                            </div>
+                            <Badge variant="outline">{new Date(record.timestamp).toLocaleDateString()}</Badge>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="flex justify-between">
+                            <span className="text-sm text-muted-foreground">Value</span>
+                            <span className="text-sm font-medium">
+                              {record.value}{record.unit ? ` ${record.unit}` : ""}
+                            </span>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+              </div>
+            );
+          })()}
         </TabsContent>
 
         <TabsContent value="sleep" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {mockWearableData.sleepData.map((sleep, index) => {
-              const device = mockWearableData.connectedDevices.find(u => u.deviceId === sleep.deviceId);
-              const provider = WEARABLE_PROVIDERS.find(p => p.id === device?.provider);
-
+          {(() => {
+            const records = wearableData.filter(d => SLEEP_TYPES.includes(d.dataType));
+            if (records.length === 0) {
               return (
-                <Card key={index}>
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle className="text-lg">Sleep Analysis</CardTitle>
-                        <CardDescription className="flex items-center space-x-2">
-                          <img
-                            src={provider?.logoUrl || ""}
-                            alt={provider?.name || "Device"}
-                            className="w-4 h-4"
-                          />
-                          <span>{provider?.displayName}</span>
-                        </CardDescription>
-                      </div>
-                      <Badge variant="outline">
-                        {sleep.efficiency}% Efficiency
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <div className="flex justify-between">
-                            <span className="text-sm text-muted-foreground">Bedtime</span>
-                            <span className="text-sm font-medium">
-                              {new Date(sleep.bedtime).toLocaleTimeString()}
-                            </span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-sm text-muted-foreground">Wake Time</span>
-                            <span className="text-sm font-medium">
-                              {new Date(sleep.wakeTime).toLocaleTimeString()}
-                            </span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-sm text-muted-foreground">Duration</span>
-                            <span className="text-sm font-medium">{Math.floor(sleep.duration / 60)}h {sleep.duration % 60}m</span>
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <div className="flex justify-between">
-                            <span className="text-sm text-muted-foreground">Deep Sleep</span>
-                            <span className="text-sm font-medium">{sleep.deepSleep}m</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-sm text-muted-foreground">REM Sleep</span>
-                            <span className="text-sm font-medium">{sleep.remSleep}m</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-sm text-muted-foreground">Light Sleep</span>
-                            <span className="text-sm font-medium">{sleep.lightSleep}m</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                <Card>
+                  <CardContent className="py-12 text-center text-muted-foreground">
+                    No sleep data synced yet.
                   </CardContent>
                 </Card>
               );
-            })}
-          </div>
+            }
+            return (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {records
+                  .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+                  .map((record) => {
+                    const player = players.find(p => p.id === record.playerId);
+                    return (
+                      <Card key={record.id}>
+                        <CardHeader>
+                          <div className="flex items-center justify-between">
+                            <CardTitle className="text-lg">Sleep</CardTitle>
+                            <Badge variant="outline">{new Date(record.timestamp).toLocaleDateString()}</Badge>
+                          </div>
+                          <CardDescription>
+                            {player ? `${player.firstName} ${player.lastName}` : 'Unknown Player'}
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="flex justify-between">
+                            <span className="text-sm text-muted-foreground">Value</span>
+                            <span className="text-sm font-medium">
+                              {record.value}{record.unit ? ` ${record.unit}` : ""}
+                            </span>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+              </div>
+            );
+          })()}
         </TabsContent>
 
         <TabsContent value="metrics" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {mockWearableData.dailyMetrics.map((metrics, index) => {
-              const device = mockWearableData.connectedDevices.find(u => u.deviceId === metrics.deviceId);
-              const provider = WEARABLE_PROVIDERS.find(p => p.id === device?.provider);
-
+          {(() => {
+            const records = wearableData.filter(d => !ACTIVITY_TYPES.includes(d.dataType) && !SLEEP_TYPES.includes(d.dataType));
+            if (records.length === 0) {
               return (
-                <Card key={index}>
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle className="text-lg">Daily Health Metrics</CardTitle>
-                        <CardDescription className="flex items-center space-x-2">
-                          <img
-                            src={provider?.logoUrl || ""}
-                            alt={provider?.name || "Device"}
-                            className="w-4 h-4"
-                          />
-                          <span>{new Date(metrics.date).toLocaleDateString()}</span>
-                        </CardDescription>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-3">
-                        <div className="flex justify-between">
-                          <span className="text-sm text-muted-foreground">Steps</span>
-                          <span className="text-sm font-medium">{metrics.steps.toLocaleString()}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-sm text-muted-foreground">Calories</span>
-                          <span className="text-sm font-medium">{metrics.calories}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-sm text-muted-foreground">Active Minutes</span>
-                          <span className="text-sm font-medium">{metrics.activeMinutes}</span>
-                        </div>
-                      </div>
-                      <div className="space-y-3">
-                        <div className="flex justify-between">
-                          <span className="text-sm text-muted-foreground">Resting HR</span>
-                          <span className="text-sm font-medium">{metrics.restingHeartRate} bpm</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-sm text-muted-foreground">HRV</span>
-                          <span className="text-sm font-medium">{metrics.hrv} ms</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-sm text-muted-foreground">VO2 Max</span>
-                          <span className="text-sm font-medium">{metrics.vo2Max}</span>
-                        </div>
-                      </div>
-                    </div>
+                <Card>
+                  <CardContent className="py-12 text-center text-muted-foreground">
+                    No additional metrics synced yet.
                   </CardContent>
                 </Card>
               );
-            })}
-          </div>
+            }
+            return (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {records
+                  .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+                  .map((record) => {
+                    const player = players.find(p => p.id === record.playerId);
+                    return (
+                      <Card key={record.id}>
+                        <CardHeader>
+                          <div className="flex items-center justify-between">
+                            <CardTitle className="text-lg capitalize">{record.dataType.replace('_', ' ')}</CardTitle>
+                            <Badge variant="outline">{new Date(record.timestamp).toLocaleDateString()}</Badge>
+                          </div>
+                          <CardDescription>
+                            {player ? `${player.firstName} ${player.lastName}` : 'Unknown Player'}
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="flex justify-between">
+                            <span className="text-sm text-muted-foreground">Value</span>
+                            <span className="text-sm font-medium">
+                              {record.value}{record.unit ? ` ${record.unit}` : ""}
+                            </span>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+              </div>
+            );
+          })()}
         </TabsContent>
       </Tabs>
     </div>

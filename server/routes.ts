@@ -1291,6 +1291,15 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   });
 
   // Player Stats
+  app.get("/api/player-stats", async (req, res) => {
+    try {
+      const stats = await storage.getAllPlayerStats();
+      res.json(stats);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch player stats" });
+    }
+  });
+
   app.get("/api/players/:id/stats", async (req, res) => {
     try {
       const playerId = parseInt(req.params.id);

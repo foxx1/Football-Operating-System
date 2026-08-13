@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,9 +8,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { FileText, Download, Filter, Calendar, TrendingUp, Users, Target, Activity, BarChart3, FilePlus } from "lucide-react";
-import type { TrainingSession, Player, Team } from "@shared/schema";
+import type { TrainingSession, Player, Team, SessionAttendance } from "@shared/schema";
 import { format } from "date-fns";
 import PDFReportGeneratorComponent from "@/components/pdf-report-generator";
+
+type AttendanceRecord = SessionAttendance & { player: Player };
 
 export default function Reports() {
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
@@ -27,6 +29,10 @@ export default function Reports() {
 
   const { data: teams = [] } = useQuery<Team[]>({
     queryKey: ["/api/teams"],
+  });
+
+  const { data: dashboardStats } = useQuery<{ attendanceRate: number }>({
+    queryKey: ["/api/dashboard/stats"],
   });
 
   // Filter sessions based on selections
@@ -64,17 +70,47 @@ export default function Reports() {
 
   const completionRate = stats.totalSessions > 0 ? (stats.completedSessions / stats.totalSessions) * 100 : 0;
 
-  // Mock attendance data for demo (in real app, this would come from session attendance)
-  const attendanceStats = {
-    averageAttendance: 87,
-    topAttenders: players?.slice(0, 5).map((player: Player, index) => ({
-      ...player,
-      attendanceRate: 95 - index * 3
-    })) || [],
-    attendanceBySession: filteredSessions.slice(0, 10).map((session: TrainingSession) => ({
+  // Real per-session attendance, fetched for the sessions shown in the Attendance tab
+  const recentSessions = filteredSessions.slice(0, 10);
+  const attendanceQueries = useQueries({
+    queries: recentSessions.map((session) => ({
+      queryKey: [`/api/training-sessions/${session.id}/attendance`],
+    })),
+  });
+
+  const attendanceBySession = recentSessions.map((session: TrainingSession, index) => {
+    const records = (attendanceQueries[index]?.data as AttendanceRecord[]) || [];
+    const attended = records.filter((r) => r.status === "present" || r.status === "late").length;
+    return {
       ...session,
-      attendanceRate: 80 + Math.random() * 20
-    }))
+      attendanceRate: records.length > 0 ? (attended / records.length) * 100 : 0,
+    };
+  });
+
+  const topAttenders = (() => {
+    const byPlayer = new Map<number, { player: Player; present: number; total: number }>();
+    attendanceQueries.forEach((query) => {
+      const records = (query.data as AttendanceRecord[]) || [];
+      records.forEach((record) => {
+        const entry = byPlayer.get(record.playerId) ?? { player: record.player, present: 0, total: 0 };
+        entry.total += 1;
+        if (record.status === "present" || record.status === "late") entry.present += 1;
+        byPlayer.set(record.playerId, entry);
+      });
+    });
+    return Array.from(byPlayer.values())
+      .map(({ player, present, total }) => ({
+        ...player,
+        attendanceRate: total > 0 ? Math.round((present / total) * 100) : 0,
+      }))
+      .sort((a, b) => b.attendanceRate - a.attendanceRate)
+      .slice(0, 5);
+  })();
+
+  const attendanceStats = {
+    averageAttendance: dashboardStats?.attendanceRate ?? 0,
+    topAttenders,
+    attendanceBySession,
   };
 
   const exportReport = (type: string) => {
