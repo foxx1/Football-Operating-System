@@ -1,4 +1,7 @@
-import { svgToDataUri, CONTENT_SCALE, type BoardElement, type BackgroundType } from '@/components/tactical-board/types';
+import {
+  svgToDataUri, CONTENT_SCALE, DEFAULT_STROKE_WIDTH, DEFAULT_CONE_DIAMETER, DEFAULT_GOAL_WIDTH, DEFAULT_GOAL_HEIGHT,
+  resolveEffectivePoints, type BoardElement, type BackgroundType,
+} from '@/components/tactical-board/types';
 import footballBallSvgRaw from '@/assets/tactical-icons/football-ball.svg?raw';
 
 const footballBallSvg = svgToDataUri(footballBallSvgRaw);
@@ -65,7 +68,7 @@ function pitchMarkings(width: number, height: number, backgroundType: Background
   return parts.join('\n  ');
 }
 
-function elementToSvg(el: BoardElement): string {
+function elementToSvg(el: BoardElement, allElements: BoardElement[]): string {
   const color = el.color || 'white';
   const opacity = el.opacity ?? 1;
   const fill = el.fill ? color : 'none';
@@ -92,10 +95,13 @@ function elementToSvg(el: BoardElement): string {
       return `<image href="${footballBallSvg}" x="${el.x - size / 2}" y="${el.y - size / 2}" width="${size}" height="${size}" />`;
     }
     if (el.subtype === 'cone') {
-      return `<circle cx="${el.x}" cy="${el.y}" r="${8 * S}" fill="orange" stroke="black" stroke-width="${S}" />`;
+      const r = (el.width ?? DEFAULT_CONE_DIAMETER) / 2;
+      return `<circle cx="${el.x}" cy="${el.y}" r="${r}" fill="${el.color || 'orange'}" stroke="black" stroke-width="${S}" />`;
     }
     if (el.subtype === 'goal') {
-      return `<rect x="${el.x - 20 * S}" y="${el.y - 5 * S}" width="${40 * S}" height="${10 * S}" fill="white" fill-opacity="0.5" stroke="black" stroke-width="${S}" />`;
+      const w = el.width ?? DEFAULT_GOAL_WIDTH;
+      const h = el.height ?? DEFAULT_GOAL_HEIGHT;
+      return `<rect x="${el.x}" y="${el.y}" width="${w}" height="${h}" fill="${el.color || 'white'}" fill-opacity="0.5" stroke="black" stroke-width="${S}" />`;
     }
     return '';
   }
@@ -117,8 +123,8 @@ function elementToSvg(el: BoardElement): string {
   }
 
   // Drawing elements
-  const points = el.points || [0, 0];
-  const strokeW = 2.5 * S;
+  const points = resolveEffectivePoints(el, allElements);
+  const strokeW = (el.strokeWidth ?? DEFAULT_STROKE_WIDTH) * S;
   const dashArray = `${6 * S},${5 * S}`;
   const dash = el.dashed ? ` stroke-dasharray="${dashArray}"` : '';
 
@@ -128,9 +134,29 @@ function elementToSvg(el: BoardElement): string {
   }
 
   if (el.subtype === 'curve') {
-    const [x1, y1, x2, y2] = [el.x + points[0], el.y + points[1], el.x + (points[2] ?? points[0]), el.y + (points[3] ?? points[1])];
-    const mx = (x1 + x2) / 2;
-    const my = (y1 + y2) / 2 - 30 * S;
+    const x1 = el.x + points[0];
+    const y1 = el.y + points[1];
+    let mx: number, my: number, x2: number, y2: number;
+    if (points.length >= 6) {
+      // 3-point curve: [start, through-point, end] - matches the canvas's
+      // Catmull-Rom curve, which passes through the middle point. A
+      // quadratic bezier's control point doesn't pass through the curve
+      // itself, so back-solve one that puts the curve through (tx, ty) at
+      // its midpoint instead, keeping the export in sync with the canvas.
+      const tx = el.x + points[2];
+      const ty = el.y + points[3];
+      x2 = el.x + points[4];
+      y2 = el.y + points[5];
+      mx = 2 * tx - (x1 + x2) / 2;
+      my = 2 * ty - (y1 + y2) / 2;
+    } else {
+      // Legacy 2-point curve data (drawn before curves had a real bow) -
+      // approximate with the old fixed upward bow.
+      x2 = el.x + (points[2] ?? points[0]);
+      y2 = el.y + (points[3] ?? points[1]);
+      mx = (x1 + x2) / 2;
+      my = (y1 + y2) / 2 - 30 * S;
+    }
     return `<path d="M ${x1} ${y1} Q ${mx} ${my} ${x2} ${y2}" fill="none" stroke="${color}" stroke-width="${strokeW}"${dash} />`;
   }
 
@@ -176,7 +202,7 @@ export function elementsToSvgString(
   const width = backgroundType === 'half' ? pitchWidth / 2 : pitchWidth;
   const height = pitchHeight;
 
-  const body = elements.map(elementToSvg).filter(Boolean).join('\n  ');
+  const body = elements.map(el => elementToSvg(el, elements)).filter(Boolean).join('\n  ');
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">

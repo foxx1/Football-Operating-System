@@ -12,6 +12,16 @@ export const PITCH_HEIGHT = 1080;
 // stay visually proportional at the new reference resolution.
 export const CONTENT_SCALE = PITCH_WIDTH / 800;
 
+// Default stroke width (in pre-scale units, multiply by CONTENT_SCALE when
+// rendering) for freshly drawn lines/arrows/curves/shapes.
+export const DEFAULT_STROKE_WIDTH = 2.5;
+
+// Default equipment marker sizes (already scaled by CONTENT_SCALE), used
+// when an older/unresized element has no explicit width/height.
+export const DEFAULT_CONE_DIAMETER = 16 * CONTENT_SCALE;
+export const DEFAULT_GOAL_WIDTH = 40 * CONTENT_SCALE;
+export const DEFAULT_GOAL_HEIGHT = 10 * CONTENT_SCALE;
+
 export type Team = 'home' | 'away';
 
 export type DrawingSubtype =
@@ -42,6 +52,13 @@ export interface BoardElement {
   fill?: boolean;
   opacity?: number;
   dashed?: boolean;
+  // Drawing-specific (lines/arrows/curves/shapes)
+  strokeWidth?: number;
+  // When set, this endpoint tracks a player element's live position instead
+  // of the stored point - so the line keeps following that player as they're
+  // dragged around the pitch. Only meaningful for line/arrow/dribble/curve.
+  startPlayerId?: string;
+  endPlayerId?: string;
   // Player-specific
   team?: Team;
   number?: number;
@@ -82,6 +99,30 @@ export const TEXT_PRESETS: Record<TextSubtype, Pick<BoardElement, 'text' | 'font
   title: { text: 'Title', fontSize: 48, fontStyle: 'bold', width: 400, textAlign: 'left' },
   paragraph: { text: 'Add your text here…', fontSize: 24, fontStyle: 'normal', width: 360, textAlign: 'left' },
 };
+
+// A line/arrow/dribble/curve endpoint tied to a player (startPlayerId /
+// endPlayerId) tracks that player's live position instead of its own stored
+// point. Shared between the canvas renderer and the SVG exporter so a
+// connected line always follows the player in both places, not just on
+// screen.
+export function resolveEffectivePoints(el: BoardElement, elements: BoardElement[]): number[] {
+  const pts = el.points ? [...el.points] : [0, 0];
+  if (el.startPlayerId) {
+    const player = elements.find(e => e.id === el.startPlayerId);
+    if (player) {
+      pts[0] = player.x - el.x;
+      pts[1] = player.y - el.y;
+    }
+  }
+  if (el.endPlayerId) {
+    const player = elements.find(e => e.id === el.endPlayerId);
+    if (player && pts.length >= 2) {
+      pts[pts.length - 2] = player.x - el.x;
+      pts[pts.length - 1] = player.y - el.y;
+    }
+  }
+  return pts;
+}
 
 // Turns raw SVG source (from a `?raw` import) into a data URI. Used instead
 // of a plain asset import so the resulting URL is self-contained - it works

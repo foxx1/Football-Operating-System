@@ -1,5 +1,6 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
+import { useI18n, translateWithParams } from '@/contexts/I18nContext';
 
 interface DraggableItemProps {
     type: string;
@@ -24,6 +25,7 @@ export const DraggableItem: React.FC<DraggableItemProps> = ({
     className,
     onAdd
 }) => {
+    const { t } = useI18n();
     const handleDragStart = (e: React.DragEvent) => {
         e.dataTransfer.setData('type', type);
         if (subtype) e.dataTransfer.setData('subtype', subtype);
@@ -42,8 +44,8 @@ export const DraggableItem: React.FC<DraggableItemProps> = ({
             )}
             draggable
             onDragStart={handleDragStart}
-            onDoubleClick={onAdd}
-            title={onAdd ? `Drag onto the pitch, or double-click to add ${label || 'it'} instantly` : label}
+            onClick={onAdd}
+            title={onAdd ? translateWithParams(t, 'board.draggable.hint', { label: label || '' }) : label}
         >
             <div className="mb-2 pointer-events-none">
                 {icon}

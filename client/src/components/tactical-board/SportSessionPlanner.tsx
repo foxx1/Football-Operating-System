@@ -3,7 +3,7 @@ import { useSearch } from 'wouter';
 import { TacticalBoardLayout } from './TacticalBoardLayout';
 import { SidebarTools } from './SidebarTools';
 import { BoardCanvas, BoardCanvasHandle } from './BoardCanvas';
-import { PropertiesPanel } from './PropertiesPanel';
+import { PropertiesPanel, PropertiesPanelHandle } from './PropertiesPanel';
 import { SaveBoardDialog } from './SaveBoardDialog';
 import { LoadBoardDialog } from './LoadBoardDialog';
 import { HelpDialog } from './HelpDialog';
@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import {
     Save, FolderOpen, Download, Undo2, Redo2, Trash2, ZoomIn, ZoomOut,
     Link as LinkIcon, HelpCircle, Eye, FlipHorizontal, ChevronDown, Image as ImageIcon, FileCode,
-    CheckCircle2
+    CheckCircle2, MoreVertical
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Toggle } from '@/components/ui/toggle';
@@ -87,6 +87,7 @@ function formationPlayerToPixel(p: { x: number; y: number }, team: Team): { x: n
 export default function SportSessionPlanner() {
     const { toast } = useToast();
     const canvasRef = useRef<BoardCanvasHandle>(null);
+    const propertiesPanelRef = useRef<PropertiesPanelHandle>(null);
     const search = useSearch();
     // Opened from the training session's "Open Tactical Board" button — on save,
     // the drawing is sent back to that tab instead of only living here.
@@ -98,6 +99,13 @@ export default function SportSessionPlanner() {
     const [activeTool, setActiveTool] = useState<string | null>(null);
     const { value: elements, set: setElements, reset: resetElements, undo, redo, canUndo, canRedo } = useHistoryState<BoardElement[]>([]);
     const [selectedId, setSelectedId] = useState<string | null>(null);
+    // Which element's Properties panel is showing - deliberately separate
+    // from selectedId. Clicking a player or the ball just selects it (for
+    // dragging/highlight) without popping the panel open, so repositioning
+    // a lot of players in a row stays fast; a double-click on a player
+    // explicitly opens it. Every other element type still opens on a plain
+    // click, same as before.
+    const [propertiesOpenForId, setPropertiesOpenForId] = useState<string | null>(null);
     const [backgroundType, setBackgroundType] = useState<BackgroundType>('full');
     const [halfSide, setHalfSide] = useState<'left' | 'right'>('left');
     const [drawColor, setDrawColor] = useState('white');
@@ -115,7 +123,7 @@ export default function SportSessionPlanner() {
     const [currentBoardName, setCurrentBoardName] = useState('');
     const [currentBoardIsPublic, setCurrentBoardIsPublic] = useState(false);
 
-    const selectedElement = elements.find(el => el.id === selectedId) || null;
+    const propertiesOpenElement = elements.find(el => el.id === propertiesOpenForId) || null;
 
     useEffect(() => {
         window.localStorage.setItem(COLORBLIND_STORAGE_KEY, String(colorblindMode));
@@ -149,8 +157,35 @@ export default function SportSessionPlanner() {
     // which is confusing (clicking empty pitch again would start a new
     // drawing instead of doing nothing).
     const handleSelect = useCallback((id: string | null) => {
+        // Selecting a different element or clicking away both drop whatever
+        // was selected before - apply any edits still staged in the
+        // Properties panel first instead of silently losing them.
+        propertiesPanelRef.current?.commitPending();
         setSelectedId(id);
         if (id) setActiveTool(null);
+
+        if (!id) {
+            setPropertiesOpenForId(null);
+            return;
+        }
+        const el = elements.find(e => e.id === id);
+        // Players and the ball don't pop the panel open on a plain click -
+        // see the propertiesOpenForId comment above.
+        const suppressAutoOpen = el?.type === 'player' || (el?.type === 'equipment' && el.subtype === 'ball');
+        setPropertiesOpenForId(suppressAutoOpen ? null : id);
+    }, [elements]);
+
+    // Explicit "show properties now" request - currently only reachable by
+    // double-clicking a player on the canvas.
+    const handleOpenProperties = useCallback((id: string) => {
+        setSelectedId(id);
+        setActiveTool(null);
+        setPropertiesOpenForId(id);
+    }, []);
+
+    const handleClosePropertiesPanel = useCallback(() => {
+        setSelectedId(null);
+        setPropertiesOpenForId(null);
     }, []);
 
     const handleToolSelect = (tool: string) => {
@@ -161,8 +196,10 @@ export default function SportSessionPlanner() {
         } else if (tool === 'bg-flip') {
             setHalfSide(s => s === 'left' ? 'right' : 'left');
         } else {
+            propertiesPanelRef.current?.commitPending();
             setActiveTool(current => current === tool ? null : tool);
             setSelectedId(null);
+            setPropertiesOpenForId(null);
         }
     };
 
@@ -185,6 +222,7 @@ export default function SportSessionPlanner() {
 
         setElements(prev => [...prev.filter(el => !(el.type === 'player' && el.team === team)), ...newPlayers]);
         setSelectedId(null);
+        setPropertiesOpenForId(null);
         toast({ title: 'Formation Applied', description: `${formation.name} applied to ${team === 'home' ? 'Home' : 'Away'} team.` });
     };
 
@@ -214,6 +252,11 @@ export default function SportSessionPlanner() {
         setElements(prev => [...prev, newElement]);
         setSelectedId(newElement.id);
         setActiveTool(null);
+        // Same player/ball exception as handleSelect - everything else (text,
+        // cones, goals) still opens its Properties panel right away so it
+        // can be tweaked immediately after being placed.
+        const suppressAutoOpen = newElement.type === 'player' || (newElement.type === 'equipment' && newElement.subtype === 'ball');
+        setPropertiesOpenForId(suppressAutoOpen ? null : newElement.id);
     };
 
     const updateElement = (id: string, updates: Partial<BoardElement>) => {
@@ -223,12 +266,14 @@ export default function SportSessionPlanner() {
     const deleteElement = useCallback((id: string) => {
         setElements(prev => prev.filter(el => el.id !== id));
         setSelectedId(current => current === id ? null : current);
+        setPropertiesOpenForId(current => current === id ? null : current);
     }, [setElements]);
 
     const handleClearBoard = () => {
         if (window.confirm('Are you sure you want to clear the board?')) {
             setElements([]);
             setSelectedId(null);
+            setPropertiesOpenForId(null);
         }
     };
 
@@ -251,6 +296,7 @@ export default function SportSessionPlanner() {
             } else if (e.key === 'Escape') {
                 // Deselect whichever shape is selected, and cancel the active drawing tool.
                 setSelectedId(null);
+                setPropertiesOpenForId(null);
                 setActiveTool(null);
             }
         };
@@ -323,6 +369,7 @@ export default function SportSessionPlanner() {
         if (elements.length === 0 || window.confirm('Loading a session will replace your current board. Continue?')) {
             resetElements(board.drawingElements || []);
             setSelectedId(null);
+            setPropertiesOpenForId(null);
             setCurrentBoardId(board.id);
             setCurrentBoardName(board.name);
             setCurrentBoardIsPublic(!!board.isPublic);
@@ -350,8 +397,8 @@ export default function SportSessionPlanner() {
             <TacticalBoardLayout
                 toolbar={
                     <>
-                        <div className="flex items-center gap-2 flex-wrap">
-                            <h2 className="font-bold text-lg mr-2">Session Planner</h2>
+                        <div className="flex items-center gap-2 flex-wrap min-w-0">
+                            <h2 className="font-bold text-base sm:text-lg mr-1 sm:mr-2 shrink-0">Session Planner</h2>
                             {activeTool && !activeTool.startsWith('bg-') && (
                                 <div className="bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-bold uppercase border border-primary/20 flex items-center gap-2">
                                     <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
@@ -366,7 +413,7 @@ export default function SportSessionPlanner() {
                                     <Redo2 className="h-4 w-4" />
                                 </Button>
                             </div>
-                            <Separator orientation="vertical" className="h-6 mx-1" />
+                            <Separator orientation="vertical" className="h-6 mx-1 hidden sm:block" />
                             <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-md">
                                 <Button
                                     variant="ghost"
@@ -378,7 +425,7 @@ export default function SportSessionPlanner() {
                                     <Trash2 className="h-4 w-4" />
                                 </Button>
                             </div>
-                            <Separator orientation="vertical" className="h-6 mx-1" />
+                            <Separator orientation="vertical" className="h-6 mx-1 hidden sm:block" />
                             <Toggle
                                 pressed={colorblindMode}
                                 onPressedChange={setColorblindMode}
@@ -386,61 +433,90 @@ export default function SportSessionPlanner() {
                                 className="gap-2 text-xs"
                                 title="Render teams with distinct patterns, not just color"
                             >
-                                <Eye className="h-3.5 w-3.5" /> Colorblind Mode
+                                <Eye className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Colorblind Mode</span>
                             </Toggle>
                             {backgroundType === 'half' && (
                                 <Button variant="ghost" size="sm" className="gap-1 text-xs" onClick={() => handleToolSelect('bg-flip')}>
-                                    <FlipHorizontal className="h-3.5 w-3.5" /> Flip Half
+                                    <FlipHorizontal className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Flip Half</span>
                                 </Button>
                             )}
                         </div>
 
-                        <div className="flex items-center gap-2">
-                            <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-md mr-2">
+                        <div className="flex items-center gap-2 flex-wrap justify-end">
+                            <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-md">
                                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setZoom(z => Math.max(0.5, Math.round((z - 0.1) * 10) / 10))}>
                                     <ZoomOut className="h-4 w-4" />
                                 </Button>
-                                <span className="text-xs w-12 text-center">{Math.round(zoom * 100)}%</span>
+                                <span className="text-xs w-10 sm:w-12 text-center">{Math.round(zoom * 100)}%</span>
                                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setZoom(z => Math.min(2.5, Math.round((z + 0.1) * 10) / 10))}>
                                     <ZoomIn className="h-4 w-4" />
                                 </Button>
                             </div>
 
-                            <Button variant="ghost" size="icon" className="h-8 w-8" title="Help" onClick={() => setIsHelpOpen(true)}>
-                                <HelpCircle className="h-4 w-4" />
-                            </Button>
+                            {/* Full action set - visible from md up */}
+                            <div className="hidden md:flex items-center gap-2">
+                                <Button variant="ghost" size="icon" className="h-8 w-8" title="Help" onClick={() => setIsHelpOpen(true)}>
+                                    <HelpCircle className="h-4 w-4" />
+                                </Button>
 
-                            <Button variant="outline" size="sm" className="gap-2" onClick={() => setIsLoadOpen(true)}>
-                                <FolderOpen className="h-4 w-4" />
-                                Load
-                            </Button>
+                                <Button variant="outline" size="sm" className="gap-2" onClick={() => setIsLoadOpen(true)}>
+                                    <FolderOpen className="h-4 w-4" />
+                                    Load
+                                </Button>
 
-                            <Button variant="outline" size="sm" className="gap-2" onClick={handleCopyLink}>
-                                <LinkIcon className="h-4 w-4" />
-                                Copy Link
-                            </Button>
+                                <Button variant="outline" size="sm" className="gap-2" onClick={handleCopyLink}>
+                                    <LinkIcon className="h-4 w-4" />
+                                    Copy Link
+                                </Button>
 
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="outline" size="sm" className="gap-2">
+                                            <Download className="h-4 w-4" />
+                                            Export
+                                            <ChevronDown className="h-3 w-3" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem onClick={handleExportPng} className="gap-2">
+                                            <ImageIcon className="h-4 w-4" /> PNG image
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={handleExportSvg} className="gap-2">
+                                            <FileCode className="h-4 w-4" /> SVG vector
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </div>
+
+                            {/* Collapsed action set - phones/tablets */}
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                    <Button variant="outline" size="sm" className="gap-2">
-                                        <Download className="h-4 w-4" />
-                                        Export
-                                        <ChevronDown className="h-3 w-3" />
+                                    <Button variant="outline" size="icon" className="h-8 w-8 md:hidden" title="More actions">
+                                        <MoreVertical className="h-4 w-4" />
                                     </Button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
+                                <DropdownMenuContent align="end" className="md:hidden">
+                                    <DropdownMenuItem onClick={() => setIsHelpOpen(true)} className="gap-2">
+                                        <HelpCircle className="h-4 w-4" /> Help
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setIsLoadOpen(true)} className="gap-2">
+                                        <FolderOpen className="h-4 w-4" /> Load
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={handleCopyLink} className="gap-2">
+                                        <LinkIcon className="h-4 w-4" /> Copy Link
+                                    </DropdownMenuItem>
                                     <DropdownMenuItem onClick={handleExportPng} className="gap-2">
-                                        <ImageIcon className="h-4 w-4" /> PNG image
+                                        <ImageIcon className="h-4 w-4" /> Export PNG
                                     </DropdownMenuItem>
                                     <DropdownMenuItem onClick={handleExportSvg} className="gap-2">
-                                        <FileCode className="h-4 w-4" /> SVG vector
+                                        <FileCode className="h-4 w-4" /> Export SVG
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
 
                             <Button size="sm" className="gap-2" onClick={() => setIsSaveOpen(true)}>
                                 <Save className="h-4 w-4" />
-                                Save Session
+                                <span className="hidden sm:inline">Save Session</span>
                             </Button>
 
                             {isTrainingReturn && (
@@ -478,24 +554,25 @@ export default function SportSessionPlanner() {
                             onElementsChange={setElements}
                             selectedId={selectedId}
                             onSelect={handleSelect}
+                            onOpenProperties={handleOpenProperties}
                             backgroundType={backgroundType}
                             halfSide={halfSide}
                             colorblindMode={colorblindMode}
                             drawColor={drawColor}
-                            onToolUsed={() => {
-                                // setActiveTool(null); // Optional: auto-deselect tool after each shape
-                            }}
+                            onToolUsed={() => setActiveTool(null)}
                         />
                     </div>
                 }
                 propertiesPanel={
-                    selectedElement && (
+                    propertiesOpenElement && (
                         <PropertiesPanel
-                            element={selectedElement}
+                            ref={propertiesPanelRef}
+                            element={propertiesOpenElement}
                             onUpdate={updateElement}
                             onDelete={deleteElement}
-                            onClose={() => setSelectedId(null)}
+                            onClose={handleClosePropertiesPanel}
                             colorblindMode={colorblindMode}
+                            players={elements.filter(el => el.type === 'player')}
                         />
                     )
                 }

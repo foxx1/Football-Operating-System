@@ -5,7 +5,11 @@ import { KonvaEventObject } from 'konva/lib/Node';
 import useImage from 'use-image';
 import footballPitchSvg from '@/assets/football-pitch.svg';
 import footballBallSvgRaw from '@/assets/tactical-icons/football-ball.svg?raw';
-import { BoardElement, BackgroundType, TextSubtype, PITCH_WIDTH, PITCH_HEIGHT, TEAM_COLORS, CONTENT_SCALE, TEXT_PRESETS, svgToDataUri } from './types';
+import {
+    BoardElement, BackgroundType, TextSubtype, PITCH_WIDTH, PITCH_HEIGHT, TEAM_COLORS, CONTENT_SCALE,
+    DEFAULT_STROKE_WIDTH, DEFAULT_CONE_DIAMETER, DEFAULT_GOAL_WIDTH, DEFAULT_GOAL_HEIGHT,
+    resolveEffectivePoints, TEXT_PRESETS, svgToDataUri,
+} from './types';
 
 // Short alias: fixed pixel sizes (radii, stroke widths, icon sizes) below
 // are tuned against the original 800-wide pitch and multiplied by this so
@@ -22,6 +26,7 @@ interface BoardCanvasProps {
     onElementsChange: (elements: BoardElement[]) => void;
     selectedId: string | null;
     onSelect: (id: string | null) => void;
+    onOpenProperties?: (id: string) => void;
     onToolUsed?: () => void;
     backgroundType?: BackgroundType;
     halfSide?: 'left' | 'right';
@@ -39,6 +44,16 @@ export interface BoardCanvasHandle {
 const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 2.5;
 
+// A patch applied on top of one element while a handle (resize / reshape /
+// curve control point) is actively being dragged. Kept local instead of
+// flowing through onElementsChange on every pointer move so a single drag
+// doesn't flood undo history with dozens of intermediate steps - the real
+// commit only happens once, on drag end.
+interface HandleOverride {
+    id: string;
+    patch: Partial<BoardElement>;
+}
+
 export const BoardCanvas = forwardRef<BoardCanvasHandle, BoardCanvasProps>(({
     zoom = 1,
     onZoomChange,
@@ -47,6 +62,7 @@ export const BoardCanvas = forwardRef<BoardCanvasHandle, BoardCanvasProps>(({
     onElementsChange,
     selectedId,
     onSelect,
+    onOpenProperties,
     onToolUsed,
     backgroundType = 'full',
     halfSide = 'left',
@@ -96,6 +112,9 @@ export const BoardCanvas = forwardRef<BoardCanvasHandle, BoardCanvasProps>(({
     const [isDrawing, setIsDrawing] = useState(false);
     const [drawingStart, setDrawingStart] = useState<{ x: number; y: number } | null>(null);
     const [previewElement, setPreviewElement] = useState<BoardElement | null>(null);
+
+    // Live handle-drag preview (see HandleOverride above).
+    const [handleOverride, setHandleOverride] = useState<HandleOverride | null>(null);
 
     const handleWheel = useCallback((e: KonvaEventObject<WheelEvent>) => {
         if (!onZoomChange) return;
@@ -166,6 +185,7 @@ export const BoardCanvas = forwardRef<BoardCanvasHandle, BoardCanvasProps>(({
                     height: 0,
                     points: [0, 0],
                     color: drawColor,
+                    strokeWidth: DEFAULT_STROKE_WIDTH,
                     dashed: activeTool === 'dribble',
                     fill: isZoneShape ? shadedZone : false,
                     opacity: zoneOpacity,
@@ -183,10 +203,21 @@ export const BoardCanvas = forwardRef<BoardCanvasHandle, BoardCanvasProps>(({
         const pos = stage?.getRelativePointerPosition();
         if (!pos) return;
 
-        if (activeTool === 'line' || activeTool === 'dribble' || activeTool === 'arrow' || activeTool === 'curve') {
+        if (activeTool === 'line' || activeTool === 'dribble' || activeTool === 'arrow') {
             const dx = pos.x - drawingStart.x;
             const dy = pos.y - drawingStart.y;
             setPreviewElement({ ...previewElement, points: [0, 0, dx, dy] });
+        } else if (activeTool === 'curve') {
+            const dx = pos.x - drawingStart.x;
+            const dy = pos.y - drawingStart.y;
+            const length = Math.hypot(dx, dy) || 1;
+            // A Konva Line's tension has no visible effect with only two
+            // points (start/end) - it needs a third point to bow through,
+            // so insert a midpoint offset perpendicular to the line.
+            const bow = length * 0.25;
+            const midX = dx / 2 - (dy / length) * bow;
+            const midY = dy / 2 + (dx / length) * bow;
+            setPreviewElement({ ...previewElement, points: [0, 0, midX, midY, dx, dy] });
         } else if (activeTool === 'square' || activeTool === 'circle') {
             setPreviewElement({
                 ...previewElement,
@@ -206,7 +237,21 @@ export const BoardCanvas = forwardRef<BoardCanvasHandle, BoardCanvasProps>(({
         onElementsChange([...elements, finalElement]);
         setPreviewElement(null);
 
+        // A shape drawn point-to-point is done being drawn - hand control
+        // back to the select tool instead of leaving the drawing tool armed.
         if (onToolUsed) onToolUsed();
+    };
+
+    // The pointer leaving the canvas mid-draw (or while a drawing tool is
+    // simply armed) reads as "I'm done with this" - cancel any in-progress
+    // shape and release the active tool rather than leaving it stuck on.
+    const handleMouseLeave = () => {
+        if (isDrawing) {
+            setIsDrawing(false);
+            setDrawingStart(null);
+            setPreviewElement(null);
+        }
+        if (isDrawingTool && onToolUsed) onToolUsed();
     };
 
     const handleElementDragEnd = (e: KonvaEventObject<DragEvent>) => {
@@ -226,6 +271,8 @@ export const BoardCanvas = forwardRef<BoardCanvasHandle, BoardCanvasProps>(({
             height: fieldImage.height,
         };
     };
+
+    const getEffectivePoints = useCallback((el: BoardElement): number[] => resolveEffectivePoints(el, elements), [elements]);
 
     const renderPlayer = (el: BoardElement, baseProps: Record<string, unknown>, isSelected: boolean) => {
         const color = el.color || (el.team ? TEAM_COLORS[el.team] : '#2563eb');
@@ -303,10 +350,23 @@ export const BoardCanvas = forwardRef<BoardCanvasHandle, BoardCanvasProps>(({
         onSelect(id);
     }, [onSelect]);
 
-    const handleElementDblClick = useCallback((e: KonvaEventObject<MouseEvent | TouchEvent>) => {
+    // Players are clicked constantly while blocking out a formation - popping
+    // the Properties panel open on every single click would slow that down,
+    // so a plain click only selects/repositions them. A double-click is the
+    // explicit "I want to edit this one" signal that opens the panel. Every
+    // other element type keeps the original single-click-opens behavior
+    // (handled by the parent via onSelect), so double-click on those just
+    // deselects, same as before.
+    const handleElementDblClick = useCallback((e: KonvaEventObject<MouseEvent | TouchEvent>, id: string) => {
         e.cancelBubble = true;
-        onSelect(null);
-    }, [onSelect]);
+        const el = elements.find(x => x.id === id);
+        if (el?.type === 'player' && onOpenProperties) {
+            onOpenProperties(id);
+        } else {
+            onSelect(null);
+            if (onToolUsed) onToolUsed();
+        }
+    }, [elements, onSelect, onOpenProperties, onToolUsed]);
 
     const renderElement = (el: BoardElement, isSelected: boolean) => {
         const baseProps = {
@@ -318,8 +378,8 @@ export const BoardCanvas = forwardRef<BoardCanvasHandle, BoardCanvasProps>(({
             draggable: !activeTool,
             onClick: (e: KonvaEventObject<MouseEvent>) => handleElementClick(e, el.id),
             onTap: (e: KonvaEventObject<TouchEvent>) => handleElementClick(e, el.id),
-            onDblClick: handleElementDblClick,
-            onDblTap: handleElementDblClick,
+            onDblClick: (e: KonvaEventObject<MouseEvent>) => handleElementDblClick(e, el.id),
+            onDblTap: (e: KonvaEventObject<TouchEvent>) => handleElementDblClick(e, el.id),
             onDragEnd: handleElementDragEnd,
         };
 
@@ -350,10 +410,11 @@ export const BoardCanvas = forwardRef<BoardCanvasHandle, BoardCanvasProps>(({
                 );
             }
             if (el.subtype === 'cone') {
-                return <Circle {...baseProps} radius={8 * S} fill="orange" stroke="black" strokeWidth={S} shadowBlur={isSelected ? 6 * S : 0} />;
+                const radius = (el.width ?? DEFAULT_CONE_DIAMETER) / 2;
+                return <Circle {...baseProps} radius={radius} fill={el.color || 'orange'} stroke="black" strokeWidth={S} shadowBlur={isSelected ? 6 * S : 0} />;
             }
             if (el.subtype === 'goal') {
-                return <Rect {...baseProps} width={40 * S} height={10 * S} fill="white" stroke="black" strokeWidth={S} opacity={0.5} shadowBlur={isSelected ? 6 * S : 0} />;
+                return <Rect {...baseProps} width={el.width ?? DEFAULT_GOAL_WIDTH} height={el.height ?? DEFAULT_GOAL_HEIGHT} fill={el.color || 'white'} stroke="black" strokeWidth={S} opacity={0.5} shadowBlur={isSelected ? 6 * S : 0} />;
             }
         }
 
@@ -380,15 +441,16 @@ export const BoardCanvas = forwardRef<BoardCanvasHandle, BoardCanvasProps>(({
 
         if (el.type === 'drawing') {
             const strokeColor = el.color || 'white';
+            const strokeW = (el.strokeWidth ?? DEFAULT_STROKE_WIDTH) * S;
             const shadow = isSelected ? { shadowBlur: 6 * S, shadowColor: '#3b82f6' } : {};
 
             if (el.subtype === 'line' || el.subtype === 'dribble') {
                 return (
                     <Line
                         {...baseProps}
-                        points={el.points || [0, 0]}
+                        points={getEffectivePoints(el)}
                         stroke={strokeColor}
-                        strokeWidth={2.5 * S}
+                        strokeWidth={strokeW}
                         dash={el.subtype === 'dribble' ? [6 * S, 5 * S] : undefined}
                         tension={el.subtype === 'dribble' ? 0.5 : 0}
                         {...shadow}
@@ -396,13 +458,13 @@ export const BoardCanvas = forwardRef<BoardCanvasHandle, BoardCanvasProps>(({
                 );
             }
             if (el.subtype === 'curve') {
-                const pts = el.points || [0, 0, 0, 0];
+                const pts = getEffectivePoints(el);
                 return (
                     <Line
                         {...baseProps}
                         points={pts}
                         stroke={strokeColor}
-                        strokeWidth={2.5 * S}
+                        strokeWidth={strokeW}
                         tension={0.5}
                         {...shadow}
                     />
@@ -412,9 +474,9 @@ export const BoardCanvas = forwardRef<BoardCanvasHandle, BoardCanvasProps>(({
                 return (
                     <Arrow
                         {...baseProps}
-                        points={el.points || [0, 0]}
+                        points={getEffectivePoints(el)}
                         stroke={strokeColor}
-                        strokeWidth={2.5 * S}
+                        strokeWidth={strokeW}
                         fill={strokeColor}
                         pointerLength={10 * S}
                         pointerWidth={10 * S}
@@ -429,7 +491,7 @@ export const BoardCanvas = forwardRef<BoardCanvasHandle, BoardCanvasProps>(({
                         width={el.width}
                         height={el.height}
                         stroke={strokeColor}
-                        strokeWidth={2.5 * S}
+                        strokeWidth={strokeW}
                         fill={el.fill ? strokeColor : undefined}
                         opacity={el.fill ? (el.opacity ?? zoneOpacity) : 1}
                         {...shadow}
@@ -445,7 +507,7 @@ export const BoardCanvas = forwardRef<BoardCanvasHandle, BoardCanvasProps>(({
                         y={el.y + (el.height || 0) / 2}
                         radius={r}
                         stroke={strokeColor}
-                        strokeWidth={2.5 * S}
+                        strokeWidth={strokeW}
                         fill={el.fill ? strokeColor : undefined}
                         opacity={el.fill ? (el.opacity ?? zoneOpacity) : 1}
                         {...shadow}
@@ -456,6 +518,150 @@ export const BoardCanvas = forwardRef<BoardCanvasHandle, BoardCanvasProps>(({
 
         return null;
     };
+
+    // --- Selection handles: resize / reshape / curve-bow controls shown
+    // only for the currently selected element. Dragging updates a local
+    // override for live visual feedback and only commits (and creates an
+    // undo step) once, on drag end.
+    const commitHandlePatch = (id: string, patch: Partial<BoardElement>) => {
+        onElementsChange(elements.map(e => e.id === id ? { ...e, ...patch } : e));
+        setHandleOverride(null);
+    };
+
+    const renderHandle = (key: string, x: number, y: number, onMove: (x: number, y: number) => void, onEnd: (x: number, y: number) => void) => (
+        <Circle
+            key={key}
+            x={x}
+            y={y}
+            radius={7 * S}
+            fill="#3b82f6"
+            stroke="#fff"
+            strokeWidth={1.5 * S}
+            draggable
+            onClick={(e) => { e.cancelBubble = true; }}
+            onTap={(e) => { e.cancelBubble = true; }}
+            onDragMove={(e) => onMove(e.target.x(), e.target.y())}
+            onDragEnd={(e) => onEnd(e.target.x(), e.target.y())}
+        />
+    );
+
+    const renderPointHandle = (el: BoardElement, pts: number[], idx: number) => {
+        const patchFor = (absX: number, absY: number): Partial<BoardElement> => {
+            const newPoints = [...pts];
+            newPoints[idx] = absX - el.x;
+            newPoints[idx + 1] = absY - el.y;
+            return { points: newPoints };
+        };
+        return renderHandle(
+            `pt-${el.id}-${idx}`,
+            el.x + pts[idx],
+            el.y + pts[idx + 1],
+            (x, y) => setHandleOverride({ id: el.id, patch: patchFor(x, y) }),
+            (x, y) => commitHandlePatch(el.id, patchFor(x, y)),
+        );
+    };
+
+    const renderCornerHandle = (el: BoardElement, defaultWidth: number, defaultHeight: number) => {
+        const width = el.width ?? defaultWidth;
+        const height = el.height ?? defaultHeight;
+        const patchFor = (absX: number, absY: number): Partial<BoardElement> => ({ width: absX - el.x, height: absY - el.y });
+        return renderHandle(
+            `corner-${el.id}`,
+            el.x + width,
+            el.y + height,
+            (x, y) => setHandleOverride({ id: el.id, patch: patchFor(x, y) }),
+            (x, y) => commitHandlePatch(el.id, patchFor(x, y)),
+        );
+    };
+
+    // Radius handle where el.x/el.y is the shape's own center (equipment
+    // cone) - only the diameter (stored in `width`) changes on drag.
+    const renderCenterRadiusHandle = (el: BoardElement, defaultDiameter: number) => {
+        const radius = (el.width ?? defaultDiameter) / 2;
+        const patchFor = (absX: number, absY: number): Partial<BoardElement> => {
+            const r = Math.max(4 * S, Math.hypot(absX - el.x, absY - el.y));
+            return { width: r * 2 };
+        };
+        return renderHandle(
+            `radius-${el.id}`,
+            el.x + radius,
+            el.y,
+            (x, y) => setHandleOverride({ id: el.id, patch: patchFor(x, y) }),
+            (x, y) => commitHandlePatch(el.id, patchFor(x, y)),
+        );
+    };
+
+    // Radius handle where el.x/el.y is a corner and the center is derived
+    // from width/height (drawing circle/zone) - keeps the center fixed by
+    // moving x/y back out as width/height grow from the drag.
+    const renderCenteredRadiusHandle = (el: BoardElement) => {
+        const centerX = el.x + (el.width || 0) / 2;
+        const centerY = el.y + (el.height || 0) / 2;
+        const radius = Math.max(Math.abs(el.width || 0), Math.abs(el.height || 0)) / 2;
+        const patchFor = (absX: number, absY: number): Partial<BoardElement> => {
+            const r = Math.max(4 * S, Math.hypot(absX - centerX, absY - centerY));
+            return { x: centerX - r, y: centerY - r, width: r * 2, height: r * 2 };
+        };
+        return renderHandle(
+            `radius-${el.id}`,
+            centerX + radius,
+            centerY,
+            (x, y) => setHandleOverride({ id: el.id, patch: patchFor(x, y) }),
+            (x, y) => commitHandlePatch(el.id, patchFor(x, y)),
+        );
+    };
+
+    const renderSelectionHandles = (el: BoardElement) => {
+        if (el.type === 'drawing') {
+            const pts = getEffectivePoints(el);
+            if (el.subtype === 'line' || el.subtype === 'dribble' || el.subtype === 'arrow') {
+                return (
+                    <>
+                        {!el.startPlayerId && renderPointHandle(el, pts, 0)}
+                        {!el.endPlayerId && renderPointHandle(el, pts, pts.length - 2)}
+                    </>
+                );
+            }
+            if (el.subtype === 'curve') {
+                return (
+                    <>
+                        {!el.startPlayerId && renderPointHandle(el, pts, 0)}
+                        {renderPointHandle(el, pts, 2)}
+                        {!el.endPlayerId && renderPointHandle(el, pts, pts.length - 2)}
+                    </>
+                );
+            }
+            if (el.subtype === 'square') {
+                return renderCornerHandle(el, 0, 0);
+            }
+            if (el.subtype === 'circle') {
+                return renderCenteredRadiusHandle(el);
+            }
+        }
+        if (el.type === 'equipment') {
+            if (el.subtype === 'cone') {
+                return renderCenterRadiusHandle(el, DEFAULT_CONE_DIAMETER);
+            }
+            if (el.subtype === 'goal') {
+                return renderCornerHandle(el, DEFAULT_GOAL_WIDTH, DEFAULT_GOAL_HEIGHT);
+            }
+        }
+        return null;
+    };
+
+    // A line/arrow/dribble/curve connected to a player is meant to read as
+    // coming from underneath that player's marker, not covering it - so
+    // connected drawings always render first (bottom), and everything else
+    // (including every player) renders after (top), regardless of draw
+    // order or which array index each element happens to be at.
+    const isConnectedDrawing = (el: BoardElement) => el.type === 'drawing' && !!(el.startPlayerId || el.endPlayerId);
+    const backgroundElements = elements.filter(isConnectedDrawing);
+    const foregroundElements = elements.filter(el => !isConnectedDrawing(el));
+
+    const renderWithOverride = (el: BoardElement) => renderElement(
+        handleOverride?.id === el.id ? { ...el, ...handleOverride.patch } : el,
+        el.id === selectedId,
+    );
 
     return (
         <div
@@ -478,6 +684,7 @@ export const BoardCanvas = forwardRef<BoardCanvasHandle, BoardCanvasProps>(({
                     onMouseDown={handleMouseDown}
                     onMouseMove={handleMouseMove}
                     onMouseUp={handleMouseUp}
+                    onMouseLeave={handleMouseLeave}
                     onWheel={handleWheel}
                     style={{ cursor: isPanning ? 'grab' : isDrawingTool ? 'crosshair' : 'default' }}
                 >
@@ -488,8 +695,15 @@ export const BoardCanvas = forwardRef<BoardCanvasHandle, BoardCanvasProps>(({
                             <Rect width={pitchWidth} height={pitchHeight} fill="#2d5016" />
                         )}
 
-                        {elements.map((el) => renderElement(el, el.id === selectedId))}
+                        {backgroundElements.map(renderWithOverride)}
+                        {foregroundElements.map(renderWithOverride)}
                         {previewElement && renderElement(previewElement, false)}
+                        {selectedId && !activeTool && (() => {
+                            const selected = elements.find(e => e.id === selectedId);
+                            if (!selected) return null;
+                            const withOverride = handleOverride?.id === selected.id ? { ...selected, ...handleOverride.patch } : selected;
+                            return renderSelectionHandles(withOverride);
+                        })()}
                     </Layer>
                 </Stage>
             </div>
