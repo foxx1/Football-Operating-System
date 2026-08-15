@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { logout, useAuth, getRoleDisplayName } from "@/lib/auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { UserProfileDialog } from "@/components/user-profile-dialog";
 import type { Notification } from "@shared/schema";
 
 // ─── types ──────────────────────────────────────────────────────────────────
@@ -387,6 +388,7 @@ export default function TopBar() {
   const { isRtl, t, toggleLocale } = useI18n();
   const { user } = useAuth();
   const initials = `${user?.firstName?.[0] ?? ""}${user?.lastName?.[0] ?? ""}` || "U";
+  const [profileOpen, setProfileOpen] = useState(false);
 
   return (
     <header className="border-b border-border/70 bg-card/80 px-6 py-3 backdrop-blur-xl">
@@ -468,7 +470,7 @@ export default function TopBar() {
                 <Settings className={`${isRtl ? "ml-2" : "mr-2"} h-4 w-4`} />
                 <span>{t("topbar.settings")}</span>
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setProfileOpen(true)}>
                 <span>{t("topbar.profile")}</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -485,6 +487,10 @@ export default function TopBar() {
           </DropdownMenu>
         </div>
       </div>
+
+      {user && (
+        <UserProfileDialog open={profileOpen} onOpenChange={setProfileOpen} user={user} />
+      )}
     </header>
   );
 }

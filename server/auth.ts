@@ -21,6 +21,14 @@ const loginSchema = z.object({
   password: z.string().min(1),
 });
 
+const updateOwnProfileSchema = z.object({
+  firstName: z.string().trim().min(1, "First name is required"),
+  lastName: z.string().trim().min(1, "Last name is required"),
+  email: z.string().trim().email("Valid email is required"),
+  phoneNumber: z.string().trim().nullable().optional(),
+  avatar: z.string().trim().nullable().optional(),
+});
+
 export type SafeUser = Omit<User, "password">;
 
 export function sanitizeUser(user: User): SafeUser {
@@ -176,6 +184,42 @@ export function registerAuthRoutes(app: Express) {
     }
 
     res.json({ user: sanitizeUser(user) });
+  });
+
+  app.patch("/api/auth/me", async (req, res) => {
+    if (!req.session.userId) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+
+    try {
+      const payload = updateOwnProfileSchema.parse(req.body);
+      const normalizedEmail = payload.email.trim().toLowerCase();
+
+      const users = await storage.getUsers();
+      const emailOwner = users.find((candidate) => candidate.email.toLowerCase() === normalizedEmail);
+      if (emailOwner && emailOwner.id !== req.session.userId) {
+        return res.status(400).json({ message: "Email is already registered to another user" });
+      }
+
+      const updated = await storage.updateUser(req.session.userId, {
+        firstName: payload.firstName.trim(),
+        lastName: payload.lastName.trim(),
+        email: normalizedEmail,
+        phoneNumber: payload.phoneNumber?.trim() || null,
+        avatar: payload.avatar || null,
+      });
+
+      if (!updated) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      res.json({ user: sanitizeUser(updated) });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors[0]?.message ?? "Invalid profile data" });
+      }
+      res.status(500).json({ message: "Failed to update profile" });
+    }
   });
 
   // Player signup via invitation

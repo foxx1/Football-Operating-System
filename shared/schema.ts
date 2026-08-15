@@ -10,6 +10,8 @@ export const users = pgTable("users", {
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
   email: text("email").notNull().unique(),
+  phoneNumber: text("phone_number"),
+  avatar: text("avatar"), // file path for the account's profile picture
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

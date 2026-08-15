@@ -9,7 +9,8 @@ export interface AuthUser {
   lastName: string;
   email: string;
   role: 'club_super_admin' | 'admin' | 'assistant' | 'player' | EmployeeRole;
-  avatar?: string;
+  avatar?: string | null;
+  phoneNumber?: string | null;
 }
 
 export interface AuthPermissions {

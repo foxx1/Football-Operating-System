@@ -43,6 +43,13 @@
       "when": 1785834119109,
       "tag": "0005_notifications",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1786598120748,
+      "tag": "0006_big_vin_gonzales",
+      "breakpoints": true
     }
   ]
 }
