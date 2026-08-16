@@ -203,10 +203,14 @@ export const BoardCanvas = forwardRef<BoardCanvasHandle, BoardCanvasProps>(({
         const pos = stage?.getRelativePointerPosition();
         if (!pos) return;
 
-        if (activeTool === 'line' || activeTool === 'dribble' || activeTool === 'arrow') {
+        if (activeTool === 'line' || activeTool === 'dribble' || activeTool === 'arrow' || activeTool === 'doubleArrow') {
             const dx = pos.x - drawingStart.x;
             const dy = pos.y - drawingStart.y;
-            setPreviewElement({ ...previewElement, points: [0, 0, dx, dy] });
+            // Straight by default (control point exactly on the midpoint) -
+            // the 3-point [start, control, end] shape still matches curve's,
+            // so a bend handle becomes available after drawing without
+            // changing how these tools look until someone drags it.
+            setPreviewElement({ ...previewElement, points: [0, 0, dx / 2, dy / 2, dx, dy] });
         } else if (activeTool === 'curve') {
             const dx = pos.x - drawingStart.x;
             const dy = pos.y - drawingStart.y;
@@ -444,7 +448,7 @@ export const BoardCanvas = forwardRef<BoardCanvasHandle, BoardCanvasProps>(({
             const strokeW = (el.strokeWidth ?? DEFAULT_STROKE_WIDTH) * S;
             const shadow = isSelected ? { shadowBlur: 6 * S, shadowColor: '#3b82f6' } : {};
 
-            if (el.subtype === 'line' || el.subtype === 'dribble') {
+            if (el.subtype === 'line' || el.subtype === 'dribble' || el.subtype === 'curve') {
                 return (
                     <Line
                         {...baseProps}
@@ -452,25 +456,18 @@ export const BoardCanvas = forwardRef<BoardCanvasHandle, BoardCanvasProps>(({
                         stroke={strokeColor}
                         strokeWidth={strokeW}
                         dash={el.subtype === 'dribble' ? [6 * S, 5 * S] : undefined}
-                        tension={el.subtype === 'dribble' ? 0.5 : 0}
-                        {...shadow}
-                    />
-                );
-            }
-            if (el.subtype === 'curve') {
-                const pts = getEffectivePoints(el);
-                return (
-                    <Line
-                        {...baseProps}
-                        points={pts}
-                        stroke={strokeColor}
-                        strokeWidth={strokeW}
+                        // A 3-point [start, control, end] line with tension
+                        // still renders perfectly straight when the control
+                        // sits exactly on the midpoint (the default) - it
+                        // only visibly bows once the control is dragged off
+                        // it, so this is safe for line/dribble too, not just
+                        // the dedicated curve tool.
                         tension={0.5}
                         {...shadow}
                     />
                 );
             }
-            if (el.subtype === 'arrow') {
+            if (el.subtype === 'arrow' || el.subtype === 'doubleArrow') {
                 return (
                     <Arrow
                         {...baseProps}
@@ -480,6 +477,9 @@ export const BoardCanvas = forwardRef<BoardCanvasHandle, BoardCanvasProps>(({
                         fill={strokeColor}
                         pointerLength={10 * S}
                         pointerWidth={10 * S}
+                        pointerAtBeginning={el.subtype === 'doubleArrow'}
+                        pointerAtEnding
+                        tension={0.5}
                         {...shadow}
                     />
                 );
@@ -614,15 +614,7 @@ export const BoardCanvas = forwardRef<BoardCanvasHandle, BoardCanvasProps>(({
     const renderSelectionHandles = (el: BoardElement) => {
         if (el.type === 'drawing') {
             const pts = getEffectivePoints(el);
-            if (el.subtype === 'line' || el.subtype === 'dribble' || el.subtype === 'arrow') {
-                return (
-                    <>
-                        {!el.startPlayerId && renderPointHandle(el, pts, 0)}
-                        {!el.endPlayerId && renderPointHandle(el, pts, pts.length - 2)}
-                    </>
-                );
-            }
-            if (el.subtype === 'curve') {
+            if (el.subtype === 'line' || el.subtype === 'dribble' || el.subtype === 'arrow' || el.subtype === 'doubleArrow' || el.subtype === 'curve') {
                 return (
                     <>
                         {!el.startPlayerId && renderPointHandle(el, pts, 0)}

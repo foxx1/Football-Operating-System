@@ -27,10 +27,15 @@ export type Team = 'home' | 'away';
 export type DrawingSubtype =
   | 'line'
   | 'arrow'
+  | 'doubleArrow'
   | 'curve'
   | 'dribble'
   | 'square'
   | 'circle';
+
+// Subtypes with a start/end point and a bend/reshape control point in
+// between, as opposed to square/circle which resize instead of bending.
+export const RESHAPABLE_SUBTYPES = new Set<DrawingSubtype>(['line', 'arrow', 'doubleArrow', 'curve', 'dribble']);
 
 export type EquipmentSubtype = 'ball' | 'cone' | 'goal';
 
@@ -106,7 +111,15 @@ export const TEXT_PRESETS: Record<TextSubtype, Pick<BoardElement, 'text' | 'font
 // connected line always follows the player in both places, not just on
 // screen.
 export function resolveEffectivePoints(el: BoardElement, elements: BoardElement[]): number[] {
-  const pts = el.points ? [...el.points] : [0, 0];
+  let pts = el.points ? [...el.points] : [0, 0];
+  // Lines/arrows/dribbles drawn before bend controls existed only stored a
+  // start and end point. Pad them to the same 3-point [start, control, end]
+  // shape as everything else, with the control sitting exactly on the
+  // straight midpoint - renders identically to the original straight line
+  // until someone actually drags the new control handle.
+  if (el.type === 'drawing' && el.subtype && RESHAPABLE_SUBTYPES.has(el.subtype as DrawingSubtype) && pts.length === 4) {
+    pts = [pts[0], pts[1], (pts[0] + pts[2]) / 2, (pts[1] + pts[3]) / 2, pts[2], pts[3]];
+  }
   if (el.startPlayerId) {
     const player = elements.find(e => e.id === el.startPlayerId);
     if (player) {

@@ -24,7 +24,7 @@ interface PropertiesPanelProps {
 
 // Drawing subtypes with a distinct start and end point (as opposed to
 // square/circle, which don't have a "start"/"end" to attach to a player).
-const ENDPOINT_SUBTYPES = new Set(['line', 'dribble', 'arrow', 'curve']);
+const ENDPOINT_SUBTYPES = new Set(['line', 'dribble', 'arrow', 'doubleArrow', 'curve']);
 
 export interface PropertiesPanelHandle {
     // Applies any staged (not-yet-OK'd) edits, e.g. typed text, as a single
@@ -74,6 +74,7 @@ const SUBTYPE_LABEL_KEYS: Record<string, string> = {
     goal: 'board.equipment.goal',
     line: 'board.lines.straightLine',
     arrow: 'board.lines.arrow',
+    doubleArrow: 'board.lines.doubleArrow',
     curve: 'board.lines.curvedLine',
     dribble: 'board.lines.dribbleLine',
     square: 'board.lines.rectangleZone',

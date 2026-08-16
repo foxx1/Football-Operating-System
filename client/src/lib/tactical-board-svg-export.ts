@@ -128,49 +128,45 @@ function elementToSvg(el: BoardElement, allElements: BoardElement[]): string {
   const dashArray = `${6 * S},${5 * S}`;
   const dash = el.dashed ? ` stroke-dasharray="${dashArray}"` : '';
 
-  if (el.subtype === 'line' || el.subtype === 'dribble') {
-    const [x1, y1, x2, y2] = [el.x + points[0], el.y + points[1], el.x + (points[2] ?? points[0]), el.y + (points[3] ?? points[1])];
-    return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="${strokeW}"${el.subtype === 'dribble' ? ` stroke-dasharray="${dashArray}"` : ''} />`;
-  }
-
-  if (el.subtype === 'curve') {
+  // line/dribble/arrow/doubleArrow/curve all share the same [start,
+  // control, end] point structure (resolveEffectivePoints guarantees this
+  // shape) and the same bend math: a quadratic bezier control point
+  // back-solved so the curve passes through the control point at its
+  // midpoint, matching the canvas's Catmull-Rom curve through the same 3
+  // points. When the control sits exactly on the straight midpoint (the
+  // default for everything but curve), this reduces to a straight line.
+  if (el.subtype === 'line' || el.subtype === 'dribble' || el.subtype === 'arrow' || el.subtype === 'doubleArrow' || el.subtype === 'curve') {
     const x1 = el.x + points[0];
     const y1 = el.y + points[1];
-    let mx: number, my: number, x2: number, y2: number;
-    if (points.length >= 6) {
-      // 3-point curve: [start, through-point, end] - matches the canvas's
-      // Catmull-Rom curve, which passes through the middle point. A
-      // quadratic bezier's control point doesn't pass through the curve
-      // itself, so back-solve one that puts the curve through (tx, ty) at
-      // its midpoint instead, keeping the export in sync with the canvas.
-      const tx = el.x + points[2];
-      const ty = el.y + points[3];
-      x2 = el.x + points[4];
-      y2 = el.y + points[5];
-      mx = 2 * tx - (x1 + x2) / 2;
-      my = 2 * ty - (y1 + y2) / 2;
-    } else {
-      // Legacy 2-point curve data (drawn before curves had a real bow) -
-      // approximate with the old fixed upward bow.
-      x2 = el.x + (points[2] ?? points[0]);
-      y2 = el.y + (points[3] ?? points[1]);
-      mx = (x1 + x2) / 2;
-      my = (y1 + y2) / 2 - 30 * S;
-    }
-    return `<path d="M ${x1} ${y1} Q ${mx} ${my} ${x2} ${y2}" fill="none" stroke="${color}" stroke-width="${strokeW}"${dash} />`;
-  }
+    const tx = el.x + points[2];
+    const ty = el.y + points[3];
+    const x2 = el.x + points[4];
+    const y2 = el.y + points[5];
+    const mx = 2 * tx - (x1 + x2) / 2;
+    const my = 2 * ty - (y1 + y2) / 2;
+    const path = `<path d="M ${x1} ${y1} Q ${mx} ${my} ${x2} ${y2}" fill="none" stroke="${color}" stroke-width="${strokeW}"${dash} />`;
 
-  if (el.subtype === 'arrow') {
-    const [x1, y1, x2, y2] = [el.x + points[0], el.y + points[1], el.x + (points[2] ?? points[0]), el.y + (points[3] ?? points[1])];
-    const angle = Math.atan2(y2 - y1, x2 - x1);
+    if (el.subtype !== 'arrow' && el.subtype !== 'doubleArrow') {
+      return path;
+    }
+
+    // A quadratic bezier's tangent at either end is, exactly, the
+    // direction from its control point to that end - so the arrowhead(s)
+    // point along the curve instead of the straight start-to-end chord.
     const headLen = 10 * S;
-    const hx1 = x2 - headLen * Math.cos(angle - Math.PI / 6);
-    const hy1 = y2 - headLen * Math.sin(angle - Math.PI / 6);
-    const hx2 = x2 - headLen * Math.cos(angle + Math.PI / 6);
-    const hy2 = y2 - headLen * Math.sin(angle + Math.PI / 6);
+    const arrowHead = (fromX: number, fromY: number, tipX: number, tipY: number) => {
+      const angle = Math.atan2(tipY - fromY, tipX - fromX);
+      const hx1 = tipX - headLen * Math.cos(angle - Math.PI / 6);
+      const hy1 = tipY - headLen * Math.sin(angle - Math.PI / 6);
+      const hx2 = tipX - headLen * Math.cos(angle + Math.PI / 6);
+      const hy2 = tipY - headLen * Math.sin(angle + Math.PI / 6);
+      return `<polygon points="${tipX},${tipY} ${hx1},${hy1} ${hx2},${hy2}" fill="${color}" />`;
+    };
+
     return `<g>
-    <line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="${strokeW}"${dash} />
-    <polygon points="${x2},${y2} ${hx1},${hy1} ${hx2},${hy2}" fill="${color}" />
+    ${path}
+    ${arrowHead(mx, my, x2, y2)}
+    ${el.subtype === 'doubleArrow' ? arrowHead(mx, my, x1, y1) : ''}
   </g>`;
   }
 

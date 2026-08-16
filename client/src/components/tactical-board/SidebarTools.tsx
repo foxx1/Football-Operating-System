@@ -186,6 +186,9 @@ export const SidebarTools: React.FC<SidebarToolsProps> = ({ onToolSelect, onAppl
                                 <Button variant="outline" className="w-full justify-start gap-2 h-auto py-2" onClick={() => onToolSelect('arrow')}>
                                     <div className="flex items-center"><Minus className="h-4 w-4" /><div className="w-0 h-0 border-t-4 border-b-4 border-l-4 border-transparent border-l-current"></div></div> {t('board.lines.arrow')}
                                 </Button>
+                                <Button variant="outline" className="w-full justify-start gap-2 h-auto py-2" onClick={() => onToolSelect('doubleArrow')}>
+                                    <div className="flex items-center"><div className="w-0 h-0 border-t-4 border-b-4 border-r-4 border-transparent border-r-current"></div><Minus className="h-4 w-4" /><div className="w-0 h-0 border-t-4 border-b-4 border-l-4 border-transparent border-l-current"></div></div> {t('board.lines.doubleArrow')}
+                                </Button>
                                 <Button variant="outline" className="w-full justify-start gap-2 h-auto py-2" onClick={() => onToolSelect('curve')}>
                                     <div className="h-4 w-4 border-t-2 border-current rounded-full" /> {t('board.lines.curvedLine')}
                                 </Button>
