@@ -1,5 +1,6 @@
 import type { NextFunction, Request, RequestHandler, Response } from "express";
 import { ZodError, type ZodSchema } from "zod";
+import { logger } from "./logger";
 
 export type ApiErrorCode =
   | "BAD_REQUEST"
@@ -117,6 +118,16 @@ export function sendApiError(res: Response, error: unknown, fallbackMessage: str
       },
     });
   }
+
+  // Anything reaching here is an unexpected error (not an ApiError/ZodError/
+  // payload-size case already handled above) - log it, since the client
+  // only ever sees the generic fallback message.
+  const err = error as { name?: string; message?: string; stack?: string } | undefined;
+  logger.error("unhandled_api_error", {
+    name: err?.name,
+    message: err?.message,
+    stack: err?.stack,
+  });
 
   return res.status(500).json({
     error: {

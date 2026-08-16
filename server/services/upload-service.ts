@@ -3,6 +3,7 @@ import path from "path";
 import multer from "multer";
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { env } from "../env";
+import { logger } from "../logger";
 
 export type UploadProvider = "local" | "object-storage";
 
@@ -78,7 +79,22 @@ function createR2UploadService(): UploadService {
           ContentType: file.mimetype,
         }))
           .then(() => cb(null, { filename: key, size: body.length }))
-          .catch(cb);
+          .catch((err) => {
+            // The global error handler swallows this into a generic 500
+            // without logging it, so record the actual SDK error here -
+            // otherwise upload failures are undebuggable from the logs.
+            logger.error("object_storage_upload_failed", {
+              name: err?.name,
+              code: err?.Code ?? err?.code,
+              message: err?.message,
+              httpStatusCode: err?.$metadata?.httpStatusCode,
+              requestId: err?.$metadata?.requestId,
+              bucket,
+              endpoint: env.OBJECT_STORAGE_ENDPOINT,
+              region: env.OBJECT_STORAGE_REGION,
+            });
+            cb(err);
+          });
       });
     },
     _removeFile(_req, _file, cb) {
