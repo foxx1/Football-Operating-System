@@ -86,7 +86,7 @@ function createR2UploadService(): UploadService {
             logger.error("object_storage_upload_failed", {
               name: err?.name,
               code: err?.Code ?? err?.code,
-              message: err?.message,
+              errorMessage: err?.message,
               httpStatusCode: err?.$metadata?.httpStatusCode,
               requestId: err?.$metadata?.requestId,
               bucket,

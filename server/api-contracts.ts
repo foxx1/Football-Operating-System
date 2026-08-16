@@ -125,7 +125,7 @@ export function sendApiError(res: Response, error: unknown, fallbackMessage: str
   const err = error as { name?: string; message?: string; stack?: string } | undefined;
   logger.error("unhandled_api_error", {
     name: err?.name,
-    message: err?.message,
+    errorMessage: err?.message,
     stack: err?.stack,
   });
 

@@ -16,11 +16,15 @@ function shouldLog(level: LogLevel) {
 function write(level: LogLevel, message: string, meta?: Record<string, unknown>) {
   if (!shouldLog(level)) return;
 
+  // meta is spread first so a caller accidentally passing a `level`,
+  // `message`, or `timestamp` key in it can never silently clobber the
+  // actual log fields - those three always reflect what was passed to
+  // the logger call itself.
   const entry = {
+    ...meta,
     level,
     message,
     timestamp: new Date().toISOString(),
-    ...meta,
   };
 
   const line = JSON.stringify(entry);
