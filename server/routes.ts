@@ -4,6 +4,9 @@ import { createServer, type Server } from "http";
 import { z } from "zod";
 import { storage } from "./storage";
 import { getCurrentUserId, requireAuth, requirePermission, rolePermissions } from "./auth";
+import { env } from "./env";
+import { logger } from "./logger";
+import { verifyTerraSignature } from "./services/terra-webhook";
 import { registerMatchSquadRoutes } from "./route-modules/match-squads";
 import { registerMeetingRoutes } from "./route-modules/meetings";
 import { registerAdminUserRoutes } from "./route-modules/admin-users";
@@ -2054,8 +2057,28 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   // Wearable Data Webhooks - Handle incoming data from our connected devices
   app.post("/api/wearable/webhook", async (req, res) => {
     try {
+      if (env.TERRA_SIGNING_SECRET) {
+        const check = verifyTerraSignature(
+          req.headers["terra-signature"],
+          (req as any).rawBody,
+          env.TERRA_SIGNING_SECRET
+        );
+        if (!check.ok) {
+          logger.warn("Rejected wearable webhook: signature check failed", { reason: check.reason });
+          return res.status(401).json({ message: "Invalid webhook signature" });
+        }
+      } else {
+        // No signing secret configured — Terra isn't fully wired up yet (see
+        // POST /api/terra/users, which still simulates the connection rather
+        // than calling the real Terra API). Once real credentials exist, set
+        // TERRA_SIGNING_SECRET so verification above actually runs; until
+        // then this endpoint accepts any POST, so don't treat data received
+        // here as authenticated.
+        logger.warn("Wearable webhook received with no TERRA_SIGNING_SECRET configured — signature not verified");
+      }
+
       const webhookData = req.body;
-      
+
       // Log wearable data for debugging
       console.log("Wearable data received:", JSON.stringify(webhookData, null, 2));
       

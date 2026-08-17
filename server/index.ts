@@ -29,7 +29,15 @@ if (env.NODE_ENV === "production") {
   });
 }
 
-app.use(express.json({ limit: "20mb" }));
+// verify: stash the raw body bytes on req.rawBody. Terra webhook signature
+// verification needs the exact bytes Terra signed, which JSON.parse (and any
+// re-stringify) can't reliably reproduce.
+app.use(express.json({
+  limit: "20mb",
+  verify: (req, _res, buf) => {
+    (req as any).rawBody = buf;
+  },
+}));
 app.use(express.urlencoded({ extended: false, limit: "20mb" }));
 
 const sessionStore = new (MemoryStore(session))({ checkPeriod: 86400000 });

@@ -27,6 +27,7 @@ const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   DATABASE_URL: z.string().url().optional(),
   SESSION_SECRET: z.string().min(32).optional(),
+  TERRA_SIGNING_SECRET: z.string().optional(),
   UPLOAD_PROVIDER: z.enum(["local", "object-storage"]).default("local"),
   OBJECT_STORAGE_BUCKET: z.string().optional(),
   OBJECT_STORAGE_REGION: z.string().optional(),
