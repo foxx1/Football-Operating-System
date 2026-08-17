@@ -2171,7 +2171,7 @@ const translations: Record<Locale, Record<string, string>> = {
     "injury.list.searchPlaceholder": "ابحث باسم اللاعب أو نوع الإصابة...",
     "injury.list.allTeams": "جميع الفرق",
     "injury.list.allStatus": "جميع الحالات",
-    "injury.list.recordsTitle": "سجلات الإصابات",
+    "injury.list.recordsTitle": "سجل الإصابات",
     "injury.list.showingCount": "عرض {shown} من {total} إصابة",
     "injury.list.colPlayer": "اللاعب",
     "injury.list.colTeam": "الفريق",
