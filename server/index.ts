@@ -1,6 +1,9 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import MemoryStore from "memorystore";
+import connectPgSimple from "connect-pg-simple";
+import { Pool } from "pg";
+import crypto from "crypto";
 import path from "path";
 import fs from "fs";
 import { registerRoutes } from "./routes";
@@ -40,11 +43,69 @@ app.use(express.json({
 }));
 app.use(express.urlencoded({ extended: false, limit: "20mb" }));
 
-const sessionStore = new (MemoryStore(session))({ checkPeriod: 86400000 });
+// Session storage. Backed by Postgres (via connect-pg-simple) whenever
+// DATABASE_URL is set, so sessions survive redeploys and work across
+// multiple instances — falls back to an in-memory store only for local dev
+// without a database.
+//
+// This uses its OWN connection pool, deliberately separate from the app's
+// main query pool in server/db.ts. Two earlier attempts at this (see git
+// history: 843cc93, 48df82d, 3a62aa6, 4ac8226) reverted to memorystore
+// after "silent failures" on Neon. The most likely causes, based on that
+// history: (1) session writes sharing a pool with regular API traffic, so
+// a burst of app queries could starve session.save() of a connection, and
+// (2) no explicit connectionTimeoutMillis, so a slow/cold-starting Neon
+// compute (serverless Postgres auto-suspends when idle) could hang rather
+// than fail fast or retry. A small, isolated pool with a generous but
+// finite timeout addresses both. createTableIfMissing is intentionally
+// re-enabled: it runs a `CREATE TABLE IF NOT EXISTS`, so it's a no-op once
+// the table exists, and it makes this self-healing in any fresh
+// environment (a new Neon branch, disaster recovery) instead of depending
+// on a table that was created by hand outside the migration system.
+const sessionPool = env.DATABASE_URL
+  ? new Pool({
+      connectionString: env.DATABASE_URL,
+      ssl: env.NODE_ENV === "production" ? { rejectUnauthorized: false } : undefined,
+      max: 5,
+      connectionTimeoutMillis: 10_000,
+      idleTimeoutMillis: 30_000,
+    })
+  : undefined;
+
+if (sessionPool) {
+  sessionPool.on("error", (err) => {
+    // A connection idling in the pool was terminated (e.g. Neon closing it
+    // after a suspend). This does not crash the process — pg replaces the
+    // connection on the next checkout — but it's worth knowing about if
+    // session errors are being investigated again.
+    logger.error("session_pool_error", { error: err.message });
+  });
+}
+
+const sessionStore = sessionPool
+  ? new (connectPgSimple(session))({
+      pool: sessionPool,
+      tableName: "user_sessions",
+      createTableIfMissing: true,
+      errorLog: (err: Error) => logger.error("session_store_error", { error: err.message }),
+    })
+  : new (MemoryStore(session))({ checkPeriod: 86400000 });
+
+if (!sessionPool) {
+  logger.warn("DATABASE_URL not set — using in-memory session store (fine for local dev; sessions won't persist across restarts or work across multiple instances)");
+}
+
+// env.ts requires SESSION_SECRET in production, so this fallback only ever
+// runs in local dev. Generated fresh at boot rather than hardcoded, so
+// there's no static secret sitting in the (public) repo.
+const sessionSecret = env.SESSION_SECRET ?? crypto.randomBytes(32).toString("hex");
+if (!env.SESSION_SECRET) {
+  logger.warn("SESSION_SECRET not set — using a random secret generated at boot (dev only; this invalidates existing sessions on every restart)");
+}
 
 app.use(session({
   store: sessionStore,
-  secret: process.env.SESSION_SECRET || "dev-session-secret-change-me",
+  secret: sessionSecret,
   resave: false,
   saveUninitialized: false,
   cookie: {
