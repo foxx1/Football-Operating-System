@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import { I18nProvider } from "@/contexts/I18nContext";
 import LoginPage from "./login";
 
 vi.mock("wouter", () => ({
@@ -17,7 +18,9 @@ function renderWithQueryClient(ui: React.ReactElement) {
 
   return render(
     <QueryClientProvider client={queryClient}>
-      {ui}
+      <I18nProvider>
+        {ui}
+      </I18nProvider>
     </QueryClientProvider>,
   );
 }
