@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { z } from "zod";
 import { asyncHandler, parseBody, parseIdParam, validateBody } from "../api-contracts";
-import { getRolePermissions, getCurrentUserId, hashPassword, requirePermission, sanitizeUser } from "../auth";
+import { getRolePermissions, getCurrentUserId, getCurrentOrganizationId, hashPassword, requirePermission, sanitizeUser } from "../auth";
 import { storage } from "../storage";
 
 const roles = ["club_super_admin", "head_coach", "admin", "assistant_coach", "assistant", "player"] as const;
@@ -35,8 +35,8 @@ export function registerAdminUserRoutes(app: Express) {
     res.json(roles.map(roleDescriptor));
   }));
 
-  app.get("/api/admin/users", requirePermission("manage_roles"), asyncHandler(async (_req, res) => {
-    const users = await storage.getUsers();
+  app.get("/api/admin/users", requirePermission("manage_roles"), asyncHandler(async (req, res) => {
+    const users = await storage.getUsers(getCurrentOrganizationId(req));
     res.json(users.map(sanitizeUser));
   }));
 
@@ -51,7 +51,7 @@ export function registerAdminUserRoutes(app: Express) {
       }
 
       const password = await hashPassword(req.body.password);
-      const user = await storage.createUser({ ...req.body, password });
+      const user = await storage.createUser({ ...req.body, password }, getCurrentOrganizationId(req));
       res.status(201).json(sanitizeUser(user));
     }),
   );
@@ -68,7 +68,7 @@ export function registerAdminUserRoutes(app: Express) {
       delete update.password;
     }
 
-    const user = await storage.updateUser(id, update);
+    const user = await storage.updateUser(id, update, getCurrentOrganizationId(req));
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
@@ -82,7 +82,7 @@ export function registerAdminUserRoutes(app: Express) {
       return res.status(400).json({ error: "You cannot delete your own user" });
     }
 
-    const success = await storage.deleteUser(id);
+    const success = await storage.deleteUser(id, getCurrentOrganizationId(req));
     if (!success) {
       return res.status(404).json({ error: "User not found" });
     }

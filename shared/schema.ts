@@ -2,8 +2,29 @@ import { pgTable, text, serial, integer, boolean, timestamp, jsonb, decimal, var
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// ─── Multi-tenancy root ──────────────────────────────────────
+// Every organization (tenant) on the platform: a club, an academy, or an
+// association. All org-owned root tables carry an organization_id FK. The
+// temporary .default(1) keeps the app fully working during the tenancy
+// rollout (Phase T0): existing single-org code that doesn't yet pass
+// organization_id keeps writing into organization 1. Phase T1 threads
+// organizationId through the storage layer, after which the default is
+// dropped (Phase T2).
+export const organizations = pgTable("organizations", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  nameAr: text("name_ar"), // Arabic organization name, shown when Arabic locale is active
+  slug: text("slug").notNull().unique(), // url-safe identifier, e.g. "al-riffa"
+  type: text("type").default("club").notNull(), // club, academy, association
+  logo: text("logo"), // file path for organization logo
+  country: text("country").default("BH").notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
+  organizationId: integer("organization_id").references(() => organizations.id).default(1).notNull(), // tenant scope (default dropped in tenancy Phase T2)
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   role: text("role").notNull().default("assistant"), // club_super_admin, head_coach, assistant_coach, admin, assistant, player
@@ -17,6 +38,7 @@ export const users = pgTable("users", {
 
 export const players = pgTable("players", {
   id: serial("id").primaryKey(),
+  organizationId: integer("organization_id").references(() => organizations.id).default(1).notNull(), // tenant scope (default dropped in tenancy Phase T2)
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
   firstNameAr: text("first_name_ar"), // Arabic first name, shown when Arabic locale is active
@@ -47,6 +69,7 @@ export const players = pgTable("players", {
 
 export const teams = pgTable("teams", {
   id: serial("id").primaryKey(),
+  organizationId: integer("organization_id").references(() => organizations.id).default(1).notNull(), // tenant scope (default dropped in tenancy Phase T2)
   name: text("name").notNull(),
   category: text("category").notNull(), // first_team, reserves, youth
   description: text("description"),
@@ -83,6 +106,7 @@ export const teamStaff = pgTable("team_staff", {
 
 export const trainingSessions = pgTable("training_sessions", {
   id: serial("id").primaryKey(),
+  organizationId: integer("organization_id").references(() => organizations.id).default(1).notNull(), // tenant scope (default dropped in tenancy Phase T2)
   title: text("title").notNull(),
   description: text("description"),
   sessionType: text("session_type").notNull(), // fitness, technical, tactical, match_prep, recovery
@@ -214,6 +238,7 @@ export const notifications = pgTable("notifications", {
 
 export const tacticalFormations = pgTable("tactical_formations", {
   id: serial("id").primaryKey(),
+  organizationId: integer("organization_id").references(() => organizations.id).default(1).notNull(), // tenant scope (default dropped in tenancy Phase T2)
   name: text("name").notNull(),
   formation: text("formation").notNull(), // e.g., "4-4-2", "3-5-2"
   teamId: integer("team_id").references(() => teams.id).notNull(),
@@ -248,6 +273,7 @@ export const playerStats = pgTable("player_stats", {
 
 export const staff = pgTable("staff", {
   id: serial("id").primaryKey(),
+  organizationId: integer("organization_id").references(() => organizations.id).default(1).notNull(), // tenant scope (default dropped in tenancy Phase T2)
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
   firstNameAr: text("first_name_ar"), // Arabic first name, shown when Arabic locale is active
@@ -276,6 +302,7 @@ export const staff = pgTable("staff", {
 
 export const matches = pgTable("matches", {
   id: serial("id").primaryKey(),
+  organizationId: integer("organization_id").references(() => organizations.id).default(1).notNull(), // tenant scope (default dropped in tenancy Phase T2)
   homeTeamId: integer("home_team_id").references(() => teams.id).notNull(),
   awayTeam: text("away_team").notNull(), // opponent team name
   competition: text("competition").notNull(), // league, cup, friendly
@@ -329,6 +356,7 @@ export const matchSquads = pgTable("match_squads", {
 
 export const meetings = pgTable("meetings", {
   id: serial("id").primaryKey(),
+  organizationId: integer("organization_id").references(() => organizations.id).default(1).notNull(), // tenant scope (default dropped in tenancy Phase T2)
   title: text("title").notNull(),
   description: text("description"),
   meetingType: text("meeting_type").notNull(), // team, tactical, staff, individual, medical, board, sponsors, other
@@ -353,6 +381,7 @@ export const meetings = pgTable("meetings", {
 
 export const analyticsReports = pgTable("analytics_reports", {
   id: serial("id").primaryKey(),
+  organizationId: integer("organization_id").references(() => organizations.id).default(1).notNull(), // tenant scope (default dropped in tenancy Phase T2)
   title: text("title").notNull(),
   type: text("type").notNull(), // performance, tactical, fitness, injury, attendance
   period: text("period").notNull(), // weekly, monthly, season
@@ -373,6 +402,7 @@ export const analyticsReports = pgTable("analytics_reports", {
 
 export const systemSettings = pgTable("system_settings", {
   id: serial("id").primaryKey(),
+  organizationId: integer("organization_id").references(() => organizations.id).default(1).notNull(), // tenant scope (default dropped in tenancy Phase T2)
   category: text("category").notNull(), // general, notifications, integrations, security
   settingKey: text("setting_key").notNull(),
   settingValue: text("setting_value"),
@@ -382,7 +412,7 @@ export const systemSettings = pgTable("system_settings", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => {
   return {
-    categoryKeyUnique: uniqueIndex("system_settings_category_key_unique").on(table.category, table.settingKey),
+    categoryKeyUnique: uniqueIndex("system_settings_org_category_key_unique").on(table.organizationId, table.category, table.settingKey),
   };
 });
 
@@ -390,6 +420,7 @@ export const systemSettings = pgTable("system_settings", {
 // membership, so an injury is always scoped with the player it belongs to.
 export const injuries = pgTable("injuries", {
   id: serial("id").primaryKey(),
+  organizationId: integer("organization_id").references(() => organizations.id).default(1).notNull(), // tenant scope (default dropped in tenancy Phase T2)
   playerId: integer("player_id").references(() => players.id).notNull(),
   injuryType: text("injury_type").notNull(),
   severity: text("severity").notNull(), // mild, moderate, severe
@@ -430,6 +461,7 @@ export const injuryTreatmentLogs = pgTable("injury_treatment_logs", {
 // Annual Budget Management (Fiscal Year Allocations)
 export const annualBudgets = pgTable("annual_budgets", {
   id: serial("id").primaryKey(),
+  organizationId: integer("organization_id").references(() => organizations.id).default(1).notNull(), // tenant scope (default dropped in tenancy Phase T2)
   fiscalYear: text("fiscal_year").notNull().unique(), // e.g., "2025-26"
   // Owning squad. NULL means a club-wide budget, visible only to club super admins.
   teamId: integer("team_id").references(() => teams.id),
@@ -459,6 +491,7 @@ export const annualBudgets = pgTable("annual_budgets", {
 // Monthly Budget Management
 export const monthlyBudgets = pgTable("monthly_budgets", {
   id: serial("id").primaryKey(),
+  organizationId: integer("organization_id").references(() => organizations.id).default(1).notNull(), // tenant scope (default dropped in tenancy Phase T2)
   month: text("month").notNull(), // YYYY-MM format
   annualBudgetId: integer("annual_budget_id").references(() => annualBudgets.id),
   // Owning squad. NULL means a club-wide budget, visible only to club super admins.
@@ -492,6 +525,7 @@ export const monthlyBudgets = pgTable("monthly_budgets", {
 // Expense Tracking
 export const expenses = pgTable("expenses", {
   id: serial("id").primaryKey(),
+  organizationId: integer("organization_id").references(() => organizations.id).default(1).notNull(), // tenant scope (default dropped in tenancy Phase T2)
   budgetId: integer("budget_id").references(() => monthlyBudgets.id).notNull(),
   category: text("category").notNull(), // salaries, operational, equipment, travel, medical, facilities, marketing, other
   subcategory: text("subcategory"), // specific expense type
@@ -521,6 +555,7 @@ export const expenses = pgTable("expenses", {
 // Player Salaries (extending player info with salary details)
 export const playerContracts = pgTable("player_contracts", {
   id: serial("id").primaryKey(),
+  organizationId: integer("organization_id").references(() => organizations.id).default(1).notNull(), // tenant scope (default dropped in tenancy Phase T2)
   playerId: integer("player_id").references(() => players.id).notNull(),
   contractType: text("contract_type").notNull(), // professional, amateur, youth, loan
   startDate: text("start_date").notNull(),
@@ -556,6 +591,7 @@ export const terraDeviceProviders = pgTable("terra_device_providers", {
 
 export const terraUsers = pgTable("terra_users", {
   id: serial("id").primaryKey(),
+  organizationId: integer("organization_id").references(() => organizations.id).default(1).notNull(), // tenant scope (default dropped in tenancy Phase T2)
   userId: uuid("user_id").defaultRandom().notNull().unique(), // Terra-style UUID
   playerId: integer("player_id").references(() => players.id).notNull(), // Reference ID in Terra terms
   provider: varchar("provider", { length: 50 }).notNull(),
@@ -777,6 +813,7 @@ export const performanceReactions = pgTable("performance_reactions", {
 // Tactical Boards Library - Save/Open tactical formations and drawings
 export const tacticalBoards = pgTable("tactical_boards", {
   id: serial("id").primaryKey(),
+  organizationId: integer("organization_id").references(() => organizations.id).default(1).notNull(), // tenant scope (default dropped in tenancy Phase T2)
   name: text("name").notNull(),
   description: text("description"),
   drawingElements: jsonb("drawing_elements").notNull(), // Array of drawing elements
@@ -798,6 +835,7 @@ export const tacticalBoards = pgTable("tactical_boards", {
 // Achievement System - Gamified training milestone tracking
 export const achievementTypes = pgTable("achievement_types", {
   id: serial("id").primaryKey(),
+  organizationId: integer("organization_id").references(() => organizations.id).default(1).notNull(), // tenant scope (default dropped in tenancy Phase T2)
   name: text("name").notNull(),
   description: text("description").notNull(),
   category: text("category").notNull(), // training, fitness, skill, attendance, leadership, team_spirit
@@ -878,6 +916,7 @@ export const achievementProgress = pgTable("achievement_progress", {
 // Player Invitations - Tokens for inviting players to self-register
 export const playerInvitations = pgTable("player_invitations", {
   id: serial("id").primaryKey(),
+  organizationId: integer("organization_id").references(() => organizations.id).default(1).notNull(), // tenant scope (default dropped in tenancy Phase T2)
   token: text("token").notNull().unique(),
   teamId: integer("team_id").references(() => teams.id).notNull(),
   email: text("email"), // optional: where the invite was sent
@@ -944,6 +983,7 @@ export function isAdminRole(role: string | null | undefined): role is AdminRole 
 // Employee Invitations - Tokens for inviting staff accounts with a fixed role
 export const employeeInvitations = pgTable("employee_invitations", {
   id: serial("id").primaryKey(),
+  organizationId: integer("organization_id").references(() => organizations.id).default(1).notNull(), // tenant scope (default dropped in tenancy Phase T2)
   token: text("token").notNull().unique(),
   role: text("role").$type<EmployeeRole>().notNull(),
   teamId: integer("team_id").references(() => teams.id),
@@ -972,6 +1012,11 @@ export const registrationReminders = pgTable("registration_reminders", {
 }));
 
 // Insert schemas
+export const insertOrganizationSchema = createInsertSchema(organizations).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   createdAt: true,
@@ -1169,6 +1214,8 @@ export const insertAchievementProgressSchema = createInsertSchema(achievementPro
 
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
+export type Organization = typeof organizations.$inferSelect;
+export type InsertOrganization = z.infer<typeof insertOrganizationSchema>;
 export type User = typeof users.$inferSelect;
 
 export type InsertPlayer = z.infer<typeof insertPlayerSchema>;
@@ -1247,6 +1294,7 @@ export type PerformanceReaction = typeof performanceReactions.$inferSelect;
 // Wearable Devices - For tracking connected fitness devices
 export const wearableDevices = pgTable("wearable_devices", {
   id: serial("id").primaryKey(),
+  organizationId: integer("organization_id").references(() => organizations.id).default(1).notNull(), // tenant scope (default dropped in tenancy Phase T2)
   playerId: integer("player_id").references(() => players.id).notNull(),
   deviceType: text("device_type").notNull(), // fitbit, apple_watch, garmin, polar, etc.
   deviceModel: text("device_model").notNull(),

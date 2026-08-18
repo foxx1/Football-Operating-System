@@ -3,7 +3,7 @@ import type { Express, RequestHandler } from "express";
 import { createServer, type Server } from "http";
 import { z } from "zod";
 import { storage } from "./storage";
-import { getCurrentUserId, requireAuth, requirePermission, rolePermissions } from "./auth";
+import { getCurrentUserId, getCurrentOrganizationId, requireAuth, requirePermission, rolePermissions } from "./auth";
 import { env } from "./env";
 import { logger } from "./logger";
 import { verifyTerraSignature } from "./services/terra-webhook";
@@ -42,7 +42,7 @@ async function getScopedTeamIds(req: { session: { userId?: number } }): Promise<
   if (!user || !isAdminRole(user.role)) return null;
 
   const normalizedEmail = user.email.toLowerCase();
-  const member = (await storage.getStaff()).find(
+  const member = (await storage.getStaff(user.organizationId)).find(
     (candidate) => candidate.email.toLowerCase() === normalizedEmail
   );
   if (!member) return [];
@@ -176,14 +176,14 @@ const staffRegistrationFields = [
 
 async function getUserRegistrationStatus(user: User) {
   if (user.role === "player") {
-    const profile = (await storage.getPlayers()).find((player) => player.email?.toLowerCase() === user.email.toLowerCase());
+    const profile = (await storage.getPlayers(user.organizationId)).find((player) => player.email?.toLowerCase() === user.email.toLowerCase());
     const missingFields = playerRegistrationFields
       .filter(([key]) => !profile?.[key])
       .map(([, label]) => label);
     return { type: "player" as const, profileId: profile?.id ?? null, missingFields, isComplete: missingFields.length === 0 };
   }
 
-  const profile = (await storage.getStaff()).find((member) => member.email.toLowerCase() === user.email.toLowerCase());
+  const profile = (await storage.getStaff(user.organizationId)).find((member) => member.email.toLowerCase() === user.email.toLowerCase());
   const missingFields = staffRegistrationFields
     .filter(([key]) => !profile?.[key])
     .map(([, label]) => label);
@@ -201,8 +201,8 @@ async function notifyTeamOfTraining(session: Awaited<ReturnType<typeof storage.c
   const [teamPlayers, teamStaffMembers, users, team] = await Promise.all([
     storage.getTeamPlayers(session.teamId),
     storage.getTeamStaff(session.teamId),
-    storage.getUsers(),
-    storage.getTeam(session.teamId),
+    storage.getUsers(session.organizationId),
+    storage.getTeam(session.teamId, session.organizationId),
   ]);
 
   const usersByEmail = new Map(users.map((u) => [u.email.toLowerCase(), u]));
@@ -232,12 +232,12 @@ async function notifyTeamOfTraining(session: Awaited<ReturnType<typeof storage.c
 
 // Notifies a team's staff when a player requests leave for a training session.
 async function notifyStaffOfLeaveRequest(sessionId: number, player: Awaited<ReturnType<typeof storage.getPlayers>>[number]) {
-  const session = await storage.getTrainingSession(sessionId);
+  const session = await storage.getTrainingSession(sessionId, player.organizationId);
   if (!session) return;
 
   const [teamStaffMembers, users] = await Promise.all([
     storage.getTeamStaff(session.teamId),
-    storage.getUsers(),
+    storage.getUsers(player.organizationId),
   ]);
 
   const usersByEmail = new Map(users.map((u) => [u.email.toLowerCase(), u]));
@@ -274,7 +274,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
       }
 
       const normalizedEmail = user.email.toLowerCase();
-      const player = (await storage.getPlayers()).find((candidate) => {
+      const player = (await storage.getPlayers(user.organizationId)).find((candidate) => {
         return candidate.email?.toLowerCase() === normalizedEmail;
       });
 
@@ -309,9 +309,9 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
         firstName: profile.firstName,
         lastName: profile.lastName,
         email: normalizedEmail,
-      });
+      }, user.organizationId);
 
-      const players = await storage.getPlayers();
+      const players = await storage.getPlayers(user.organizationId);
       const linkedPlayer = players.find((candidate) => {
         return candidate.email?.toLowerCase() === user.email.toLowerCase()
           || candidate.email?.toLowerCase() === normalizedEmail;
@@ -332,8 +332,8 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
       };
 
       const player = linkedPlayer
-        ? await storage.updatePlayer(linkedPlayer.id, playerData)
-        : await storage.createPlayer(playerData);
+        ? await storage.updatePlayer(linkedPlayer.id, playerData, user.organizationId)
+        : await storage.createPlayer(playerData, user.organizationId);
 
       res.json({
         user: await storage.getUser(user.id),
@@ -357,7 +357,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
       }
 
       const normalizedEmail = user.email.toLowerCase();
-      const member = (await storage.getStaff()).find((candidate) => {
+      const member = (await storage.getStaff(user.organizationId)).find((candidate) => {
         return candidate.email.toLowerCase() === normalizedEmail;
       });
 
@@ -387,7 +387,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
         return res.status(400).json({ message: "Email is already registered to another user" });
       }
 
-      const allStaff = await storage.getStaff();
+      const allStaff = await storage.getStaff(user.organizationId);
       const emailOwnerStaff = allStaff.find((candidate) => candidate.email.toLowerCase() === normalizedEmail);
       const linkedStaff = allStaff.find((candidate) => {
         const candidateEmail = candidate.email.toLowerCase();
@@ -401,7 +401,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
         firstName: profile.firstName,
         lastName: profile.lastName,
         email: normalizedEmail,
-      });
+      }, user.organizationId);
 
       const staffData = {
         firstName: profile.firstName,
@@ -420,8 +420,8 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
       };
 
       const member = linkedStaff
-        ? await storage.updateStaff(linkedStaff.id, staffData)
-        : await storage.createStaff(staffData);
+        ? await storage.updateStaff(linkedStaff.id, staffData, user.organizationId)
+        : await storage.createStaff(staffData, user.organizationId);
 
       res.json({
         user: await storage.getUser(user.id),
@@ -444,7 +444,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
         return res.status(403).json({ message: "Administrator access required" });
       }
 
-      const accountUsers = (await storage.getUsers()).filter((user) => {
+      const accountUsers = (await storage.getUsers(getCurrentOrganizationId(req))).filter((user) => {
         return user.role === "player" || isEmployeeAccountRole(user.role);
       });
       const statuses = await Promise.all(accountUsers.map(async (user) => {
@@ -477,7 +477,11 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
 
       const payload = z.object({ userId: z.coerce.number().int().positive() }).parse(req.body);
       const targetUser = await storage.getUser(payload.userId);
-      if (!targetUser || (targetUser.role !== "player" && !isEmployeeAccountRole(targetUser.role))) {
+      if (
+        !targetUser ||
+        targetUser.organizationId !== currentUser!.organizationId ||
+        (targetUser.role !== "player" && !isEmployeeAccountRole(targetUser.role))
+      ) {
         return res.status(404).json({ message: "Player or staff account not found" });
       }
 
@@ -521,7 +525,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
       }
 
       const normalizedEmail = user.email.toLowerCase();
-      const player = (await storage.getPlayers()).find((candidate) => {
+      const player = (await storage.getPlayers(user.organizationId)).find((candidate) => {
         return candidate.email?.toLowerCase() === normalizedEmail;
       });
 
@@ -570,7 +574,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   // Players
   app.get("/api/players", requireAuth, async (req, res) => {
     try {
-      const players = await storage.getPlayers();
+      const players = await storage.getPlayers(getCurrentOrganizationId(req));
       const scopedTeamIds = await getScopedTeamIds(req);
       if (scopedTeamIds) {
         const allowedPlayerIds = await getPlayerIdsForTeams(scopedTeamIds);
@@ -586,7 +590,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.get("/api/players/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const player = await storage.getPlayer(id);
+      const player = await storage.getPlayer(id, getCurrentOrganizationId(req));
       if (!player) {
         return res.status(404).json({ message: "Player not found" });
       }
@@ -601,7 +605,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
       console.log("POST /api/players - Request body:", JSON.stringify(req.body, null, 2));
       const validatedData = insertPlayerSchema.parse(req.body);
       console.log("POST /api/players - Validated data:", JSON.stringify(validatedData, null, 2));
-      const player = await storage.createPlayer(validatedData);
+      const player = await storage.createPlayer(validatedData, getCurrentOrganizationId(req));
       res.status(201).json(player);
     } catch (error) {
       console.error("POST /api/players - Error:", error);
@@ -613,7 +617,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
     try {
       const id = parseInt(req.params.id);
       const validatedData = insertPlayerSchema.partial().parse(req.body);
-      const player = await storage.updatePlayer(id, validatedData);
+      const player = await storage.updatePlayer(id, validatedData, getCurrentOrganizationId(req));
       if (!player) {
         return res.status(404).json({ message: "Player not found" });
       }
@@ -627,7 +631,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
     try {
       const id = parseInt(req.params.id);
       const validatedData = insertPlayerSchema.partial().parse(req.body);
-      const player = await storage.updatePlayer(id, validatedData);
+      const player = await storage.updatePlayer(id, validatedData, getCurrentOrganizationId(req));
       if (!player) {
         return res.status(404).json({ message: "Player not found" });
       }
@@ -641,7 +645,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.delete("/api/players/:id", requirePermission("manage_players"), blockTechnicalStaffFromRosterMutation, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const success = await storage.deletePlayer(id);
+      const success = await storage.deletePlayer(id, getCurrentOrganizationId(req));
       if (!success) {
         return res.status(404).json({ message: "Player not found" });
       }
@@ -698,7 +702,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   // Teams
   app.get("/api/teams", requireAuth, async (req, res) => {
     try {
-      const teams = await storage.getTeams();
+      const teams = await storage.getTeams(getCurrentOrganizationId(req));
       const scopedTeamIds = await getScopedTeamIds(req);
       if (scopedTeamIds) {
         return res.json(teams.filter((team) => scopedTeamIds.includes(team.id)));
@@ -712,7 +716,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.get("/api/teams/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const team = await storage.getTeam(id);
+      const team = await storage.getTeam(id, getCurrentOrganizationId(req));
       if (!team) {
         return res.status(404).json({ message: "Team not found" });
       }
@@ -750,7 +754,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
         return res.status(403).json({ message: "Administrators cannot create teams" });
       }
       const validatedData = insertTeamSchema.parse(req.body);
-      const team = await storage.createTeam(validatedData);
+      const team = await storage.createTeam(validatedData, getCurrentOrganizationId(req));
       res.status(201).json(team);
     } catch (error) {
       res.status(400).json({ message: "Invalid team data" });
@@ -764,7 +768,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
       if (scopedTeamIds && !scopedTeamIds.includes(id)) {
         return res.status(403).json({ message: "This team is not assigned to you" });
       }
-      const team = await storage.updateTeam(id, req.body);
+      const team = await storage.updateTeam(id, req.body, getCurrentOrganizationId(req));
       if (!team) return res.status(404).json({ message: "Team not found" });
       res.json(team);
     } catch (error) {
@@ -779,7 +783,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
       if (scopedTeamIds && !scopedTeamIds.includes(id)) {
         return res.status(403).json({ message: "This team is not assigned to you" });
       }
-      const success = await storage.deleteTeam(id);
+      const success = await storage.deleteTeam(id, getCurrentOrganizationId(req));
       if (!success) return res.status(404).json({ message: "Team not found" });
       res.json({ success: true });
     } catch (error) {
@@ -807,7 +811,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
         email,
         invitedBy: userId,
         expiresAt,
-      });
+      }, getCurrentOrganizationId(req));
 
       const link = `${req.protocol}://${req.get("host")}/invite/${invitation.token}`;
       res.status(201).json({ link });
@@ -868,7 +872,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
         email: email || null,
         invitedBy: getCurrentUserId(req),
         expiresAt,
-      });
+      }, getCurrentOrganizationId(req));
 
       const link = `${req.protocol}://${req.get("host")}/employee-invite/${invitation.token}`;
       res.status(201).json({ link });
@@ -900,7 +904,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
 
       let teamName: string | null = null;
       if (invitation.teamId) {
-        const team = await storage.getTeam(invitation.teamId);
+        const team = await storage.getTeam(invitation.teamId, invitation.organizationId);
         teamName = team?.name ?? null;
       }
 
@@ -999,7 +1003,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
       const normalizedEmail = user.email.toLowerCase();
 
       if (user.role === "player") {
-        const player = (await storage.getPlayers()).find(
+        const player = (await storage.getPlayers(user.organizationId)).find(
           (candidate) => candidate.email?.toLowerCase() === normalizedEmail
         );
         if (!player) {
@@ -1009,7 +1013,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
         return res.json(playerTeams.map((pt) => pt.team));
       }
 
-      const member = (await storage.getStaff()).find(
+      const member = (await storage.getStaff(user.organizationId)).find(
         (candidate) => candidate.email.toLowerCase() === normalizedEmail
       );
 
@@ -1040,7 +1044,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
       const normalizedEmail = user.email.toLowerCase();
 
       if (user.role === "player") {
-        const player = (await storage.getPlayers()).find(
+        const player = (await storage.getPlayers(user.organizationId)).find(
           (candidate) => candidate.email?.toLowerCase() === normalizedEmail
         );
         return res.json({
@@ -1051,7 +1055,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
         });
       }
 
-      const member = (await storage.getStaff()).find(
+      const member = (await storage.getStaff(user.organizationId)).find(
         (candidate) => candidate.email.toLowerCase() === normalizedEmail
       );
 
@@ -1083,7 +1087,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
 
       // Use the admin's own staff record as coachId
       const normalizedEmail = user.email.toLowerCase();
-      const member = (await storage.getStaff()).find(
+      const member = (await storage.getStaff(user.organizationId)).find(
         (s) => s.email.toLowerCase() === normalizedEmail
       );
 
@@ -1110,7 +1114,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
         location,
         teamId,
         coachId,
-      });
+      }, user.organizationId);
 
       res.status(201).json(session);
     } catch (error) {
@@ -1122,7 +1126,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   // Training Sessions
   app.get("/api/training-sessions", requireAuth, async (req, res) => {
     try {
-      const sessions = await storage.getTrainingSessions();
+      const sessions = await storage.getTrainingSessions(getCurrentOrganizationId(req));
 
       // An administrator's scope is enforced here, not taken from the client.
       const scopedTeamIds = await getScopedTeamIds(req);
@@ -1144,7 +1148,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.get("/api/training-sessions/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const session = await storage.getTrainingSession(id);
+      const session = await storage.getTrainingSession(id, getCurrentOrganizationId(req));
       if (!session) {
         return res.status(404).json({ message: "Training session not found" });
       }
@@ -1157,7 +1161,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.post("/api/training-sessions", requirePermission("schedule_training"), async (req, res) => {
     try {
       const validatedData = insertTrainingSessionSchema.parse(req.body);
-      const session = await storage.createTrainingSession(validatedData);
+      const session = await storage.createTrainingSession(validatedData, getCurrentOrganizationId(req));
       res.status(201).json(session);
 
       // Notification delivery shouldn't block or fail session creation.
@@ -1173,7 +1177,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
     try {
       const id = parseInt(req.params.id);
       const validatedData = insertTrainingSessionSchema.partial().parse(req.body);
-      const session = await storage.updateTrainingSession(id, validatedData);
+      const session = await storage.updateTrainingSession(id, validatedData, getCurrentOrganizationId(req));
       if (!session) {
         return res.status(404).json({ message: "Training session not found" });
       }
@@ -1186,7 +1190,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.delete("/api/training-sessions/:id", requirePermission("schedule_training"), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const success = await storage.deleteTrainingSession(id);
+      const success = await storage.deleteTrainingSession(id, getCurrentOrganizationId(req));
       if (!success) {
         return res.status(404).json({ message: "Training session not found" });
       }
@@ -1219,7 +1223,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
 
       if (user.role === "player") {
         const normalizedEmail = user.email.toLowerCase();
-        respondingPlayer = (await storage.getPlayers()).find(
+        respondingPlayer = (await storage.getPlayers(user.organizationId)).find(
           (candidate) => candidate.email?.toLowerCase() === normalizedEmail
         );
         if (!respondingPlayer) {
@@ -1249,7 +1253,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.get("/api/teams/:id/formations", requireAuth, async (req, res) => {
     try {
       const teamId = parseInt(req.params.id);
-      const formations = await storage.getFormations(teamId);
+      const formations = await storage.getFormations(teamId, getCurrentOrganizationId(req));
       res.json(formations);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch formations" });
@@ -1259,7 +1263,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.post("/api/formations", requirePermission("manage_tactics"), async (req, res) => {
     try {
       const validatedData = insertTacticalFormationSchema.parse(req.body);
-      const formation = await storage.createFormation(validatedData);
+      const formation = await storage.createFormation(validatedData, getCurrentOrganizationId(req));
       res.status(201).json(formation);
     } catch (error) {
       res.status(400).json({ message: "Invalid formation data" });
@@ -1270,7 +1274,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
     try {
       const id = parseInt(req.params.id);
       const validatedData = insertTacticalFormationSchema.partial().parse(req.body);
-      const formation = await storage.updateFormation(id, validatedData);
+      const formation = await storage.updateFormation(id, validatedData, getCurrentOrganizationId(req));
       if (!formation) {
         return res.status(404).json({ message: "Formation not found" });
       }
@@ -1283,7 +1287,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.delete("/api/formations/:id", requirePermission("manage_tactics"), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const success = await storage.deleteFormation(id);
+      const success = await storage.deleteFormation(id, getCurrentOrganizationId(req));
       if (!success) {
         return res.status(404).json({ message: "Formation not found" });
       }
@@ -1326,7 +1330,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   // Staff Management
   app.get("/api/staff", requireAuth, async (req, res) => {
     try {
-      const staff = await storage.getStaff();
+      const staff = await storage.getStaff(getCurrentOrganizationId(req));
       const scopedTeamIds = await getScopedTeamIds(req);
       if (scopedTeamIds) {
         const allowedStaffIds = await getStaffIdsForTeams(scopedTeamIds);
@@ -1341,7 +1345,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.get("/api/staff/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const staff = await storage.getStaffMember(id);
+      const staff = await storage.getStaffMember(id, getCurrentOrganizationId(req));
       if (!staff) {
         return res.status(404).json({ message: "Staff member not found" });
       }
@@ -1354,7 +1358,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.post("/api/staff", requirePermission("manage_teams"), async (req, res) => {
     try {
       const validatedData = insertStaffSchema.parse(req.body);
-      const staff = await storage.createStaff(validatedData);
+      const staff = await storage.createStaff(validatedData, getCurrentOrganizationId(req));
       res.status(201).json(staff);
     } catch (error) {
       res.status(400).json({ message: "Invalid staff data" });
@@ -1365,7 +1369,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
     try {
       const id = parseInt(req.params.id);
       const validatedData = insertStaffSchema.partial().parse(req.body);
-      const staff = await storage.updateStaff(id, validatedData);
+      const staff = await storage.updateStaff(id, validatedData, getCurrentOrganizationId(req));
       if (!staff) {
         return res.status(404).json({ message: "Staff member not found" });
       }
@@ -1378,7 +1382,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.delete("/api/staff/:id", requirePermission("manage_teams"), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const success = await storage.deleteStaff(id);
+      const success = await storage.deleteStaff(id, getCurrentOrganizationId(req));
       if (!success) {
         return res.status(404).json({ message: "Staff member not found" });
       }
@@ -1391,7 +1395,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   // Matches
   app.get("/api/matches", requireAuth, async (req, res) => {
     try {
-      const matches = await storage.getMatches();
+      const matches = await storage.getMatches(getCurrentOrganizationId(req));
 
       // An administrator's scope is enforced here, not taken from the client.
       const scopedTeamIds = await getScopedTeamIds(req);
@@ -1413,7 +1417,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.get("/api/matches/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const match = await storage.getMatch(id);
+      const match = await storage.getMatch(id, getCurrentOrganizationId(req));
       if (!match) {
         return res.status(404).json({ message: "Match not found" });
       }
@@ -1429,7 +1433,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
 
       // Guard against the same fixture being scheduled twice (e.g. a
       // double form submission) — same team, opponent, date, and kickoff.
-      const existingMatches = await storage.getMatches();
+      const existingMatches = await storage.getMatches(getCurrentOrganizationId(req));
       const isDuplicate = existingMatches.some((m) =>
         m.homeTeamId === validatedData.homeTeamId &&
         m.awayTeam.trim().toLowerCase() === validatedData.awayTeam.trim().toLowerCase() &&
@@ -1440,7 +1444,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
         return res.status(409).json({ message: "A match against this opponent at this date and time already exists" });
       }
 
-      const match = await storage.createMatch(validatedData);
+      const match = await storage.createMatch(validatedData, getCurrentOrganizationId(req));
       res.status(201).json(match);
     } catch (error) {
       res.status(400).json({ message: "Invalid match data" });
@@ -1451,7 +1455,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
     try {
       const id = parseInt(req.params.id);
       const validatedData = insertMatchSchema.partial().parse(req.body);
-      const match = await storage.updateMatch(id, validatedData);
+      const match = await storage.updateMatch(id, validatedData, getCurrentOrganizationId(req));
       if (!match) {
         return res.status(404).json({ message: "Match not found" });
       }
@@ -1464,7 +1468,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.delete("/api/matches/:id", requirePermission("manage_teams"), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const success = await storage.deleteMatch(id);
+      const success = await storage.deleteMatch(id, getCurrentOrganizationId(req));
       if (!success) {
         return res.status(404).json({ message: "Match not found" });
       }
@@ -1477,7 +1481,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   // Analytics Reports
   app.get("/api/analytics", requirePermission("view_reports"), async (req, res) => {
     try {
-      const reports = await storage.getAnalyticsReports();
+      const reports = await storage.getAnalyticsReports(getCurrentOrganizationId(req));
       res.json(reports);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch analytics reports" });
@@ -1487,7 +1491,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.post("/api/analytics", requirePermission("export_data"), async (req, res) => {
     try {
       const validatedData = insertAnalyticsReportSchema.parse(req.body);
-      const report = await storage.createAnalyticsReport(validatedData);
+      const report = await storage.createAnalyticsReport(validatedData, getCurrentOrganizationId(req));
       res.status(201).json(report);
     } catch (error) {
       res.status(400).json({ message: "Invalid analytics report data" });
@@ -1497,7 +1501,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.delete("/api/analytics/:id", requirePermission("export_data"), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const success = await storage.deleteAnalyticsReport(id);
+      const success = await storage.deleteAnalyticsReport(id, getCurrentOrganizationId(req));
       if (!success) {
         return res.status(404).json({ message: "Analytics report not found" });
       }
@@ -1510,7 +1514,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   // System Settings
   app.get("/api/settings", requireAuth, async (req, res) => {
     try {
-      const settings = await storage.getSystemSettings();
+      const settings = await storage.getSystemSettings(getCurrentOrganizationId(req));
       res.json(settings);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch settings" });
@@ -1521,7 +1525,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.get("/api/settings/:category/:key", requireAuth, async (req, res) => {
     try {
       const { category, key } = req.params;
-      const settings = await storage.getSystemSettings();
+      const settings = await storage.getSystemSettings(getCurrentOrganizationId(req));
       const setting = settings.find(
         s => s.category === category && s.settingKey === key && s.isActive
       );
@@ -1539,7 +1543,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.post("/api/settings", requirePermission("manage_users"), async (req, res) => {
     try {
       const validatedData = insertSystemSettingsSchema.parse(req.body);
-      const setting = await storage.createSystemSetting(validatedData);
+      const setting = await storage.createSystemSetting(validatedData, getCurrentOrganizationId(req));
       res.status(201).json(setting);
     } catch (error) {
       res.status(400).json({ message: "Invalid setting data" });
@@ -1550,7 +1554,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
     try {
       const id = parseInt(req.params.id);
       const validatedData = insertSystemSettingsSchema.partial().parse(req.body);
-      const setting = await storage.updateSystemSetting(id, validatedData);
+      const setting = await storage.updateSystemSetting(id, validatedData, getCurrentOrganizationId(req));
       if (!setting) {
         return res.status(404).json({ message: "Setting not found" });
       }
@@ -1563,11 +1567,11 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   // Dashboard Stats
   app.get("/api/dashboard/stats", requireAuth, async (req, res) => {
     try {
-      const players = await storage.getPlayers();
-      const teams = await storage.getTeams();
-      const sessions = await storage.getTrainingSessions();
-      const staff = await storage.getStaff();
-      const matches = await storage.getMatches();
+      const players = await storage.getPlayers(getCurrentOrganizationId(req));
+      const teams = await storage.getTeams(getCurrentOrganizationId(req));
+      const sessions = await storage.getTrainingSessions(getCurrentOrganizationId(req));
+      const staff = await storage.getStaff(getCurrentOrganizationId(req));
+      const matches = await storage.getMatches(getCurrentOrganizationId(req));
 
       const today = new Date().toISOString().split('T')[0];
       const upcomingSessions = sessions.filter(s => s.date >= today).slice(0, 3);
@@ -1660,7 +1664,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.get("/api/wearable-devices", requireAuth, async (req, res) => {
     try {
       const playerId = req.query.playerId ? parseInt(req.query.playerId as string) : undefined;
-      const devices = await storage.getWearableDevices(playerId);
+      const devices = await storage.getWearableDevices(getCurrentOrganizationId(req), playerId);
       res.json(devices);
     } catch (error) {
       console.error("Error fetching wearable devices:", error);
@@ -1671,8 +1675,8 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.get("/api/wearable-devices/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const device = await storage.getWearableDevice(id);
-      
+      const device = await storage.getWearableDevice(id, getCurrentOrganizationId(req));
+
       if (!device) {
         return res.status(404).json({ error: "Wearable device not found" });
       }
@@ -1686,7 +1690,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
 
   app.post("/api/wearable-devices", requirePermission("manage_teams"), async (req, res) => {
     try {
-      const device = await storage.createWearableDevice(req.body);
+      const device = await storage.createWearableDevice(req.body, getCurrentOrganizationId(req));
       res.json(device);
     } catch (error) {
       console.error("Error creating wearable device:", error);
@@ -1697,7 +1701,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.put("/api/wearable-devices/:id", requirePermission("manage_teams"), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const device = await storage.updateWearableDevice(id, req.body);
+      const device = await storage.updateWearableDevice(id, req.body, getCurrentOrganizationId(req));
       
       if (!device) {
         return res.status(404).json({ error: "Wearable device not found" });
@@ -1713,7 +1717,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.delete("/api/wearable-devices/:id", requirePermission("manage_teams"), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const success = await storage.deleteWearableDevice(id);
+      const success = await storage.deleteWearableDevice(id, getCurrentOrganizationId(req));
       
       if (!success) {
         return res.status(404).json({ error: "Wearable device not found" });
@@ -2282,7 +2286,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
 
   app.get("/api/injuries", requireAuth, async (req, res) => {
     try {
-      const allInjuries = await storage.getInjuries();
+      const allInjuries = await storage.getInjuries(getCurrentOrganizationId(req));
 
       // Administrators only see injuries for players in their squads.
       const scopedTeamIds = await getScopedTeamIds(req);
@@ -2301,7 +2305,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
 
   app.get("/api/injuries/:id", requireAuth, async (req, res) => {
     try {
-      const injury = await storage.getInjury(parseInt(req.params.id));
+      const injury = await storage.getInjury(parseInt(req.params.id), getCurrentOrganizationId(req));
       if (!injury) return res.status(404).json({ message: "Injury not found" });
 
       const scopedTeamIds = await getScopedTeamIds(req);
@@ -2322,7 +2326,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
         ...req.body,
         createdBy: getCurrentUserId(req),
       });
-      const injury = await storage.createInjury(validatedData);
+      const injury = await storage.createInjury(validatedData, getCurrentOrganizationId(req));
       res.status(201).json(injury);
     } catch (error) {
       console.error("Error creating injury:", error);
@@ -2336,7 +2340,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.patch("/api/injuries/:id", requireAuth, requireMedicalStaff, async (req, res) => {
     try {
       const validatedData = insertInjurySchema.partial().parse(req.body);
-      const injury = await storage.updateInjury(parseInt(req.params.id), validatedData);
+      const injury = await storage.updateInjury(parseInt(req.params.id), validatedData, getCurrentOrganizationId(req));
       if (!injury) return res.status(404).json({ message: "Injury not found" });
       res.json(injury);
     } catch (error) {
@@ -2347,7 +2351,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
 
   app.delete("/api/injuries/:id", requireAuth, requireMedicalStaff, async (req, res) => {
     try {
-      const success = await storage.deleteInjury(parseInt(req.params.id));
+      const success = await storage.deleteInjury(parseInt(req.params.id), getCurrentOrganizationId(req));
       if (!success) return res.status(404).json({ message: "Injury not found" });
       res.status(204).send();
     } catch (error) {
@@ -2358,7 +2362,11 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
 
   app.get("/api/injuries/:id/treatments", requireAuth, async (req, res) => {
     try {
-      const logs = await storage.getInjuryTreatmentLogs(parseInt(req.params.id));
+      const injuryId = parseInt(req.params.id);
+      const injury = await storage.getInjury(injuryId, getCurrentOrganizationId(req));
+      if (!injury) return res.status(404).json({ message: "Injury not found" });
+
+      const logs = await storage.getInjuryTreatmentLogs(injuryId);
       res.json(logs);
     } catch (error) {
       console.error("Error fetching treatment logs:", error);
@@ -2368,9 +2376,13 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
 
   app.post("/api/injuries/:id/treatments", requireAuth, requireMedicalStaff, async (req, res) => {
     try {
+      const injuryId = parseInt(req.params.id);
+      const injury = await storage.getInjury(injuryId, getCurrentOrganizationId(req));
+      if (!injury) return res.status(404).json({ message: "Injury not found" });
+
       const validatedData = insertInjuryTreatmentLogSchema.parse({
         ...req.body,
-        injuryId: parseInt(req.params.id),
+        injuryId,
         createdBy: getCurrentUserId(req),
       });
       const log = await storage.createInjuryTreatmentLog(validatedData);
@@ -2386,7 +2398,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
 
   app.delete("/api/injuries/treatments/:logId", requireAuth, requireMedicalStaff, async (req, res) => {
     try {
-      const success = await storage.deleteInjuryTreatmentLog(parseInt(req.params.logId));
+      const success = await storage.deleteInjuryTreatmentLog(parseInt(req.params.logId), getCurrentOrganizationId(req));
       if (!success) return res.status(404).json({ message: "Treatment log not found" });
       res.status(204).send();
     } catch (error) {
@@ -2400,7 +2412,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   // no budget at all.
   app.get("/api/annual-budgets", requirePermission("manage_finance"), async (req, res) => {
     try {
-      const budgets = await storage.getAnnualBudgets();
+      const budgets = await storage.getAnnualBudgets(getCurrentOrganizationId(req));
 
       const scopedTeamIds = await getScopedTeamIds(req);
       if (scopedTeamIds) {
@@ -2418,7 +2430,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
 
   app.get("/api/annual-budgets/:id", requirePermission("manage_finance"), async (req, res) => {
     try {
-      const budget = await storage.getAnnualBudget(parseInt(req.params.id));
+      const budget = await storage.getAnnualBudget(parseInt(req.params.id), getCurrentOrganizationId(req));
       if (!budget) return res.status(404).json({ error: "Annual budget not found" });
       res.json(budget);
     } catch (error) {
@@ -2430,7 +2442,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.post("/api/annual-budgets", requirePermission("manage_finance"), async (req, res) => {
     try {
       const validatedData = insertAnnualBudgetSchema.parse(req.body);
-      const budget = await storage.createAnnualBudget(validatedData);
+      const budget = await storage.createAnnualBudget(validatedData, getCurrentOrganizationId(req));
       res.status(201).json(budget);
     } catch (error) {
       console.error("Error creating annual budget:", error);
@@ -2443,7 +2455,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
 
   app.get("/api/budgets/:budgetId/monthly-breakdown", requirePermission("manage_finance"), async (req, res) => {
     try {
-      const breakdown = await storage.getMonthlyBudgetBreakdown(parseInt(req.params.budgetId));
+      const breakdown = await storage.getMonthlyBudgetBreakdown(parseInt(req.params.budgetId), getCurrentOrganizationId(req));
       res.json(breakdown);
     } catch (error) {
       console.error("Error fetching monthly breakdown:", error);
@@ -2454,7 +2466,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   // Monthly Budgets API endpoints
   app.get("/api/budgets", requirePermission("manage_finance"), async (req, res) => {
     try {
-      const budgets = await storage.getMonthlyBudgets();
+      const budgets = await storage.getMonthlyBudgets(getCurrentOrganizationId(req));
 
       // Administrators see budgets owned by their squads. Club-wide budgets
       // (team_id NULL) stay with the club super admin.
@@ -2475,8 +2487,8 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.get("/api/budgets/:id", requirePermission("manage_finance"), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const budget = await storage.getMonthlyBudget(id);
-      
+      const budget = await storage.getMonthlyBudget(id, getCurrentOrganizationId(req));
+
       if (!budget) {
         return res.status(404).json({ error: "Budget not found" });
       }
@@ -2491,7 +2503,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.post("/api/budgets", requirePermission("manage_finance"), async (req, res) => {
     try {
       const validatedData = insertMonthlyBudgetSchema.parse(req.body);
-      const budget = await storage.createMonthlyBudget(validatedData);
+      const budget = await storage.createMonthlyBudget(validatedData, getCurrentOrganizationId(req));
       res.status(201).json(budget);
     } catch (error) {
       console.error("Error creating budget:", error);
@@ -2502,7 +2514,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.put("/api/budgets/:id", requirePermission("manage_finance"), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const budget = await storage.updateMonthlyBudget(id, req.body);
+      const budget = await storage.updateMonthlyBudget(id, req.body, getCurrentOrganizationId(req));
       
       if (!budget) {
         return res.status(404).json({ error: "Budget not found" });
@@ -2518,7 +2530,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.delete("/api/budgets/:id", requirePermission("manage_finance"), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const success = await storage.deleteMonthlyBudget(id);
+      const success = await storage.deleteMonthlyBudget(id, getCurrentOrganizationId(req));
       
       if (!success) {
         return res.status(404).json({ error: "Budget not found" });
@@ -2535,7 +2547,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.get("/api/expenses", requirePermission("manage_finance"), async (req, res) => {
     try {
       const budgetId = req.query.budgetId ? parseInt(req.query.budgetId as string) : undefined;
-      const expenses = await storage.getExpenses(budgetId);
+      const expenses = await storage.getExpenses(getCurrentOrganizationId(req), budgetId);
       res.json(expenses);
     } catch (error) {
       console.error("Error fetching expenses:", error);
@@ -2546,8 +2558,8 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.get("/api/expenses/:id", requirePermission("manage_finance"), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const expense = await storage.getExpense(id);
-      
+      const expense = await storage.getExpense(id, getCurrentOrganizationId(req));
+
       if (!expense) {
         return res.status(404).json({ error: "Expense not found" });
       }
@@ -2562,7 +2574,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.post("/api/expenses", requirePermission("manage_finance"), async (req, res) => {
     try {
       const validatedData = insertExpenseSchema.parse(req.body);
-      const expense = await storage.createExpense(validatedData);
+      const expense = await storage.createExpense(validatedData, getCurrentOrganizationId(req));
       res.status(201).json(expense);
     } catch (error) {
       console.error("Error creating expense:", error);
@@ -2573,7 +2585,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.put("/api/expenses/:id", requirePermission("manage_finance"), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const expense = await storage.updateExpense(id, req.body);
+      const expense = await storage.updateExpense(id, req.body, getCurrentOrganizationId(req));
       
       if (!expense) {
         return res.status(404).json({ error: "Expense not found" });
@@ -2589,7 +2601,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.delete("/api/expenses/:id", requirePermission("manage_finance"), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const success = await storage.deleteExpense(id);
+      const success = await storage.deleteExpense(id, getCurrentOrganizationId(req));
       
       if (!success) {
         return res.status(404).json({ error: "Expense not found" });
@@ -2606,7 +2618,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
     try {
       const id = parseInt(req.params.id);
       const approvedBy = 1; // Current user ID from session/auth
-      const expense = await storage.approveExpense(id, approvedBy);
+      const expense = await storage.approveExpense(id, approvedBy, getCurrentOrganizationId(req));
       
       if (!expense) {
         return res.status(404).json({ error: "Expense not found" });
@@ -2623,7 +2635,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.get("/api/budgets/salary-summary/:month", requirePermission("manage_finance"), async (req, res) => {
     try {
       const month = req.params.month;
-      const salarySummary = await storage.getTotalMonthlySalaries(month);
+      const salarySummary = await storage.getTotalMonthlySalaries(month, getCurrentOrganizationId(req));
       res.json(salarySummary);
     } catch (error) {
       console.error("Error fetching salary summary:", error);
@@ -2635,7 +2647,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.get("/api/budgets/salary-summary", requirePermission("manage_finance"), async (req, res) => {
     try {
       const currentMonth = new Date().toISOString().slice(0, 7);
-      const salarySummary = await storage.getTotalMonthlySalaries(currentMonth);
+      const salarySummary = await storage.getTotalMonthlySalaries(currentMonth, getCurrentOrganizationId(req));
       res.json(salarySummary);
     } catch (error) {
       console.error("Error fetching salary summary:", error);
@@ -2648,7 +2660,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   // every salary total rendered as 0.
   app.get("/api/payroll/:month", requirePermission("manage_finance"), async (req, res) => {
     try {
-      const payroll = await storage.getPayrollDetails(req.params.month);
+      const payroll = await storage.getPayrollDetails(req.params.month, getCurrentOrganizationId(req));
 
       // Administrators only see payroll for the squads assigned to them.
       const scopedTeamIds = await getScopedTeamIds(req);
@@ -2670,7 +2682,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
 
   app.get("/api/salary-summary/:month", requirePermission("manage_finance"), async (req, res) => {
     try {
-      const payroll = await storage.getPayrollDetails(req.params.month);
+      const payroll = await storage.getPayrollDetails(req.params.month, getCurrentOrganizationId(req));
       let staffList = payroll.staff;
       let playerList = payroll.players;
 
@@ -2694,7 +2706,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.get("/api/budgets/summary/:budgetId", requirePermission("manage_finance"), async (req, res) => {
     try {
       const budgetId = parseInt(req.params.budgetId);
-      const budgetSummary = await storage.getBudgetVsActualExpenses(budgetId);
+      const budgetSummary = await storage.getBudgetVsActualExpenses(budgetId, getCurrentOrganizationId(req));
       res.json(budgetSummary);
     } catch (error) {
       console.error("Error fetching budget summary:", error);
@@ -2706,7 +2718,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.get("/api/player-contracts", requirePermission("manage_finance"), async (req, res) => {
     try {
       const playerId = req.query.playerId ? parseInt(req.query.playerId as string) : undefined;
-      const contracts = await storage.getPlayerContracts(playerId);
+      const contracts = await storage.getPlayerContracts(getCurrentOrganizationId(req), playerId);
       res.json(contracts);
     } catch (error) {
       console.error("Error fetching player contracts:", error);
@@ -2717,7 +2729,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.post("/api/player-contracts", requirePermission("manage_finance"), async (req, res) => {
     try {
       const validatedData = insertPlayerContractSchema.parse(req.body);
-      const contract = await storage.createPlayerContract(validatedData);
+      const contract = await storage.createPlayerContract(validatedData, getCurrentOrganizationId(req));
       res.status(201).json(contract);
     } catch (error) {
       console.error("Error creating player contract:", error);
@@ -2781,7 +2793,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   // Tactical Boards API
   app.get("/api/tactical-boards", requireAuth, async (req, res) => {
     try {
-      const boards = await storage.getTacticalBoards();
+      const boards = await storage.getTacticalBoards(getCurrentOrganizationId(req));
       res.json(boards);
     } catch (error) {
       console.error("Error fetching tactical boards:", error);
@@ -2792,7 +2804,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.get("/api/tactical-boards/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const board = await storage.getTacticalBoard(id);
+      const board = await storage.getTacticalBoard(id, getCurrentOrganizationId(req));
       if (!board) {
         return res.status(404).json({ error: "Tactical board not found" });
       }
@@ -2808,7 +2820,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
       const validatedData = insertTacticalBoardSchema.parse(req.body);
       // Set created by user ID (placeholder for now)
       validatedData.createdBy = 1;
-      const board = await storage.createTacticalBoard(validatedData);
+      const board = await storage.createTacticalBoard(validatedData, getCurrentOrganizationId(req));
       res.status(201).json(board);
     } catch (error) {
       console.error("Error creating tactical board:", error);
@@ -2820,7 +2832,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
     try {
       const id = parseInt(req.params.id);
       const validatedData = insertTacticalBoardSchema.parse(req.body);
-      const board = await storage.updateTacticalBoard(id, validatedData);
+      const board = await storage.updateTacticalBoard(id, validatedData, getCurrentOrganizationId(req));
       if (!board) {
         return res.status(404).json({ error: "Tactical board not found" });
       }
@@ -2834,7 +2846,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.delete("/api/tactical-boards/:id", requirePermission("manage_tactics"), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const success = await storage.deleteTacticalBoard(id);
+      const success = await storage.deleteTacticalBoard(id, getCurrentOrganizationId(req));
       if (!success) {
         return res.status(404).json({ error: "Tactical board not found" });
       }
@@ -2848,7 +2860,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   // Achievement System Routes
   app.get("/api/achievements", requireAuth, async (req, res) => {
     try {
-      const achievements = await storage.getAchievements();
+      const achievements = await storage.getAchievements(getCurrentOrganizationId(req));
       res.json(achievements);
     } catch (error) {
       console.error("Error fetching achievements:", error);
@@ -2860,7 +2872,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   // matched as a playerId (Express matches routes in registration order).
   app.get("/api/achievements/leaderboard", requireAuth, async (req, res) => {
     try {
-      const leaderboard = await storage.getAchievementLeaderboard();
+      const leaderboard = await storage.getAchievementLeaderboard(getCurrentOrganizationId(req));
       res.json(leaderboard);
     } catch (error) {
       console.error("Error fetching achievement leaderboard:", error);
@@ -2871,7 +2883,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.get("/api/achievements/:playerId", requireAuth, async (req, res) => {
     try {
       const playerId = parseInt(req.params.playerId);
-      const achievements = await storage.getPlayerAchievements(playerId);
+      const achievements = await storage.getPlayerAchievements(playerId, getCurrentOrganizationId(req));
       res.json(achievements);
     } catch (error) {
       console.error("Error fetching player achievements:", error);
@@ -2884,7 +2896,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
       const playerId = parseInt(req.params.playerId);
       const { achievementTypeId, value, eventType, eventId } = req.body;
 
-      const progress = await storage.updateAchievementProgress(playerId, achievementTypeId, value, eventType, eventId);
+      const progress = await storage.updateAchievementProgress(playerId, achievementTypeId, value, eventType, getCurrentOrganizationId(req), eventId);
       res.json(progress);
     } catch (error) {
       console.error("Error updating achievement progress:", error);
@@ -2895,7 +2907,7 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   // Initialize player achievements for all existing players
   app.post("/api/achievements/initialize", requirePermission("manage_users"), async (req, res) => {
     try {
-      const result = await storage.initializePlayerAchievements();
+      const result = await storage.initializePlayerAchievements(getCurrentOrganizationId(req));
       res.json(result);
     } catch (error) {
       console.error("Error initializing player achievements:", error);

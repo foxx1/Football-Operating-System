@@ -1,13 +1,13 @@
 import type { Express } from "express";
 import { insertMeetingSchema } from "@shared/schema";
 import { asyncHandler, getPagination, parseIdParam, validateBody } from "../api-contracts";
-import { requirePermission } from "../auth";
+import { requireAuth, requirePermission, getCurrentOrganizationId } from "../auth";
 import { storage } from "../storage";
 
 export function registerMeetingRoutes(app: Express) {
-  app.get("/api/meetings", asyncHandler(async (req, res) => {
+  app.get("/api/meetings", requireAuth, asyncHandler(async (req, res) => {
     const { limit, offset, search } = getPagination(req.query);
-    const meetings = await storage.getMeetings();
+    const meetings = await storage.getMeetings(getCurrentOrganizationId(req));
     const filtered = search
       ? meetings.filter((meeting) =>
         [meeting.title, meeting.description, meeting.meetingType, meeting.location, meeting.status, meeting.priority]
@@ -21,9 +21,9 @@ export function registerMeetingRoutes(app: Express) {
     });
   }));
 
-  app.get("/api/meetings/:id", asyncHandler(async (req, res) => {
+  app.get("/api/meetings/:id", requireAuth, asyncHandler(async (req, res) => {
     const id = parseIdParam(req.params.id);
-    const meeting = await storage.getMeeting(id);
+    const meeting = await storage.getMeeting(id, getCurrentOrganizationId(req));
     if (!meeting) {
       return res.status(404).json({ error: "Meeting not found" });
     }
@@ -35,7 +35,7 @@ export function registerMeetingRoutes(app: Express) {
     requirePermission("schedule_training"),
     validateBody(insertMeetingSchema),
     asyncHandler(async (req, res) => {
-      const meeting = await storage.createMeeting(req.body);
+      const meeting = await storage.createMeeting(req.body, getCurrentOrganizationId(req));
       res.status(201).json(meeting);
     }),
   );
@@ -46,7 +46,7 @@ export function registerMeetingRoutes(app: Express) {
     validateBody(insertMeetingSchema.partial()),
     asyncHandler(async (req, res) => {
       const id = parseIdParam(req.params.id);
-      const meeting = await storage.updateMeeting(id, req.body);
+      const meeting = await storage.updateMeeting(id, req.body, getCurrentOrganizationId(req));
       if (!meeting) {
         return res.status(404).json({ error: "Meeting not found" });
       }
@@ -56,7 +56,7 @@ export function registerMeetingRoutes(app: Express) {
 
   app.delete("/api/meetings/:id", requirePermission("schedule_training"), asyncHandler(async (req, res) => {
     const id = parseIdParam(req.params.id);
-    const success = await storage.deleteMeeting(id);
+    const success = await storage.deleteMeeting(id, getCurrentOrganizationId(req));
     if (!success) {
       return res.status(404).json({ error: "Meeting not found" });
     }

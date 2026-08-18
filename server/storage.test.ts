@@ -19,7 +19,7 @@ describe("MemStorage", () => {
                 lastName: "User",
                 email: "test@example.com",
             };
-            const created = await storage.createUser(newUser);
+            const created = await storage.createUser(newUser, 1);
             expect(created).toBeDefined();
             expect(created.id).toBeDefined();
             expect(created.username).toBe("testuser");
@@ -47,12 +47,12 @@ describe("MemStorage", () => {
                 height: 180,
                 weight: 75,
             };
-            const created = await storage.createPlayer(newPlayer);
+            const created = await storage.createPlayer(newPlayer, 1);
             expect(created).toBeDefined();
             expect(created.id).toBeDefined();
             expect(created.firstName).toBe("John");
 
-            const retrieved = await storage.getPlayer(created.id);
+            const retrieved = await storage.getPlayer(created.id, 1);
             expect(retrieved).toEqual(created);
         });
     });

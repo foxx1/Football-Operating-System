@@ -38,26 +38,30 @@ import { eq, and, sql, desc } from "drizzle-orm";
 
 export interface IStorage {
   // Users
-  getUsers(): Promise<User[]>;
+  // organizationId omitted only for platform-wide uniqueness checks (login, signup) —
+  // every other caller must scope. See tenancy-migration-plan.md decision #4/#5.
+  getUsers(organizationId?: number): Promise<User[]>;
+  // Trusted-id lookup only: session bootstrap or a self-reference. Never call with an id
+  // taken from route params/body that could belong to another organization.
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
-  updateUser(id: number, user: Partial<InsertUser>): Promise<User | undefined>;
-  deleteUser(id: number): Promise<boolean>;
+  createUser(user: InsertUser, organizationId: number): Promise<User>;
+  updateUser(id: number, user: Partial<InsertUser>, organizationId: number): Promise<User | undefined>;
+  deleteUser(id: number, organizationId: number): Promise<boolean>;
 
   // Players
-  getPlayers(): Promise<Player[]>;
-  getPlayer(id: number): Promise<Player | undefined>;
-  createPlayer(player: InsertPlayer): Promise<Player>;
-  updatePlayer(id: number, player: Partial<InsertPlayer>): Promise<Player | undefined>;
-  deletePlayer(id: number): Promise<boolean>;
+  getPlayers(organizationId: number): Promise<Player[]>;
+  getPlayer(id: number, organizationId: number): Promise<Player | undefined>;
+  createPlayer(player: InsertPlayer, organizationId: number): Promise<Player>;
+  updatePlayer(id: number, player: Partial<InsertPlayer>, organizationId: number): Promise<Player | undefined>;
+  deletePlayer(id: number, organizationId: number): Promise<boolean>;
 
   // Teams
-  getTeams(): Promise<Team[]>;
-  getTeam(id: number): Promise<Team | undefined>;
-  createTeam(team: InsertTeam): Promise<Team>;
-  updateTeam(id: number, team: Partial<InsertTeam>): Promise<Team | undefined>;
-  deleteTeam(id: number): Promise<boolean>;
+  getTeams(organizationId: number): Promise<Team[]>;
+  getTeam(id: number, organizationId: number): Promise<Team | undefined>;
+  createTeam(team: InsertTeam, organizationId: number): Promise<Team>;
+  updateTeam(id: number, team: Partial<InsertTeam>, organizationId: number): Promise<Team | undefined>;
+  deleteTeam(id: number, organizationId: number): Promise<boolean>;
 
   // Team Players
   getTeamPlayers(teamId: number): Promise<(TeamPlayer & { player: Player })[]>;
@@ -78,11 +82,11 @@ export interface IStorage {
   markAllNotificationsRead(userId: number): Promise<void>;
 
   // Training Sessions
-  getTrainingSessions(): Promise<TrainingSession[]>;
-  getTrainingSession(id: number): Promise<TrainingSession | undefined>;
-  createTrainingSession(session: InsertTrainingSession): Promise<TrainingSession>;
-  updateTrainingSession(id: number, session: Partial<InsertTrainingSession>): Promise<TrainingSession | undefined>;
-  deleteTrainingSession(id: number): Promise<boolean>;
+  getTrainingSessions(organizationId: number): Promise<TrainingSession[]>;
+  getTrainingSession(id: number, organizationId: number): Promise<TrainingSession | undefined>;
+  createTrainingSession(session: InsertTrainingSession, organizationId: number): Promise<TrainingSession>;
+  updateTrainingSession(id: number, session: Partial<InsertTrainingSession>, organizationId: number): Promise<TrainingSession | undefined>;
+  deleteTrainingSession(id: number, organizationId: number): Promise<boolean>;
 
   // Session Attendance
   getSessionAttendance(sessionId: number): Promise<(SessionAttendance & { player: Player })[]>;
@@ -90,10 +94,10 @@ export interface IStorage {
   updateAttendance(id: number, attendance: Partial<InsertSessionAttendance>): Promise<SessionAttendance | undefined>;
 
   // Tactical Formations
-  getFormations(teamId: number): Promise<TacticalFormation[]>;
-  createFormation(formation: InsertTacticalFormation): Promise<TacticalFormation>;
-  updateFormation(id: number, formation: Partial<InsertTacticalFormation>): Promise<TacticalFormation | undefined>;
-  deleteFormation(id: number): Promise<boolean>;
+  getFormations(teamId: number, organizationId: number): Promise<TacticalFormation[]>;
+  createFormation(formation: InsertTacticalFormation, organizationId: number): Promise<TacticalFormation>;
+  updateFormation(id: number, formation: Partial<InsertTacticalFormation>, organizationId: number): Promise<TacticalFormation | undefined>;
+  deleteFormation(id: number, organizationId: number): Promise<boolean>;
 
   // Player Stats
   getPlayerStats(playerId: number): Promise<PlayerStats[]>;
@@ -102,18 +106,18 @@ export interface IStorage {
   updatePlayerStats(id: number, stats: Partial<InsertPlayerStats>): Promise<PlayerStats | undefined>;
 
   // Staff
-  getStaff(): Promise<Staff[]>;
-  getStaffMember(id: number): Promise<Staff | undefined>;
-  createStaff(staff: InsertStaff): Promise<Staff>;
-  updateStaff(id: number, staff: Partial<InsertStaff>): Promise<Staff | undefined>;
-  deleteStaff(id: number): Promise<boolean>;
+  getStaff(organizationId: number): Promise<Staff[]>;
+  getStaffMember(id: number, organizationId: number): Promise<Staff | undefined>;
+  createStaff(staff: InsertStaff, organizationId: number): Promise<Staff>;
+  updateStaff(id: number, staff: Partial<InsertStaff>, organizationId: number): Promise<Staff | undefined>;
+  deleteStaff(id: number, organizationId: number): Promise<boolean>;
 
   // Matches
-  getMatches(): Promise<Match[]>;
-  getMatch(id: number): Promise<Match | undefined>;
-  createMatch(match: InsertMatch): Promise<Match>;
-  updateMatch(id: number, match: Partial<InsertMatch>): Promise<Match | undefined>;
-  deleteMatch(id: number): Promise<boolean>;
+  getMatches(organizationId: number): Promise<Match[]>;
+  getMatch(id: number, organizationId: number): Promise<Match | undefined>;
+  createMatch(match: InsertMatch, organizationId: number): Promise<Match>;
+  updateMatch(id: number, match: Partial<InsertMatch>, organizationId: number): Promise<Match | undefined>;
+  deleteMatch(id: number, organizationId: number): Promise<boolean>;
 
   // Match Squads
   getMatchSquad(matchId: number): Promise<(MatchSquad & { player: Player })[]>;
@@ -123,31 +127,31 @@ export interface IStorage {
   deleteMatchSquad(id: number): Promise<boolean>;
 
   // Meetings
-  getMeetings(): Promise<Meeting[]>;
-  getMeeting(id: number): Promise<Meeting | undefined>;
-  createMeeting(meeting: InsertMeeting): Promise<Meeting>;
-  updateMeeting(id: number, meeting: Partial<InsertMeeting>): Promise<Meeting | undefined>;
-  deleteMeeting(id: number): Promise<boolean>;
+  getMeetings(organizationId: number): Promise<Meeting[]>;
+  getMeeting(id: number, organizationId: number): Promise<Meeting | undefined>;
+  createMeeting(meeting: InsertMeeting, organizationId: number): Promise<Meeting>;
+  updateMeeting(id: number, meeting: Partial<InsertMeeting>, organizationId: number): Promise<Meeting | undefined>;
+  deleteMeeting(id: number, organizationId: number): Promise<boolean>;
 
   // Analytics Reports
-  getAnalyticsReports(): Promise<AnalyticsReport[]>;
-  getAnalyticsReport(id: number): Promise<AnalyticsReport | undefined>;
-  createAnalyticsReport(report: InsertAnalyticsReport): Promise<AnalyticsReport>;
-  updateAnalyticsReport(id: number, report: Partial<InsertAnalyticsReport>): Promise<AnalyticsReport | undefined>;
-  deleteAnalyticsReport(id: number): Promise<boolean>;
+  getAnalyticsReports(organizationId: number): Promise<AnalyticsReport[]>;
+  getAnalyticsReport(id: number, organizationId: number): Promise<AnalyticsReport | undefined>;
+  createAnalyticsReport(report: InsertAnalyticsReport, organizationId: number): Promise<AnalyticsReport>;
+  updateAnalyticsReport(id: number, report: Partial<InsertAnalyticsReport>, organizationId: number): Promise<AnalyticsReport | undefined>;
+  deleteAnalyticsReport(id: number, organizationId: number): Promise<boolean>;
 
   // System Settings
-  getSystemSettings(): Promise<SystemSettings[]>;
-  getSystemSetting(id: number): Promise<SystemSettings | undefined>;
-  createSystemSetting(setting: InsertSystemSettings): Promise<SystemSettings>;
-  updateSystemSetting(id: number, setting: Partial<InsertSystemSettings>): Promise<SystemSettings | undefined>;
+  getSystemSettings(organizationId: number): Promise<SystemSettings[]>;
+  getSystemSetting(id: number, organizationId: number): Promise<SystemSettings | undefined>;
+  createSystemSetting(setting: InsertSystemSettings, organizationId: number): Promise<SystemSettings>;
+  updateSystemSetting(id: number, setting: Partial<InsertSystemSettings>, organizationId: number): Promise<SystemSettings | undefined>;
 
   // Wearable Devices
-  getWearableDevices(playerId?: number): Promise<WearableDevice[]>;
-  getWearableDevice(id: number): Promise<WearableDevice | undefined>;
-  createWearableDevice(device: InsertWearableDevice): Promise<WearableDevice>;
-  updateWearableDevice(id: number, device: Partial<InsertWearableDevice>): Promise<WearableDevice | undefined>;
-  deleteWearableDevice(id: number): Promise<boolean>;
+  getWearableDevices(organizationId: number, playerId?: number): Promise<WearableDevice[]>;
+  getWearableDevice(id: number, organizationId: number): Promise<WearableDevice | undefined>;
+  createWearableDevice(device: InsertWearableDevice, organizationId: number): Promise<WearableDevice>;
+  updateWearableDevice(id: number, device: Partial<InsertWearableDevice>, organizationId: number): Promise<WearableDevice | undefined>;
+  deleteWearableDevice(id: number, organizationId: number): Promise<boolean>;
 
   // Wearable Data
   getWearableData(deviceId?: number, playerId?: number, dataType?: string): Promise<WearableData[]>;
@@ -160,49 +164,53 @@ export interface IStorage {
   getPlayerPerformanceTrends(playerId: number, days: number): Promise<PerformanceMetrics[]>;
 
   // Injuries
-  getInjuries(): Promise<InjuryWithPlayer[]>;
-  getInjury(id: number): Promise<InjuryWithPlayer | undefined>;
-  createInjury(injury: InsertInjury): Promise<Injury>;
-  updateInjury(id: number, injury: Partial<InsertInjury>): Promise<Injury | undefined>;
-  deleteInjury(id: number): Promise<boolean>;
+  getInjuries(organizationId: number): Promise<InjuryWithPlayer[]>;
+  getInjury(id: number, organizationId: number): Promise<InjuryWithPlayer | undefined>;
+  createInjury(injury: InsertInjury, organizationId: number): Promise<Injury>;
+  updateInjury(id: number, injury: Partial<InsertInjury>, organizationId: number): Promise<Injury | undefined>;
+  deleteInjury(id: number, organizationId: number): Promise<boolean>;
+  // Child table, scoped indirectly via the parent injury — callers must resolve/verify
+  // the injury with getInjury(id, organizationId) first.
   getInjuryTreatmentLogs(injuryId: number): Promise<InjuryTreatmentLog[]>;
   createInjuryTreatmentLog(log: InsertInjuryTreatmentLog): Promise<InjuryTreatmentLog>;
-  deleteInjuryTreatmentLog(id: number): Promise<boolean>;
+  // Deleted by its own id (no parent injuryId available at the call site), so this one
+  // does carry an explicit organizationId, enforced via a join back to injuries.
+  deleteInjuryTreatmentLog(id: number, organizationId: number): Promise<boolean>;
 
   // Annual Budget Management
-  getAnnualBudgets(): Promise<AnnualBudget[]>;
-  getAnnualBudget(id: number): Promise<AnnualBudget | undefined>;
-  getAnnualBudgetByYear(fiscalYear: string): Promise<AnnualBudget | undefined>;
-  createAnnualBudget(budget: InsertAnnualBudget): Promise<AnnualBudget>;
+  getAnnualBudgets(organizationId: number): Promise<AnnualBudget[]>;
+  getAnnualBudget(id: number, organizationId: number): Promise<AnnualBudget | undefined>;
+  getAnnualBudgetByYear(fiscalYear: string, organizationId: number): Promise<AnnualBudget | undefined>;
+  createAnnualBudget(budget: InsertAnnualBudget, organizationId: number): Promise<AnnualBudget>;
 
   // Budget Management
-  getMonthlyBudgets(): Promise<MonthlyBudget[]>;
-  getMonthlyBudget(id: number): Promise<MonthlyBudget | undefined>;
-  getMonthlyBudgetByMonth(month: string): Promise<MonthlyBudget | undefined>;
-  createMonthlyBudget(budget: InsertMonthlyBudget): Promise<MonthlyBudget>;
-  updateMonthlyBudget(id: number, budget: Partial<InsertMonthlyBudget>): Promise<MonthlyBudget | undefined>;
-  deleteMonthlyBudget(id: number): Promise<boolean>;
+  getMonthlyBudgets(organizationId: number): Promise<MonthlyBudget[]>;
+  getMonthlyBudget(id: number, organizationId: number): Promise<MonthlyBudget | undefined>;
+  getMonthlyBudgetByMonth(month: string, organizationId: number): Promise<MonthlyBudget | undefined>;
+  createMonthlyBudget(budget: InsertMonthlyBudget, organizationId: number): Promise<MonthlyBudget>;
+  updateMonthlyBudget(id: number, budget: Partial<InsertMonthlyBudget>, organizationId: number): Promise<MonthlyBudget | undefined>;
+  deleteMonthlyBudget(id: number, organizationId: number): Promise<boolean>;
 
-  // Expense Management  
-  getExpenses(budgetId?: number): Promise<Expense[]>;
-  getExpense(id: number): Promise<Expense | undefined>;
-  createExpense(expense: InsertExpense): Promise<Expense>;
-  updateExpense(id: number, expense: Partial<InsertExpense>): Promise<Expense | undefined>;
-  deleteExpense(id: number): Promise<boolean>;
-  approveExpense(id: number, approvedBy: number): Promise<Expense | undefined>;
+  // Expense Management
+  getExpenses(organizationId: number, budgetId?: number): Promise<Expense[]>;
+  getExpense(id: number, organizationId: number): Promise<Expense | undefined>;
+  createExpense(expense: InsertExpense, organizationId: number): Promise<Expense>;
+  updateExpense(id: number, expense: Partial<InsertExpense>, organizationId: number): Promise<Expense | undefined>;
+  deleteExpense(id: number, organizationId: number): Promise<boolean>;
+  approveExpense(id: number, approvedBy: number, organizationId: number): Promise<Expense | undefined>;
 
   // Player Contracts
-  getPlayerContracts(playerId?: number): Promise<PlayerContract[]>;
-  getPlayerContract(id: number): Promise<PlayerContract | undefined>;
-  createPlayerContract(contract: InsertPlayerContract): Promise<PlayerContract>;
-  updatePlayerContract(id: number, contract: Partial<InsertPlayerContract>): Promise<PlayerContract | undefined>;
-  deletePlayerContract(id: number): Promise<boolean>;
+  getPlayerContracts(organizationId: number, playerId?: number): Promise<PlayerContract[]>;
+  getPlayerContract(id: number, organizationId: number): Promise<PlayerContract | undefined>;
+  createPlayerContract(contract: InsertPlayerContract, organizationId: number): Promise<PlayerContract>;
+  updatePlayerContract(id: number, contract: Partial<InsertPlayerContract>, organizationId: number): Promise<PlayerContract | undefined>;
+  deletePlayerContract(id: number, organizationId: number): Promise<boolean>;
 
   // Budget Summary Methods
-  getTotalMonthlySalaries(month: string): Promise<{ staff: number; players: number; total: number }>;
-  getBudgetVsActualExpenses(budgetId: number): Promise<{ budgeted: number; actual: number; remaining: number; categories: any[] }>;
-  getPayrollDetails(month: string): Promise<{ staff: Array<any>; players: Array<any> }>;
-  getMonthlyBudgetBreakdown(budgetId: number): Promise<Array<any>>;
+  getTotalMonthlySalaries(month: string, organizationId: number): Promise<{ staff: number; players: number; total: number }>;
+  getBudgetVsActualExpenses(budgetId: number, organizationId: number): Promise<{ budgeted: number; actual: number; remaining: number; categories: any[] }>;
+  getPayrollDetails(month: string, organizationId: number): Promise<{ staff: Array<any>; players: Array<any> }>;
+  getMonthlyBudgetBreakdown(budgetId: number, organizationId: number): Promise<Array<any>>;
 
 
   // Performance Reactions
@@ -212,31 +220,33 @@ export interface IStorage {
   deletePerformanceReaction(id: number): Promise<boolean>;
 
   // Tactical Boards
-  getTacticalBoards(): Promise<TacticalBoard[]>;
-  getTacticalBoard(id: number): Promise<TacticalBoard | undefined>;
-  createTacticalBoard(board: InsertTacticalBoard): Promise<TacticalBoard>;
-  updateTacticalBoard(id: number, board: Partial<InsertTacticalBoard>): Promise<TacticalBoard | undefined>;
-  deleteTacticalBoard(id: number): Promise<boolean>;
+  getTacticalBoards(organizationId: number): Promise<TacticalBoard[]>;
+  getTacticalBoard(id: number, organizationId: number): Promise<TacticalBoard | undefined>;
+  createTacticalBoard(board: InsertTacticalBoard, organizationId: number): Promise<TacticalBoard>;
+  updateTacticalBoard(id: number, board: Partial<InsertTacticalBoard>, organizationId: number): Promise<TacticalBoard | undefined>;
+  deleteTacticalBoard(id: number, organizationId: number): Promise<boolean>;
 
   // Achievement System
-  getAchievements(): Promise<any[]>;
-  getPlayerAchievements(playerId: number): Promise<any[]>;
-  updateAchievementProgress(playerId: number, achievementTypeId: number, value: number, eventType: string, eventId?: number): Promise<any>;
-  getAchievementLeaderboard(): Promise<any[]>;
-  initializePlayerAchievements(): Promise<any>;
+  getAchievements(organizationId: number): Promise<any[]>;
+  getPlayerAchievements(playerId: number, organizationId: number): Promise<any[]>;
+  updateAchievementProgress(playerId: number, achievementTypeId: number, value: number, eventType: string, organizationId: number, eventId?: number): Promise<any>;
+  getAchievementLeaderboard(organizationId: number): Promise<any[]>;
+  initializePlayerAchievements(organizationId: number): Promise<any>;
 
   // Player Invitations
-  getPlayerInvitations(): Promise<(PlayerInvitation & { team?: Team })[]>;
-  getPlayerInvitation(id: number): Promise<PlayerInvitation | undefined>;
+  // organizationId omitted only on the token lookup — invitation acceptance is
+  // pre-auth, so the token itself (not the session) is the security boundary.
+  getPlayerInvitations(organizationId: number): Promise<(PlayerInvitation & { team?: Team })[]>;
+  getPlayerInvitation(id: number, organizationId: number): Promise<PlayerInvitation | undefined>;
   getPlayerInvitationByToken(token: string): Promise<(PlayerInvitation & { team?: Team }) | undefined>;
-  createPlayerInvitation(invitation: InsertPlayerInvitation): Promise<PlayerInvitation>;
-  updatePlayerInvitation(id: number, invitation: Partial<InsertPlayerInvitation> & { usedAt?: Date | null }): Promise<PlayerInvitation | undefined>;
-  deletePlayerInvitation(id: number): Promise<boolean>;
+  createPlayerInvitation(invitation: InsertPlayerInvitation, organizationId: number): Promise<PlayerInvitation>;
+  updatePlayerInvitation(id: number, invitation: Partial<InsertPlayerInvitation> & { usedAt?: Date | null }, organizationId: number): Promise<PlayerInvitation | undefined>;
+  deletePlayerInvitation(id: number, organizationId: number): Promise<boolean>;
 
   // Employee Invitations
   getEmployeeInvitationByToken(token: string): Promise<EmployeeInvitation | undefined>;
-  createEmployeeInvitation(invitation: InsertEmployeeInvitation): Promise<EmployeeInvitation>;
-  updateEmployeeInvitation(id: number, invitation: Partial<InsertEmployeeInvitation> & { usedAt?: Date | null }): Promise<EmployeeInvitation | undefined>;
+  createEmployeeInvitation(invitation: InsertEmployeeInvitation, organizationId: number): Promise<EmployeeInvitation>;
+  updateEmployeeInvitation(id: number, invitation: Partial<InsertEmployeeInvitation> & { usedAt?: Date | null }, organizationId: number): Promise<EmployeeInvitation | undefined>;
 
   // Registration Reminders
   getRegistrationRemindersForUser(userId: number): Promise<RegistrationReminder[]>;
@@ -326,6 +336,7 @@ export class MemStorage implements IStorage {
 
     // Create default admin user
     const admin: User = {
+      organizationId: 1,
       id: this.currentIds.users++,
       username: adminUsername,
       password: adminPassword,
@@ -341,6 +352,7 @@ export class MemStorage implements IStorage {
 
     // Create default coach user
     const coach: User = {
+      organizationId: 1,
       id: this.currentIds.users++,
       username: "coach",
       password: "password",
@@ -356,6 +368,7 @@ export class MemStorage implements IStorage {
 
     // Create default team
     const firstTeam: Team = {
+      organizationId: 1,
       id: this.currentIds.teams++,
       name: "First Team",
       category: "first_team",
@@ -376,6 +389,7 @@ export class MemStorage implements IStorage {
 
     samplePlayers.forEach((playerData) => {
       const player: Player = {
+        organizationId: 1,
         id: this.currentIds.players++,
         ...playerData,
         firstNameAr: null,
@@ -416,6 +430,7 @@ export class MemStorage implements IStorage {
 
     // Create default system settings
     const clubNameSetting: SystemSettings = {
+      organizationId: 1,
       id: this.currentIds.systemSettings++,
       category: "general",
       settingKey: "clubName",
@@ -429,8 +444,9 @@ export class MemStorage implements IStorage {
   }
 
   // Users
-  async getUsers(): Promise<User[]> {
-    return Array.from(this.users.values());
+  async getUsers(organizationId?: number): Promise<User[]> {
+    const all = Array.from(this.users.values());
+    return organizationId === undefined ? all : all.filter(u => u.organizationId === organizationId);
   }
 
   async getUser(id: number): Promise<User | undefined> {
@@ -441,9 +457,10 @@ export class MemStorage implements IStorage {
     return Array.from(this.users.values()).find(user => user.username === username);
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
+  async createUser(insertUser: InsertUser, organizationId: number): Promise<User> {
     const id = this.currentIds.users++;
     const user: User = {
+      organizationId,
       id,
       username: insertUser.username,
       password: insertUser.password,
@@ -459,9 +476,9 @@ export class MemStorage implements IStorage {
     return user;
   }
 
-  async updateUser(id: number, updateData: Partial<InsertUser>): Promise<User | undefined> {
+  async updateUser(id: number, updateData: Partial<InsertUser>, organizationId: number): Promise<User | undefined> {
     const user = this.users.get(id);
-    if (!user) return undefined;
+    if (!user || user.organizationId !== organizationId) return undefined;
 
     const updatedUser: User = {
       ...user,
@@ -472,22 +489,26 @@ export class MemStorage implements IStorage {
     return updatedUser;
   }
 
-  async deleteUser(id: number): Promise<boolean> {
+  async deleteUser(id: number, organizationId: number): Promise<boolean> {
+    const user = this.users.get(id);
+    if (!user || user.organizationId !== organizationId) return false;
     return this.users.delete(id);
   }
 
   // Players
-  async getPlayers(): Promise<Player[]> {
-    return Array.from(this.players.values()).filter(p => p.isActive);
+  async getPlayers(organizationId: number): Promise<Player[]> {
+    return Array.from(this.players.values()).filter(p => p.isActive && p.organizationId === organizationId);
   }
 
-  async getPlayer(id: number): Promise<Player | undefined> {
-    return this.players.get(id);
+  async getPlayer(id: number, organizationId: number): Promise<Player | undefined> {
+    const player = this.players.get(id);
+    return player && player.organizationId === organizationId ? player : undefined;
   }
 
-  async createPlayer(insertPlayer: InsertPlayer): Promise<Player> {
+  async createPlayer(insertPlayer: InsertPlayer, organizationId: number): Promise<Player> {
     const id = this.currentIds.players++;
     const player: Player = {
+      organizationId,
       id,
       firstName: insertPlayer.firstName,
       lastName: insertPlayer.lastName,
@@ -520,18 +541,18 @@ export class MemStorage implements IStorage {
     return player;
   }
 
-  async updatePlayer(id: number, updateData: Partial<InsertPlayer>): Promise<Player | undefined> {
+  async updatePlayer(id: number, updateData: Partial<InsertPlayer>, organizationId: number): Promise<Player | undefined> {
     const player = this.players.get(id);
-    if (!player) return undefined;
+    if (!player || player.organizationId !== organizationId) return undefined;
 
     const updatedPlayer = { ...player, ...updateData };
     this.players.set(id, updatedPlayer);
     return updatedPlayer;
   }
 
-  async deletePlayer(id: number): Promise<boolean> {
+  async deletePlayer(id: number, organizationId: number): Promise<boolean> {
     const player = this.players.get(id);
-    if (!player) return false;
+    if (!player || player.organizationId !== organizationId) return false;
 
     const updatedPlayer = { ...player, isActive: false };
     this.players.set(id, updatedPlayer);
@@ -539,18 +560,20 @@ export class MemStorage implements IStorage {
   }
 
   // Teams
-  async getTeams(): Promise<Team[]> {
-    return Array.from(this.teams.values()).filter(t => t.isActive);
+  async getTeams(organizationId: number): Promise<Team[]> {
+    return Array.from(this.teams.values()).filter(t => t.isActive && t.organizationId === organizationId);
   }
 
-  async getTeam(id: number): Promise<Team | undefined> {
-    return this.teams.get(id);
+  async getTeam(id: number, organizationId: number): Promise<Team | undefined> {
+    const team = this.teams.get(id);
+    return team && team.organizationId === organizationId ? team : undefined;
   }
 
-  async createTeam(insertTeam: InsertTeam): Promise<Team> {
+  async createTeam(insertTeam: InsertTeam, organizationId: number): Promise<Team> {
     const id = this.currentIds.teams++;
     const team: Team = {
       ...insertTeam, // Spread first
+      organizationId,
       id,
       description: insertTeam.description ?? null, // Override potential undefined
       isActive: insertTeam.isActive ?? true, // Override potential undefined
@@ -560,9 +583,9 @@ export class MemStorage implements IStorage {
     return team;
   }
 
-  async updateTeam(id: number, updateData: Partial<InsertTeam>): Promise<Team | undefined> {
+  async updateTeam(id: number, updateData: Partial<InsertTeam>, organizationId: number): Promise<Team | undefined> {
     const team = this.teams.get(id);
-    if (!team) return undefined;
+    if (!team || team.organizationId !== organizationId) return undefined;
 
     const updatedTeam = {
       ...team,
@@ -574,9 +597,9 @@ export class MemStorage implements IStorage {
     return updatedTeam;
   }
 
-  async deleteTeam(id: number): Promise<boolean> {
+  async deleteTeam(id: number, organizationId: number): Promise<boolean> {
     const team = this.teams.get(id);
-    if (!team) return false;
+    if (!team || team.organizationId !== organizationId) return false;
 
     const updatedTeam = { ...team, isActive: false };
     this.teams.set(id, updatedTeam);
@@ -684,18 +707,20 @@ export class MemStorage implements IStorage {
   }
 
   // Training Sessions
-  async getTrainingSessions(): Promise<TrainingSession[]> {
-    return Array.from(this.trainingSessions.values());
+  async getTrainingSessions(organizationId: number): Promise<TrainingSession[]> {
+    return Array.from(this.trainingSessions.values()).filter(s => s.organizationId === organizationId);
   }
 
-  async getTrainingSession(id: number): Promise<TrainingSession | undefined> {
-    return this.trainingSessions.get(id);
+  async getTrainingSession(id: number, organizationId: number): Promise<TrainingSession | undefined> {
+    const session = this.trainingSessions.get(id);
+    return session && session.organizationId === organizationId ? session : undefined;
   }
 
-  async createTrainingSession(insertSession: InsertTrainingSession): Promise<TrainingSession> {
+  async createTrainingSession(insertSession: InsertTrainingSession, organizationId: number): Promise<TrainingSession> {
     const id = this.currentIds.trainingSessions++;
     const session: TrainingSession = {
       ...insertSession,
+      organizationId,
       id,
       description: insertSession.description ?? null,
       maxParticipants: insertSession.maxParticipants ?? null,
@@ -778,21 +803,18 @@ export class MemStorage implements IStorage {
     return session;
   }
 
-  async updateTrainingSession(id: number, updateData: Partial<InsertTrainingSession>): Promise<TrainingSession | undefined> {
+  async updateTrainingSession(id: number, updateData: Partial<InsertTrainingSession>, organizationId: number): Promise<TrainingSession | undefined> {
     const session = this.trainingSessions.get(id);
-    if (!session) return undefined;
+    if (!session || session.organizationId !== organizationId) return undefined;
 
     const updatedSession = { ...session, ...updateData };
-    // Merging types here is tricky with partial updates on strict types, but effectively we rely on runtime behavior or rigorous mapping if strictly needed.
-    // For now, let's assume updateData matches better or we just accept it as strict TS might complain but it's runtime valid.
-    // Actually, for MemStorage, strict TS requires mapped overrides again.
-    // I'll skip full mapping for update unless explicitly requested by error, to avoid code bloat.
-
     this.trainingSessions.set(id, updatedSession as TrainingSession); // Casting to suppress for update if needed
     return updatedSession as TrainingSession;
   }
 
-  async deleteTrainingSession(id: number): Promise<boolean> {
+  async deleteTrainingSession(id: number, organizationId: number): Promise<boolean> {
+    const session = this.trainingSessions.get(id);
+    if (!session || session.organizationId !== organizationId) return false;
     return this.trainingSessions.delete(id);
   }
 
@@ -885,15 +907,16 @@ export class MemStorage implements IStorage {
   }
 
   // Tactical Formations
-  async getFormations(teamId: number): Promise<TacticalFormation[]> {
+  async getFormations(teamId: number, organizationId: number): Promise<TacticalFormation[]> {
     return Array.from(this.tacticalFormations.values())
-      .filter(f => f.teamId === teamId);
+      .filter(f => f.teamId === teamId && f.organizationId === organizationId);
   }
 
-  async createFormation(insertFormation: InsertTacticalFormation): Promise<TacticalFormation> {
+  async createFormation(insertFormation: InsertTacticalFormation, organizationId: number): Promise<TacticalFormation> {
     const id = this.currentIds.tacticalFormations++;
     const formation: TacticalFormation = {
       ...insertFormation,
+      organizationId,
       id,
       notes: insertFormation.notes ?? null,
       createdAt: new Date()
@@ -902,9 +925,9 @@ export class MemStorage implements IStorage {
     return formation;
   }
 
-  async updateFormation(id: number, updateData: Partial<InsertTacticalFormation>): Promise<TacticalFormation | undefined> {
+  async updateFormation(id: number, updateData: Partial<InsertTacticalFormation>, organizationId: number): Promise<TacticalFormation | undefined> {
     const formation = this.tacticalFormations.get(id);
-    if (!formation) return undefined;
+    if (!formation || formation.organizationId !== organizationId) return undefined;
 
     const updatedFormation = {
       ...formation,
@@ -915,7 +938,9 @@ export class MemStorage implements IStorage {
     return updatedFormation;
   }
 
-  async deleteFormation(id: number): Promise<boolean> {
+  async deleteFormation(id: number, organizationId: number): Promise<boolean> {
+    const formation = this.tacticalFormations.get(id);
+    if (!formation || formation.organizationId !== organizationId) return false;
     return this.tacticalFormations.delete(id);
   }
 
@@ -959,17 +984,19 @@ export class MemStorage implements IStorage {
   }
 
   // Staff
-  async getStaff(): Promise<Staff[]> {
-    return Array.from(this.staff.values());
+  async getStaff(organizationId: number): Promise<Staff[]> {
+    return Array.from(this.staff.values()).filter(s => s.organizationId === organizationId);
   }
 
-  async getStaffMember(id: number): Promise<Staff | undefined> {
-    return this.staff.get(id);
+  async getStaffMember(id: number, organizationId: number): Promise<Staff | undefined> {
+    const member = this.staff.get(id);
+    return member && member.organizationId === organizationId ? member : undefined;
   }
 
-  async createStaff(insertStaff: InsertStaff): Promise<Staff> {
+  async createStaff(insertStaff: InsertStaff, organizationId: number): Promise<Staff> {
     const id = this.currentIds.staff++;
     const staffMember: Staff = {
+      organizationId,
       id,
       firstName: insertStaff.firstName,
       lastName: insertStaff.lastName,
@@ -1027,21 +1054,23 @@ export class MemStorage implements IStorage {
     };
   }
 
-  async getInjuries(): Promise<InjuryWithPlayer[]> {
+  async getInjuries(organizationId: number): Promise<InjuryWithPlayer[]> {
     return Array.from(this.injuries.values())
+      .filter((injury) => injury.organizationId === organizationId)
       .sort((a, b) => b.injuryDate.localeCompare(a.injuryDate))
       .map((injury) => this.decorateInjury(injury));
   }
 
-  async getInjury(id: number): Promise<InjuryWithPlayer | undefined> {
+  async getInjury(id: number, organizationId: number): Promise<InjuryWithPlayer | undefined> {
     const injury = this.injuries.get(id);
-    return injury ? this.decorateInjury(injury) : undefined;
+    return injury && injury.organizationId === organizationId ? this.decorateInjury(injury) : undefined;
   }
 
-  async createInjury(injury: InsertInjury): Promise<Injury> {
+  async createInjury(injury: InsertInjury, organizationId: number): Promise<Injury> {
     const id = this.nextInjuryId++;
     const created: Injury = {
       ...injury,
+      organizationId,
       id,
       status: injury.status ?? "recovering",
       expectedReturn: injury.expectedReturn ?? null,
@@ -1056,15 +1085,17 @@ export class MemStorage implements IStorage {
     return created;
   }
 
-  async updateInjury(id: number, injury: Partial<InsertInjury>): Promise<Injury | undefined> {
+  async updateInjury(id: number, injury: Partial<InsertInjury>, organizationId: number): Promise<Injury | undefined> {
     const existing = this.injuries.get(id);
-    if (!existing) return undefined;
+    if (!existing || existing.organizationId !== organizationId) return undefined;
     const updated: Injury = { ...existing, ...injury, updatedAt: new Date() };
     this.injuries.set(id, updated);
     return updated;
   }
 
-  async deleteInjury(id: number): Promise<boolean> {
+  async deleteInjury(id: number, organizationId: number): Promise<boolean> {
+    const existing = this.injuries.get(id);
+    if (!existing || existing.organizationId !== organizationId) return false;
     for (const [logId, log] of this.injuryTreatmentLogs.entries()) {
       if (log.injuryId === id) this.injuryTreatmentLogs.delete(logId);
     }
@@ -1091,27 +1122,33 @@ export class MemStorage implements IStorage {
     return created;
   }
 
-  async deleteInjuryTreatmentLog(id: number): Promise<boolean> {
+  async deleteInjuryTreatmentLog(id: number, organizationId: number): Promise<boolean> {
+    const log = this.injuryTreatmentLogs.get(id);
+    if (!log) return false;
+    const parentInjury = this.injuries.get(log.injuryId);
+    if (!parentInjury || parentInjury.organizationId !== organizationId) return false;
     return this.injuryTreatmentLogs.delete(id);
   }
 
   // Annual Budget Management
-  async getAnnualBudgets(): Promise<AnnualBudget[]> {
-    return Array.from(this.annualBudgets.values());
+  async getAnnualBudgets(organizationId: number): Promise<AnnualBudget[]> {
+    return Array.from(this.annualBudgets.values()).filter(b => b.organizationId === organizationId);
   }
 
-  async getAnnualBudget(id: number): Promise<AnnualBudget | undefined> {
-    return this.annualBudgets.get(id);
+  async getAnnualBudget(id: number, organizationId: number): Promise<AnnualBudget | undefined> {
+    const budget = this.annualBudgets.get(id);
+    return budget && budget.organizationId === organizationId ? budget : undefined;
   }
 
-  async getAnnualBudgetByYear(fiscalYear: string): Promise<AnnualBudget | undefined> {
-    return Array.from(this.annualBudgets.values()).find(b => b.fiscalYear === fiscalYear);
+  async getAnnualBudgetByYear(fiscalYear: string, organizationId: number): Promise<AnnualBudget | undefined> {
+    return Array.from(this.annualBudgets.values()).find(b => b.fiscalYear === fiscalYear && b.organizationId === organizationId);
   }
 
-  async createAnnualBudget(insertBudget: InsertAnnualBudget): Promise<AnnualBudget> {
+  async createAnnualBudget(insertBudget: InsertAnnualBudget, organizationId: number): Promise<AnnualBudget> {
     const id = this.currentIds.annualBudgets++;
     const budget: AnnualBudget = {
       ...insertBudget,
+      organizationId,
       id,
       notes: insertBudget.notes ?? null,
       teamId: insertBudget.teamId ?? null,
@@ -1126,22 +1163,24 @@ export class MemStorage implements IStorage {
   }
 
   // Expense Management
-  async getExpenses(budgetId?: number): Promise<Expense[]> {
-    const allExpenses = Array.from(this.expenses.values());
+  async getExpenses(organizationId: number, budgetId?: number): Promise<Expense[]> {
+    const allExpenses = Array.from(this.expenses.values()).filter(e => e.organizationId === organizationId);
     if (budgetId) {
       return allExpenses.filter(e => e.budgetId === budgetId);
     }
     return allExpenses;
   }
 
-  async getExpense(id: number): Promise<Expense | undefined> {
-    return this.expenses.get(id);
+  async getExpense(id: number, organizationId: number): Promise<Expense | undefined> {
+    const expense = this.expenses.get(id);
+    return expense && expense.organizationId === organizationId ? expense : undefined;
   }
 
-  async createExpense(insertExpense: InsertExpense): Promise<Expense> {
+  async createExpense(insertExpense: InsertExpense, organizationId: number): Promise<Expense> {
     const id = this.currentIds.expenses++;
     const expense: Expense = {
       ...insertExpense,
+      organizationId,
       id,
       subcategory: insertExpense.subcategory ?? null,
       vendor: insertExpense.vendor ?? null,
@@ -1159,9 +1198,9 @@ export class MemStorage implements IStorage {
     return expense;
   }
 
-  async updateExpense(id: number, updateData: Partial<InsertExpense>): Promise<Expense | undefined> {
+  async updateExpense(id: number, updateData: Partial<InsertExpense>, organizationId: number): Promise<Expense | undefined> {
     const expense = this.expenses.get(id);
-    if (!expense) return undefined;
+    if (!expense || expense.organizationId !== organizationId) return undefined;
 
     const updatedExpense = {
       ...expense,
@@ -1172,13 +1211,15 @@ export class MemStorage implements IStorage {
     return updatedExpense;
   }
 
-  async deleteExpense(id: number): Promise<boolean> {
+  async deleteExpense(id: number, organizationId: number): Promise<boolean> {
+    const expense = this.expenses.get(id);
+    if (!expense || expense.organizationId !== organizationId) return false;
     return this.expenses.delete(id);
   }
 
-  async approveExpense(id: number, approvedBy: number): Promise<Expense | undefined> {
+  async approveExpense(id: number, approvedBy: number, organizationId: number): Promise<Expense | undefined> {
     const expense = this.expenses.get(id);
-    if (!expense) return undefined;
+    if (!expense || expense.organizationId !== organizationId) return undefined;
 
     const updatedExpense: Expense = {
       ...expense,
@@ -1192,31 +1233,35 @@ export class MemStorage implements IStorage {
   }
 
 
-  async updateStaff(id: number, updateData: Partial<InsertStaff>): Promise<Staff | undefined> {
+  async updateStaff(id: number, updateData: Partial<InsertStaff>, organizationId: number): Promise<Staff | undefined> {
     const staff = this.staff.get(id);
-    if (!staff) return undefined;
+    if (!staff || staff.organizationId !== organizationId) return undefined;
 
     const updatedStaff = { ...staff, ...updateData };
     this.staff.set(id, updatedStaff);
     return updatedStaff;
   }
 
-  async deleteStaff(id: number): Promise<boolean> {
+  async deleteStaff(id: number, organizationId: number): Promise<boolean> {
+    const staff = this.staff.get(id);
+    if (!staff || staff.organizationId !== organizationId) return false;
     return this.staff.delete(id);
   }
 
   // Matches
-  async getMatches(): Promise<Match[]> {
-    return Array.from(this.matches.values());
+  async getMatches(organizationId: number): Promise<Match[]> {
+    return Array.from(this.matches.values()).filter(m => m.organizationId === organizationId);
   }
 
-  async getMatch(id: number): Promise<Match | undefined> {
-    return this.matches.get(id);
+  async getMatch(id: number, organizationId: number): Promise<Match | undefined> {
+    const match = this.matches.get(id);
+    return match && match.organizationId === organizationId ? match : undefined;
   }
 
-  async createMatch(insertMatch: InsertMatch): Promise<Match> {
+  async createMatch(insertMatch: InsertMatch, organizationId: number): Promise<Match> {
     const id = this.currentIds.matches++;
     const match: Match = {
+      organizationId,
       id,
       homeTeamId: insertMatch.homeTeamId,
       awayTeam: insertMatch.awayTeam,
@@ -1242,9 +1287,9 @@ export class MemStorage implements IStorage {
     return match;
   }
 
-  async updateMatch(id: number, updateData: Partial<InsertMatch>): Promise<Match | undefined> {
+  async updateMatch(id: number, updateData: Partial<InsertMatch>, organizationId: number): Promise<Match | undefined> {
     const match = this.matches.get(id);
-    if (!match) return undefined;
+    if (!match || match.organizationId !== organizationId) return undefined;
 
     const updatedMatch: Match = {
       ...match,
@@ -1260,7 +1305,9 @@ export class MemStorage implements IStorage {
     return updatedMatch;
   }
 
-  async deleteMatch(id: number): Promise<boolean> {
+  async deleteMatch(id: number, organizationId: number): Promise<boolean> {
+    const match = this.matches.get(id);
+    if (!match || match.organizationId !== organizationId) return false;
     return this.matches.delete(id);
   }
 
@@ -1348,17 +1395,21 @@ export class MemStorage implements IStorage {
   }
 
   // Meetings
-  async getMeetings(): Promise<Meeting[]> {
-    return Array.from(this.meetings.values()).sort((a, b) => `${a.date} ${a.startTime}`.localeCompare(`${b.date} ${b.startTime}`));
+  async getMeetings(organizationId: number): Promise<Meeting[]> {
+    return Array.from(this.meetings.values())
+      .filter(m => m.organizationId === organizationId)
+      .sort((a, b) => `${a.date} ${a.startTime}`.localeCompare(`${b.date} ${b.startTime}`));
   }
 
-  async getMeeting(id: number): Promise<Meeting | undefined> {
-    return this.meetings.get(id);
+  async getMeeting(id: number, organizationId: number): Promise<Meeting | undefined> {
+    const meeting = this.meetings.get(id);
+    return meeting && meeting.organizationId === organizationId ? meeting : undefined;
   }
 
-  async createMeeting(insertMeeting: InsertMeeting): Promise<Meeting> {
+  async createMeeting(insertMeeting: InsertMeeting, organizationId: number): Promise<Meeting> {
     const id = this.currentIds.meetings++;
     const meeting: Meeting = {
+      organizationId,
       id,
       title: insertMeeting.title,
       description: insertMeeting.description ?? null,
@@ -1379,9 +1430,9 @@ export class MemStorage implements IStorage {
     return meeting;
   }
 
-  async updateMeeting(id: number, updateData: Partial<InsertMeeting>): Promise<Meeting | undefined> {
+  async updateMeeting(id: number, updateData: Partial<InsertMeeting>, organizationId: number): Promise<Meeting | undefined> {
     const meeting = this.meetings.get(id);
-    if (!meeting) return undefined;
+    if (!meeting || meeting.organizationId !== organizationId) return undefined;
 
     const updatedMeeting: Meeting = {
       ...meeting,
@@ -1397,22 +1448,26 @@ export class MemStorage implements IStorage {
     return updatedMeeting;
   }
 
-  async deleteMeeting(id: number): Promise<boolean> {
+  async deleteMeeting(id: number, organizationId: number): Promise<boolean> {
+    const meeting = this.meetings.get(id);
+    if (!meeting || meeting.organizationId !== organizationId) return false;
     return this.meetings.delete(id);
   }
 
   // Analytics Reports
-  async getAnalyticsReports(): Promise<AnalyticsReport[]> {
-    return Array.from(this.analyticsReports.values());
+  async getAnalyticsReports(organizationId: number): Promise<AnalyticsReport[]> {
+    return Array.from(this.analyticsReports.values()).filter(r => r.organizationId === organizationId);
   }
 
-  async getAnalyticsReport(id: number): Promise<AnalyticsReport | undefined> {
-    return this.analyticsReports.get(id);
+  async getAnalyticsReport(id: number, organizationId: number): Promise<AnalyticsReport | undefined> {
+    const report = this.analyticsReports.get(id);
+    return report && report.organizationId === organizationId ? report : undefined;
   }
 
-  async createAnalyticsReport(insertReport: InsertAnalyticsReport): Promise<AnalyticsReport> {
+  async createAnalyticsReport(insertReport: InsertAnalyticsReport, organizationId: number): Promise<AnalyticsReport> {
     const id = this.currentIds.analyticsReports++;
     const report: AnalyticsReport = {
+      organizationId,
       id,
       title: insertReport.title,
       type: insertReport.type,
@@ -1429,9 +1484,9 @@ export class MemStorage implements IStorage {
     return report;
   }
 
-  async updateAnalyticsReport(id: number, updateData: Partial<InsertAnalyticsReport>): Promise<AnalyticsReport | undefined> {
+  async updateAnalyticsReport(id: number, updateData: Partial<InsertAnalyticsReport>, organizationId: number): Promise<AnalyticsReport | undefined> {
     const report = this.analyticsReports.get(id);
-    if (!report) return undefined;
+    if (!report || report.organizationId !== organizationId) return undefined;
 
     const updatedReport: AnalyticsReport = {
       ...report,
@@ -1445,23 +1500,26 @@ export class MemStorage implements IStorage {
     return updatedReport;
   }
 
-  async deleteAnalyticsReport(id: number): Promise<boolean> {
+  async deleteAnalyticsReport(id: number, organizationId: number): Promise<boolean> {
+    const report = this.analyticsReports.get(id);
+    if (!report || report.organizationId !== organizationId) return false;
     return this.analyticsReports.delete(id);
   }
 
   // System Settings
-  async getSystemSettings(): Promise<SystemSettings[]> {
-    return Array.from(this.systemSettings.values());
+  async getSystemSettings(organizationId: number): Promise<SystemSettings[]> {
+    return Array.from(this.systemSettings.values()).filter(s => s.organizationId === organizationId);
   }
 
-  async getSystemSetting(id: number): Promise<SystemSettings | undefined> {
-    return this.systemSettings.get(id);
+  async getSystemSetting(id: number, organizationId: number): Promise<SystemSettings | undefined> {
+    const setting = this.systemSettings.get(id);
+    return setting && setting.organizationId === organizationId ? setting : undefined;
   }
 
-  async createSystemSetting(insertSetting: InsertSystemSettings): Promise<SystemSettings> {
+  async createSystemSetting(insertSetting: InsertSystemSettings, organizationId: number): Promise<SystemSettings> {
     // Check for existing setting to prevent duplicates (Upsert logic)
     const existing = Array.from(this.systemSettings.values()).find(
-      s => s.category === insertSetting.category && s.settingKey === insertSetting.settingKey
+      s => s.organizationId === organizationId && s.category === insertSetting.category && s.settingKey === insertSetting.settingKey
     );
 
     if (existing) {
@@ -1476,6 +1534,7 @@ export class MemStorage implements IStorage {
 
     const id = this.currentIds.systemSettings++;
     const setting: SystemSettings = {
+      organizationId,
       id,
       category: insertSetting.category,
       settingKey: insertSetting.settingKey,
@@ -1489,9 +1548,9 @@ export class MemStorage implements IStorage {
     return setting;
   }
 
-  async updateSystemSetting(id: number, updateData: Partial<InsertSystemSettings>): Promise<SystemSettings | undefined> {
+  async updateSystemSetting(id: number, updateData: Partial<InsertSystemSettings>, organizationId: number): Promise<SystemSettings | undefined> {
     const setting = this.systemSettings.get(id);
-    if (!setting) return undefined;
+    if (!setting || setting.organizationId !== organizationId) return undefined;
 
     const updatedSetting: SystemSettings = {
       ...setting,
@@ -1506,11 +1565,11 @@ export class MemStorage implements IStorage {
   }
 
   // Missing methods stubs and implementations
-  async getWearableDevices(playerId?: number): Promise<WearableDevice[]> { return []; }
-  async getWearableDevice(id: number): Promise<WearableDevice | undefined> { return undefined; }
-  async createWearableDevice(device: InsertWearableDevice): Promise<WearableDevice> { throw new Error("Not implemented"); }
-  async updateWearableDevice(id: number, device: Partial<InsertWearableDevice>): Promise<WearableDevice | undefined> { return undefined; }
-  async deleteWearableDevice(id: number): Promise<boolean> { return false; }
+  async getWearableDevices(organizationId: number, playerId?: number): Promise<WearableDevice[]> { return []; }
+  async getWearableDevice(id: number, organizationId: number): Promise<WearableDevice | undefined> { return undefined; }
+  async createWearableDevice(device: InsertWearableDevice, organizationId: number): Promise<WearableDevice> { throw new Error("Not implemented"); }
+  async updateWearableDevice(id: number, device: Partial<InsertWearableDevice>, organizationId: number): Promise<WearableDevice | undefined> { return undefined; }
+  async deleteWearableDevice(id: number, organizationId: number): Promise<boolean> { return false; }
   async getWearableData(deviceId?: number, playerId?: number, dataType?: string): Promise<WearableData[]> { return []; }
   async createWearableData(data: InsertWearableData): Promise<WearableData> { throw new Error("Not implemented"); }
   async getLatestWearableData(playerId: number, dataType: string): Promise<WearableData | undefined> { return undefined; }
@@ -1519,22 +1578,24 @@ export class MemStorage implements IStorage {
   async getPlayerPerformanceTrends(playerId: number, days: number): Promise<PerformanceMetrics[]> { return []; }
 
   // Monthly Budgets
-  async getMonthlyBudgets(): Promise<MonthlyBudget[]> {
-    return Array.from(this.monthlyBudgets.values()).sort((a, b) => a.month.localeCompare(b.month));
+  async getMonthlyBudgets(organizationId: number): Promise<MonthlyBudget[]> {
+    return Array.from(this.monthlyBudgets.values()).filter(b => b.organizationId === organizationId).sort((a, b) => a.month.localeCompare(b.month));
   }
 
-  async getMonthlyBudget(id: number): Promise<MonthlyBudget | undefined> {
-    return this.monthlyBudgets.get(id);
+  async getMonthlyBudget(id: number, organizationId: number): Promise<MonthlyBudget | undefined> {
+    const budget = this.monthlyBudgets.get(id);
+    return budget && budget.organizationId === organizationId ? budget : undefined;
   }
 
-  async getMonthlyBudgetByMonth(month: string): Promise<MonthlyBudget | undefined> {
-    return Array.from(this.monthlyBudgets.values()).find(b => b.month === month);
+  async getMonthlyBudgetByMonth(month: string, organizationId: number): Promise<MonthlyBudget | undefined> {
+    return Array.from(this.monthlyBudgets.values()).find(b => b.month === month && b.organizationId === organizationId);
   }
 
-  async createMonthlyBudget(budget: InsertMonthlyBudget): Promise<MonthlyBudget> {
+  async createMonthlyBudget(budget: InsertMonthlyBudget, organizationId: number): Promise<MonthlyBudget> {
     const id = this.currentIds.monthlyBudgets++;
     const newBudget: MonthlyBudget = {
       ...budget,
+      organizationId,
       id,
       notes: budget.notes ?? null,
       approvedBy: budget.approvedBy ?? null,
@@ -1550,9 +1611,9 @@ export class MemStorage implements IStorage {
     return newBudget;
   }
 
-  async updateMonthlyBudget(id: number, budget: Partial<InsertMonthlyBudget>): Promise<MonthlyBudget | undefined> {
+  async updateMonthlyBudget(id: number, budget: Partial<InsertMonthlyBudget>, organizationId: number): Promise<MonthlyBudget | undefined> {
     const existing = this.monthlyBudgets.get(id);
-    if (!existing) return undefined;
+    if (!existing || existing.organizationId !== organizationId) return undefined;
 
     const updated = {
       ...existing,
@@ -1563,30 +1624,32 @@ export class MemStorage implements IStorage {
     return updated;
   }
 
-  async deleteMonthlyBudget(id: number): Promise<boolean> {
+  async deleteMonthlyBudget(id: number, organizationId: number): Promise<boolean> {
+    const existing = this.monthlyBudgets.get(id);
+    if (!existing || existing.organizationId !== organizationId) return false;
     return this.monthlyBudgets.delete(id);
   }
 
   // Budget Summary
-  async getTotalMonthlySalaries(month: string): Promise<{ staff: number; players: number; total: number }> {
+  async getTotalMonthlySalaries(month: string, organizationId: number): Promise<{ staff: number; players: number; total: number }> {
     let staffTotal = 0;
     for (const s of this.staff.values()) {
-      if (s.isActive && s.salary) {
+      if (s.isActive && s.salary && s.organizationId === organizationId) {
         staffTotal += Number(s.salary);
       }
     }
     let playerTotal = 0;
     for (const p of this.players.values()) {
-      if (p.isActive && p.monthlySalary) {
+      if (p.isActive && p.monthlySalary && p.organizationId === organizationId) {
         playerTotal += Number(p.monthlySalary);
       }
     }
     return { staff: staffTotal, players: playerTotal, total: staffTotal + playerTotal };
   }
 
-  async getPayrollDetails(month: string): Promise<{ staff: Array<any>; players: Array<any> }> {
+  async getPayrollDetails(month: string, organizationId: number): Promise<{ staff: Array<any>; players: Array<any> }> {
     const staffDetails = Array.from(this.staff.values())
-      .filter(s => s.isActive)
+      .filter(s => s.isActive && s.organizationId === organizationId)
       .map(s => ({
         id: s.id,
         firstName: s.firstName,
@@ -1599,7 +1662,7 @@ export class MemStorage implements IStorage {
       }));
 
     const playerDetails = Array.from(this.players.values())
-      .filter(p => p.isActive)
+      .filter(p => p.isActive && p.organizationId === organizationId)
       .map(p => ({
         id: p.id,
         firstName: p.firstName,
@@ -1613,7 +1676,7 @@ export class MemStorage implements IStorage {
     return { staff: staffDetails, players: playerDetails };
   }
 
-  async getMonthlyBudgetBreakdown(budgetId: number): Promise<Array<any>> {
+  async getMonthlyBudgetBreakdown(budgetId: number, organizationId: number): Promise<Array<any>> {
     // For fiscal year budgets, divide by 12 to get monthly allocations
     // Return 12 months of data
     const months = [
@@ -1633,7 +1696,7 @@ export class MemStorage implements IStorage {
     return months;
   }
 
-  async getBudgetVsActualExpenses(budgetId: number): Promise<{ budgeted: number; actual: number; remaining: number; categories: any[] }> {
+  async getBudgetVsActualExpenses(budgetId: number, organizationId: number): Promise<{ budgeted: number; actual: number; remaining: number; categories: any[] }> {
     return { budgeted: 0, actual: 0, remaining: 0, categories: [] };
   }
 
@@ -1651,18 +1714,18 @@ export class MemStorage implements IStorage {
   // Check lines 780 again... yes they are there.
 
   // Tactical Boards
-  async getTacticalBoards(): Promise<TacticalBoard[]> { return []; }
-  async getTacticalBoard(id: number): Promise<TacticalBoard | undefined> { return undefined; }
-  async createTacticalBoard(board: InsertTacticalBoard): Promise<TacticalBoard> { throw new Error("Not implemented"); }
-  async updateTacticalBoard(id: number, board: Partial<InsertTacticalBoard>): Promise<TacticalBoard | undefined> { return undefined; }
-  async deleteTacticalBoard(id: number): Promise<boolean> { return false; }
+  async getTacticalBoards(organizationId: number): Promise<TacticalBoard[]> { return []; }
+  async getTacticalBoard(id: number, organizationId: number): Promise<TacticalBoard | undefined> { return undefined; }
+  async createTacticalBoard(board: InsertTacticalBoard, organizationId: number): Promise<TacticalBoard> { throw new Error("Not implemented"); }
+  async updateTacticalBoard(id: number, board: Partial<InsertTacticalBoard>, organizationId: number): Promise<TacticalBoard | undefined> { return undefined; }
+  async deleteTacticalBoard(id: number, organizationId: number): Promise<boolean> { return false; }
 
   // Player Contracts
-  async getPlayerContracts(playerId?: number): Promise<PlayerContract[]> { return []; }
-  async getPlayerContract(id: number): Promise<PlayerContract | undefined> { return undefined; }
-  async createPlayerContract(contract: InsertPlayerContract): Promise<PlayerContract> { throw new Error("Not implemented"); }
-  async updatePlayerContract(id: number, contract: Partial<InsertPlayerContract>): Promise<PlayerContract | undefined> { return undefined; }
-  async deletePlayerContract(id: number): Promise<boolean> { return false; }
+  async getPlayerContracts(organizationId: number, playerId?: number): Promise<PlayerContract[]> { return []; }
+  async getPlayerContract(id: number, organizationId: number): Promise<PlayerContract | undefined> { return undefined; }
+  async createPlayerContract(contract: InsertPlayerContract, organizationId: number): Promise<PlayerContract> { throw new Error("Not implemented"); }
+  async updatePlayerContract(id: number, contract: Partial<InsertPlayerContract>, organizationId: number): Promise<PlayerContract | undefined> { return undefined; }
+  async deletePlayerContract(id: number, organizationId: number): Promise<boolean> { return false; }
 
   // Performance Reactions
   async getPerformanceReactions(playerId?: number, performanceType?: string): Promise<PerformanceReaction[]> { return []; }
@@ -1671,21 +1734,24 @@ export class MemStorage implements IStorage {
   async deletePerformanceReaction(id: number): Promise<boolean> { return false; }
 
   // Achievement System
-  async getAchievements(): Promise<any[]> { return []; }
-  async getPlayerAchievements(playerId: number): Promise<any[]> { return []; }
-  async updateAchievementProgress(playerId: number, achievementTypeId: number, value: number, eventType: string, eventId?: number): Promise<any> { return {}; }
-  async getAchievementLeaderboard(): Promise<any[]> { return []; }
-  async initializePlayerAchievements(): Promise<any> { return {}; }
+  async getAchievements(organizationId: number): Promise<any[]> { return []; }
+  async getPlayerAchievements(playerId: number, organizationId: number): Promise<any[]> { return []; }
+  async updateAchievementProgress(playerId: number, achievementTypeId: number, value: number, eventType: string, organizationId: number, eventId?: number): Promise<any> { return {}; }
+  async getAchievementLeaderboard(organizationId: number): Promise<any[]> { return []; }
+  async initializePlayerAchievements(organizationId: number): Promise<any> { return {}; }
 
-  async getPlayerInvitations(): Promise<(PlayerInvitation & { team?: Team })[]> {
-    return Array.from(this.playerInvitations.values()).map((invitation) => ({
-      ...invitation,
-      team: this.teams.get(invitation.teamId),
-    }));
+  async getPlayerInvitations(organizationId: number): Promise<(PlayerInvitation & { team?: Team })[]> {
+    return Array.from(this.playerInvitations.values())
+      .filter((invitation) => invitation.organizationId === organizationId)
+      .map((invitation) => ({
+        ...invitation,
+        team: this.teams.get(invitation.teamId),
+      }));
   }
 
-  async getPlayerInvitation(id: number): Promise<PlayerInvitation | undefined> {
-    return this.playerInvitations.get(id);
+  async getPlayerInvitation(id: number, organizationId: number): Promise<PlayerInvitation | undefined> {
+    const invitation = this.playerInvitations.get(id);
+    return invitation && invitation.organizationId === organizationId ? invitation : undefined;
   }
 
   async getPlayerInvitationByToken(token: string): Promise<(PlayerInvitation & { team?: Team }) | undefined> {
@@ -1693,9 +1759,10 @@ export class MemStorage implements IStorage {
     return invitation ? { ...invitation, team: this.teams.get(invitation.teamId) } : undefined;
   }
 
-  async createPlayerInvitation(insertInvitation: InsertPlayerInvitation): Promise<PlayerInvitation> {
+  async createPlayerInvitation(insertInvitation: InsertPlayerInvitation, organizationId: number): Promise<PlayerInvitation> {
     const id = this.currentIds.playerInvitations++;
     const invitation: PlayerInvitation = {
+      organizationId,
       id,
       token: insertInvitation.token,
       teamId: insertInvitation.teamId,
@@ -1709,15 +1776,17 @@ export class MemStorage implements IStorage {
     return invitation;
   }
 
-  async updatePlayerInvitation(id: number, updateData: Partial<InsertPlayerInvitation> & { usedAt?: Date | null }): Promise<PlayerInvitation | undefined> {
+  async updatePlayerInvitation(id: number, updateData: Partial<InsertPlayerInvitation> & { usedAt?: Date | null }, organizationId: number): Promise<PlayerInvitation | undefined> {
     const invitation = this.playerInvitations.get(id);
-    if (!invitation) return undefined;
+    if (!invitation || invitation.organizationId !== organizationId) return undefined;
     const updatedInvitation = { ...invitation, ...updateData };
     this.playerInvitations.set(id, updatedInvitation);
     return updatedInvitation;
   }
 
-  async deletePlayerInvitation(id: number): Promise<boolean> {
+  async deletePlayerInvitation(id: number, organizationId: number): Promise<boolean> {
+    const invitation = this.playerInvitations.get(id);
+    if (!invitation || invitation.organizationId !== organizationId) return false;
     return this.playerInvitations.delete(id);
   }
 
@@ -1725,9 +1794,10 @@ export class MemStorage implements IStorage {
     return Array.from(this.employeeInvitations.values()).find((item) => item.token === token);
   }
 
-  async createEmployeeInvitation(insertInvitation: InsertEmployeeInvitation): Promise<EmployeeInvitation> {
+  async createEmployeeInvitation(insertInvitation: InsertEmployeeInvitation, organizationId: number): Promise<EmployeeInvitation> {
     const id = this.currentIds.employeeInvitations++;
     const invitation: EmployeeInvitation = {
+      organizationId,
       id,
       token: insertInvitation.token,
       role: insertInvitation.role,
@@ -1742,9 +1812,9 @@ export class MemStorage implements IStorage {
     return invitation;
   }
 
-  async updateEmployeeInvitation(id: number, updateData: Partial<InsertEmployeeInvitation> & { usedAt?: Date | null }): Promise<EmployeeInvitation | undefined> {
+  async updateEmployeeInvitation(id: number, updateData: Partial<InsertEmployeeInvitation> & { usedAt?: Date | null }, organizationId: number): Promise<EmployeeInvitation | undefined> {
     const invitation = this.employeeInvitations.get(id);
-    if (!invitation) return undefined;
+    if (!invitation || invitation.organizationId !== organizationId) return undefined;
     const updatedInvitation = { ...invitation, ...updateData };
     this.employeeInvitations.set(id, updatedInvitation);
     return updatedInvitation;
@@ -1851,8 +1921,9 @@ export class DatabaseStorage implements IStorage {
     await db.execute(sql`CREATE INDEX IF NOT EXISTS registration_reminders_sent_by_idx ON registration_reminders(sent_by)`);
   }
 
-  async getUsers(): Promise<User[]> {
-    return await db.select().from(users);
+  async getUsers(organizationId?: number): Promise<User[]> {
+    if (organizationId === undefined) return await db.select().from(users);
+    return await db.select().from(users).where(eq(users.organizationId, organizationId));
   }
 
   async getUser(id: number): Promise<User | undefined> {
@@ -1865,87 +1936,87 @@ export class DatabaseStorage implements IStorage {
     return user || undefined;
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
+  async createUser(insertUser: InsertUser, organizationId: number): Promise<User> {
     const [user] = await db
       .insert(users)
-      .values(insertUser)
+      .values({ ...insertUser, organizationId })
       .returning();
     return user;
   }
 
-  async updateUser(id: number, updateData: Partial<InsertUser>): Promise<User | undefined> {
+  async updateUser(id: number, updateData: Partial<InsertUser>, organizationId: number): Promise<User | undefined> {
     const [user] = await db
       .update(users)
       .set(updateData)
-      .where(eq(users.id, id))
+      .where(and(eq(users.id, id), eq(users.organizationId, organizationId)))
       .returning();
     return user || undefined;
   }
 
-  async deleteUser(id: number): Promise<boolean> {
-    const result = await db.delete(users).where(eq(users.id, id));
+  async deleteUser(id: number, organizationId: number): Promise<boolean> {
+    const result = await db.delete(users).where(and(eq(users.id, id), eq(users.organizationId, organizationId)));
     return (result.rowCount || 0) > 0;
   }
 
-  async getPlayers(): Promise<Player[]> {
-    return await db.select().from(players);
+  async getPlayers(organizationId: number): Promise<Player[]> {
+    return await db.select().from(players).where(eq(players.organizationId, organizationId));
   }
 
-  async getPlayer(id: number): Promise<Player | undefined> {
-    const [player] = await db.select().from(players).where(eq(players.id, id));
+  async getPlayer(id: number, organizationId: number): Promise<Player | undefined> {
+    const [player] = await db.select().from(players).where(and(eq(players.id, id), eq(players.organizationId, organizationId)));
     return player || undefined;
   }
 
-  async createPlayer(insertPlayer: InsertPlayer): Promise<Player> {
+  async createPlayer(insertPlayer: InsertPlayer, organizationId: number): Promise<Player> {
     const [player] = await db
       .insert(players)
-      .values(insertPlayer)
+      .values({ ...insertPlayer, organizationId })
       .returning();
     return player;
   }
 
-  async updatePlayer(id: number, updateData: Partial<InsertPlayer>): Promise<Player | undefined> {
+  async updatePlayer(id: number, updateData: Partial<InsertPlayer>, organizationId: number): Promise<Player | undefined> {
     const [player] = await db
       .update(players)
       .set(updateData)
-      .where(eq(players.id, id))
+      .where(and(eq(players.id, id), eq(players.organizationId, organizationId)))
       .returning();
     return player || undefined;
   }
 
-  async deletePlayer(id: number): Promise<boolean> {
-    const result = await db.delete(players).where(eq(players.id, id));
+  async deletePlayer(id: number, organizationId: number): Promise<boolean> {
+    const result = await db.delete(players).where(and(eq(players.id, id), eq(players.organizationId, organizationId)));
     return (result.rowCount ?? 0) > 0;
   }
 
-  async getTeams(): Promise<Team[]> {
-    return await db.select().from(teams);
+  async getTeams(organizationId: number): Promise<Team[]> {
+    return await db.select().from(teams).where(eq(teams.organizationId, organizationId));
   }
 
-  async getTeam(id: number): Promise<Team | undefined> {
-    const [team] = await db.select().from(teams).where(eq(teams.id, id));
+  async getTeam(id: number, organizationId: number): Promise<Team | undefined> {
+    const [team] = await db.select().from(teams).where(and(eq(teams.id, id), eq(teams.organizationId, organizationId)));
     return team || undefined;
   }
 
-  async createTeam(insertTeam: InsertTeam): Promise<Team> {
+  async createTeam(insertTeam: InsertTeam, organizationId: number): Promise<Team> {
     const [team] = await db
       .insert(teams)
-      .values(insertTeam)
+      .values({ ...insertTeam, organizationId })
       .returning();
     return team;
   }
 
-  async updateTeam(id: number, updateData: Partial<InsertTeam>): Promise<Team | undefined> {
+  async updateTeam(id: number, updateData: Partial<InsertTeam>, organizationId: number): Promise<Team | undefined> {
     const [team] = await db
       .update(teams)
       .set(updateData)
-      .where(eq(teams.id, id))
+      .where(and(eq(teams.id, id), eq(teams.organizationId, organizationId)))
       .returning();
     return team || undefined;
   }
 
-  async deleteTeam(id: number): Promise<boolean> {
-    const result = await db.delete(teams).where(eq(teams.id, id));
+  async deleteTeam(id: number, organizationId: number): Promise<boolean> {
+    const result = await db.delete(teams).where(and(eq(teams.id, id), eq(teams.organizationId, organizationId)));
     return (result.rowCount ?? 0) > 0;
   }
 
@@ -2041,34 +2112,34 @@ export class DatabaseStorage implements IStorage {
     return results.map(row => ({ ...row.team_players, team: row.teams }));
   }
 
-  async getTrainingSessions(): Promise<TrainingSession[]> {
-    return await db.select().from(trainingSessions);
+  async getTrainingSessions(organizationId: number): Promise<TrainingSession[]> {
+    return await db.select().from(trainingSessions).where(eq(trainingSessions.organizationId, organizationId));
   }
 
-  async getTrainingSession(id: number): Promise<TrainingSession | undefined> {
-    const [session] = await db.select().from(trainingSessions).where(eq(trainingSessions.id, id));
+  async getTrainingSession(id: number, organizationId: number): Promise<TrainingSession | undefined> {
+    const [session] = await db.select().from(trainingSessions).where(and(eq(trainingSessions.id, id), eq(trainingSessions.organizationId, organizationId)));
     return session || undefined;
   }
 
-  async createTrainingSession(insertSession: InsertTrainingSession): Promise<TrainingSession> {
+  async createTrainingSession(insertSession: InsertTrainingSession, organizationId: number): Promise<TrainingSession> {
     const [session] = await db
       .insert(trainingSessions)
-      .values(insertSession)
+      .values({ ...insertSession, organizationId })
       .returning();
     return session;
   }
 
-  async updateTrainingSession(id: number, updateData: Partial<InsertTrainingSession>): Promise<TrainingSession | undefined> {
+  async updateTrainingSession(id: number, updateData: Partial<InsertTrainingSession>, organizationId: number): Promise<TrainingSession | undefined> {
     const [session] = await db
       .update(trainingSessions)
       .set(updateData)
-      .where(eq(trainingSessions.id, id))
+      .where(and(eq(trainingSessions.id, id), eq(trainingSessions.organizationId, organizationId)))
       .returning();
     return session || undefined;
   }
 
-  async deleteTrainingSession(id: number): Promise<boolean> {
-    const result = await db.delete(trainingSessions).where(eq(trainingSessions.id, id));
+  async deleteTrainingSession(id: number, organizationId: number): Promise<boolean> {
+    const result = await db.delete(trainingSessions).where(and(eq(trainingSessions.id, id), eq(trainingSessions.organizationId, organizationId)));
     return (result.rowCount || 0) > 0;
   }
 
@@ -2147,29 +2218,30 @@ export class DatabaseStorage implements IStorage {
       .where(eq(notifications.userId, userId));
   }
 
-  async getFormations(teamId: number): Promise<TacticalFormation[]> {
-    return await db.select().from(tacticalFormations).where(eq(tacticalFormations.teamId, teamId));
+  async getFormations(teamId: number, organizationId: number): Promise<TacticalFormation[]> {
+    return await db.select().from(tacticalFormations)
+      .where(and(eq(tacticalFormations.teamId, teamId), eq(tacticalFormations.organizationId, organizationId)));
   }
 
-  async createFormation(insertFormation: InsertTacticalFormation): Promise<TacticalFormation> {
+  async createFormation(insertFormation: InsertTacticalFormation, organizationId: number): Promise<TacticalFormation> {
     const [formation] = await db
       .insert(tacticalFormations)
-      .values(insertFormation)
+      .values({ ...insertFormation, organizationId })
       .returning();
     return formation;
   }
 
-  async updateFormation(id: number, updateData: Partial<InsertTacticalFormation>): Promise<TacticalFormation | undefined> {
+  async updateFormation(id: number, updateData: Partial<InsertTacticalFormation>, organizationId: number): Promise<TacticalFormation | undefined> {
     const [formation] = await db
       .update(tacticalFormations)
       .set(updateData)
-      .where(eq(tacticalFormations.id, id))
+      .where(and(eq(tacticalFormations.id, id), eq(tacticalFormations.organizationId, organizationId)))
       .returning();
     return formation || undefined;
   }
 
-  async deleteFormation(id: number): Promise<boolean> {
-    const result = await db.delete(tacticalFormations).where(eq(tacticalFormations.id, id));
+  async deleteFormation(id: number, organizationId: number): Promise<boolean> {
+    const result = await db.delete(tacticalFormations).where(and(eq(tacticalFormations.id, id), eq(tacticalFormations.organizationId, organizationId)));
     return (result.rowCount || 0) > 0;
   }
 
@@ -2198,65 +2270,65 @@ export class DatabaseStorage implements IStorage {
     return stats || undefined;
   }
 
-  async getStaff(): Promise<Staff[]> {
-    return await db.select().from(staff);
+  async getStaff(organizationId: number): Promise<Staff[]> {
+    return await db.select().from(staff).where(eq(staff.organizationId, organizationId));
   }
 
-  async getStaffMember(id: number): Promise<Staff | undefined> {
-    const [staffMember] = await db.select().from(staff).where(eq(staff.id, id));
+  async getStaffMember(id: number, organizationId: number): Promise<Staff | undefined> {
+    const [staffMember] = await db.select().from(staff).where(and(eq(staff.id, id), eq(staff.organizationId, organizationId)));
     return staffMember || undefined;
   }
 
-  async createStaff(insertStaff: InsertStaff): Promise<Staff> {
+  async createStaff(insertStaff: InsertStaff, organizationId: number): Promise<Staff> {
     const [staffMember] = await db
       .insert(staff)
-      .values(insertStaff)
+      .values({ ...insertStaff, organizationId })
       .returning();
     return staffMember;
   }
 
-  async updateStaff(id: number, updateData: Partial<InsertStaff>): Promise<Staff | undefined> {
+  async updateStaff(id: number, updateData: Partial<InsertStaff>, organizationId: number): Promise<Staff | undefined> {
     const [staffMember] = await db
       .update(staff)
       .set(updateData)
-      .where(eq(staff.id, id))
+      .where(and(eq(staff.id, id), eq(staff.organizationId, organizationId)))
       .returning();
     return staffMember || undefined;
   }
 
-  async deleteStaff(id: number): Promise<boolean> {
-    const result = await db.delete(staff).where(eq(staff.id, id));
+  async deleteStaff(id: number, organizationId: number): Promise<boolean> {
+    const result = await db.delete(staff).where(and(eq(staff.id, id), eq(staff.organizationId, organizationId)));
     return (result.rowCount || 0) > 0;
   }
 
-  async getMatches(): Promise<Match[]> {
-    return await db.select().from(matches);
+  async getMatches(organizationId: number): Promise<Match[]> {
+    return await db.select().from(matches).where(eq(matches.organizationId, organizationId));
   }
 
-  async getMatch(id: number): Promise<Match | undefined> {
-    const [match] = await db.select().from(matches).where(eq(matches.id, id));
+  async getMatch(id: number, organizationId: number): Promise<Match | undefined> {
+    const [match] = await db.select().from(matches).where(and(eq(matches.id, id), eq(matches.organizationId, organizationId)));
     return match || undefined;
   }
 
-  async createMatch(insertMatch: InsertMatch): Promise<Match> {
+  async createMatch(insertMatch: InsertMatch, organizationId: number): Promise<Match> {
     const [match] = await db
       .insert(matches)
-      .values(insertMatch)
+      .values({ ...insertMatch, organizationId })
       .returning();
     return match;
   }
 
-  async updateMatch(id: number, updateData: Partial<InsertMatch>): Promise<Match | undefined> {
+  async updateMatch(id: number, updateData: Partial<InsertMatch>, organizationId: number): Promise<Match | undefined> {
     const [match] = await db
       .update(matches)
       .set(updateData)
-      .where(eq(matches.id, id))
+      .where(and(eq(matches.id, id), eq(matches.organizationId, organizationId)))
       .returning();
     return match || undefined;
   }
 
-  async deleteMatch(id: number): Promise<boolean> {
-    const result = await db.delete(matches).where(eq(matches.id, id));
+  async deleteMatch(id: number, organizationId: number): Promise<boolean> {
+    const result = await db.delete(matches).where(and(eq(matches.id, id), eq(matches.organizationId, organizationId)));
     return (result.rowCount || 0) > 0;
   }
 
@@ -2316,82 +2388,83 @@ export class DatabaseStorage implements IStorage {
     return (result.rowCount || 0) > 0;
   }
 
-  async getMeetings(): Promise<Meeting[]> {
-    return await db.select().from(meetings);
+  async getMeetings(organizationId: number): Promise<Meeting[]> {
+    return await db.select().from(meetings).where(eq(meetings.organizationId, organizationId));
   }
 
-  async getMeeting(id: number): Promise<Meeting | undefined> {
-    const [meeting] = await db.select().from(meetings).where(eq(meetings.id, id));
+  async getMeeting(id: number, organizationId: number): Promise<Meeting | undefined> {
+    const [meeting] = await db.select().from(meetings).where(and(eq(meetings.id, id), eq(meetings.organizationId, organizationId)));
     return meeting || undefined;
   }
 
-  async createMeeting(insertMeeting: InsertMeeting): Promise<Meeting> {
+  async createMeeting(insertMeeting: InsertMeeting, organizationId: number): Promise<Meeting> {
     const [meeting] = await db
       .insert(meetings)
-      .values(insertMeeting)
+      .values({ ...insertMeeting, organizationId })
       .returning();
     return meeting;
   }
 
-  async updateMeeting(id: number, updateData: Partial<InsertMeeting>): Promise<Meeting | undefined> {
+  async updateMeeting(id: number, updateData: Partial<InsertMeeting>, organizationId: number): Promise<Meeting | undefined> {
     const [meeting] = await db
       .update(meetings)
       .set(updateData)
-      .where(eq(meetings.id, id))
+      .where(and(eq(meetings.id, id), eq(meetings.organizationId, organizationId)))
       .returning();
     return meeting || undefined;
   }
 
-  async deleteMeeting(id: number): Promise<boolean> {
-    const result = await db.delete(meetings).where(eq(meetings.id, id));
+  async deleteMeeting(id: number, organizationId: number): Promise<boolean> {
+    const result = await db.delete(meetings).where(and(eq(meetings.id, id), eq(meetings.organizationId, organizationId)));
     return (result.rowCount || 0) > 0;
   }
 
-  async getAnalyticsReports(): Promise<AnalyticsReport[]> {
-    return await db.select().from(analyticsReports);
+  async getAnalyticsReports(organizationId: number): Promise<AnalyticsReport[]> {
+    return await db.select().from(analyticsReports).where(eq(analyticsReports.organizationId, organizationId));
   }
 
-  async getAnalyticsReport(id: number): Promise<AnalyticsReport | undefined> {
-    const [report] = await db.select().from(analyticsReports).where(eq(analyticsReports.id, id));
+  async getAnalyticsReport(id: number, organizationId: number): Promise<AnalyticsReport | undefined> {
+    const [report] = await db.select().from(analyticsReports).where(and(eq(analyticsReports.id, id), eq(analyticsReports.organizationId, organizationId)));
     return report || undefined;
   }
 
-  async createAnalyticsReport(insertReport: InsertAnalyticsReport): Promise<AnalyticsReport> {
+  async createAnalyticsReport(insertReport: InsertAnalyticsReport, organizationId: number): Promise<AnalyticsReport> {
     const [report] = await db
       .insert(analyticsReports)
-      .values(insertReport)
+      .values({ ...insertReport, organizationId })
       .returning();
     return report;
   }
 
-  async updateAnalyticsReport(id: number, updateData: Partial<InsertAnalyticsReport>): Promise<AnalyticsReport | undefined> {
+  async updateAnalyticsReport(id: number, updateData: Partial<InsertAnalyticsReport>, organizationId: number): Promise<AnalyticsReport | undefined> {
     const [report] = await db
       .update(analyticsReports)
       .set(updateData)
-      .where(eq(analyticsReports.id, id))
+      .where(and(eq(analyticsReports.id, id), eq(analyticsReports.organizationId, organizationId)))
       .returning();
     return report || undefined;
   }
 
-  async deleteAnalyticsReport(id: number): Promise<boolean> {
-    const result = await db.delete(analyticsReports).where(eq(analyticsReports.id, id));
+  async deleteAnalyticsReport(id: number, organizationId: number): Promise<boolean> {
+    const result = await db.delete(analyticsReports).where(and(eq(analyticsReports.id, id), eq(analyticsReports.organizationId, organizationId)));
     return (result.rowCount || 0) > 0;
   }
 
-  async getSystemSettings(): Promise<SystemSettings[]> {
-    return await db.select().from(systemSettings);
+  async getSystemSettings(organizationId: number): Promise<SystemSettings[]> {
+    return await db.select().from(systemSettings).where(eq(systemSettings.organizationId, organizationId));
   }
 
-  async getSystemSetting(id: number): Promise<SystemSettings | undefined> {
-    const [setting] = await db.select().from(systemSettings).where(eq(systemSettings.id, id));
+  async getSystemSetting(id: number, organizationId: number): Promise<SystemSettings | undefined> {
+    const [setting] = await db.select().from(systemSettings).where(and(eq(systemSettings.id, id), eq(systemSettings.organizationId, organizationId)));
     return setting || undefined;
   }
 
-  async createSystemSetting(insertSetting: InsertSystemSettings): Promise<SystemSettings> {
+  async createSystemSetting(insertSetting: InsertSystemSettings, organizationId: number): Promise<SystemSettings> {
     const [existingSetting] = await db
       .select()
       .from(systemSettings)
       .where(and(
+        eq(systemSettings.organizationId, organizationId),
         eq(systemSettings.category, insertSetting.category),
         eq(systemSettings.settingKey, insertSetting.settingKey)
       ));
@@ -2407,52 +2480,53 @@ export class DatabaseStorage implements IStorage {
 
     const [setting] = await db
       .insert(systemSettings)
-      .values(insertSetting)
+      .values({ ...insertSetting, organizationId })
       .returning();
     return setting;
   }
 
-  async updateSystemSetting(id: number, updateData: Partial<InsertSystemSettings>): Promise<SystemSettings | undefined> {
+  async updateSystemSetting(id: number, updateData: Partial<InsertSystemSettings>, organizationId: number): Promise<SystemSettings | undefined> {
     const [setting] = await db
       .update(systemSettings)
       .set(updateData)
-      .where(eq(systemSettings.id, id))
+      .where(and(eq(systemSettings.id, id), eq(systemSettings.organizationId, organizationId)))
       .returning();
     return setting || undefined;
   }
 
   // Wearable Devices
-  async getWearableDevices(playerId?: number): Promise<WearableDevice[]> {
+  async getWearableDevices(organizationId: number, playerId?: number): Promise<WearableDevice[]> {
     if (playerId) {
-      return await db.select().from(wearableDevices).where(eq(wearableDevices.playerId, playerId));
+      return await db.select().from(wearableDevices)
+        .where(and(eq(wearableDevices.playerId, playerId), eq(wearableDevices.organizationId, organizationId)));
     }
-    return await db.select().from(wearableDevices);
+    return await db.select().from(wearableDevices).where(eq(wearableDevices.organizationId, organizationId));
   }
 
-  async getWearableDevice(id: number): Promise<WearableDevice | undefined> {
-    const [device] = await db.select().from(wearableDevices).where(eq(wearableDevices.id, id));
+  async getWearableDevice(id: number, organizationId: number): Promise<WearableDevice | undefined> {
+    const [device] = await db.select().from(wearableDevices).where(and(eq(wearableDevices.id, id), eq(wearableDevices.organizationId, organizationId)));
     return device || undefined;
   }
 
-  async createWearableDevice(device: InsertWearableDevice): Promise<WearableDevice> {
+  async createWearableDevice(device: InsertWearableDevice, organizationId: number): Promise<WearableDevice> {
     const [created] = await db
       .insert(wearableDevices)
-      .values(device)
+      .values({ ...device, organizationId })
       .returning();
     return created;
   }
 
-  async updateWearableDevice(id: number, device: Partial<InsertWearableDevice>): Promise<WearableDevice | undefined> {
+  async updateWearableDevice(id: number, device: Partial<InsertWearableDevice>, organizationId: number): Promise<WearableDevice | undefined> {
     const [updated] = await db
       .update(wearableDevices)
       .set(device)
-      .where(eq(wearableDevices.id, id))
+      .where(and(eq(wearableDevices.id, id), eq(wearableDevices.organizationId, organizationId)))
       .returning();
     return updated || undefined;
   }
 
-  async deleteWearableDevice(id: number): Promise<boolean> {
-    const result = await db.delete(wearableDevices).where(eq(wearableDevices.id, id));
+  async deleteWearableDevice(id: number, organizationId: number): Promise<boolean> {
+    const result = await db.delete(wearableDevices).where(and(eq(wearableDevices.id, id), eq(wearableDevices.organizationId, organizationId)));
     return (result.rowCount || 0) > 0;
   }
 
@@ -2519,82 +2593,82 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Budget Management
-  async getMonthlyBudgets(): Promise<MonthlyBudget[]> {
+  async getMonthlyBudgets(organizationId: number): Promise<MonthlyBudget[]> {
     await this.ensureBudgetTeamColumns();
-    return await db.select().from(monthlyBudgets).orderBy(monthlyBudgets.month);
+    return await db.select().from(monthlyBudgets).where(eq(monthlyBudgets.organizationId, organizationId)).orderBy(monthlyBudgets.month);
   }
 
-  async getMonthlyBudget(id: number): Promise<MonthlyBudget | undefined> {
+  async getMonthlyBudget(id: number, organizationId: number): Promise<MonthlyBudget | undefined> {
     await this.ensureBudgetTeamColumns();
-    const [budget] = await db.select().from(monthlyBudgets).where(eq(monthlyBudgets.id, id));
+    const [budget] = await db.select().from(monthlyBudgets).where(and(eq(monthlyBudgets.id, id), eq(monthlyBudgets.organizationId, organizationId)));
     return budget || undefined;
   }
 
-  async getMonthlyBudgetByMonth(month: string): Promise<MonthlyBudget | undefined> {
+  async getMonthlyBudgetByMonth(month: string, organizationId: number): Promise<MonthlyBudget | undefined> {
     await this.ensureBudgetTeamColumns();
-    const [budget] = await db.select().from(monthlyBudgets).where(eq(monthlyBudgets.month, month));
+    const [budget] = await db.select().from(monthlyBudgets).where(and(eq(monthlyBudgets.month, month), eq(monthlyBudgets.organizationId, organizationId)));
     return budget || undefined;
   }
 
-  async createMonthlyBudget(budget: InsertMonthlyBudget): Promise<MonthlyBudget> {
+  async createMonthlyBudget(budget: InsertMonthlyBudget, organizationId: number): Promise<MonthlyBudget> {
     await this.ensureBudgetTeamColumns();
     const [created] = await db
       .insert(monthlyBudgets)
-      .values(budget)
+      .values({ ...budget, organizationId })
       .returning();
     return created;
   }
 
-  async updateMonthlyBudget(id: number, budget: Partial<InsertMonthlyBudget>): Promise<MonthlyBudget | undefined> {
+  async updateMonthlyBudget(id: number, budget: Partial<InsertMonthlyBudget>, organizationId: number): Promise<MonthlyBudget | undefined> {
     const [updated] = await db
       .update(monthlyBudgets)
       .set(budget)
-      .where(eq(monthlyBudgets.id, id))
+      .where(and(eq(monthlyBudgets.id, id), eq(monthlyBudgets.organizationId, organizationId)))
       .returning();
     return updated || undefined;
   }
 
-  async deleteMonthlyBudget(id: number): Promise<boolean> {
-    const result = await db.delete(monthlyBudgets).where(eq(monthlyBudgets.id, id));
+  async deleteMonthlyBudget(id: number, organizationId: number): Promise<boolean> {
+    const result = await db.delete(monthlyBudgets).where(and(eq(monthlyBudgets.id, id), eq(monthlyBudgets.organizationId, organizationId)));
     return (result.rowCount ?? 0) > 0;
   }
 
-  // Expense Management  
-  async getExpenses(budgetId?: number): Promise<Expense[]> {
+  // Expense Management
+  async getExpenses(organizationId: number, budgetId?: number): Promise<Expense[]> {
     if (budgetId) {
-      return await db.select().from(expenses).where(eq(expenses.budgetId, budgetId));
+      return await db.select().from(expenses).where(and(eq(expenses.budgetId, budgetId), eq(expenses.organizationId, organizationId)));
     }
-    return await db.select().from(expenses);
+    return await db.select().from(expenses).where(eq(expenses.organizationId, organizationId));
   }
 
-  async getExpense(id: number): Promise<Expense | undefined> {
-    const [expense] = await db.select().from(expenses).where(eq(expenses.id, id));
+  async getExpense(id: number, organizationId: number): Promise<Expense | undefined> {
+    const [expense] = await db.select().from(expenses).where(and(eq(expenses.id, id), eq(expenses.organizationId, organizationId)));
     return expense || undefined;
   }
 
-  async createExpense(expense: InsertExpense): Promise<Expense> {
+  async createExpense(expense: InsertExpense, organizationId: number): Promise<Expense> {
     const [created] = await db
       .insert(expenses)
-      .values(expense)
+      .values({ ...expense, organizationId })
       .returning();
     return created;
   }
 
-  async updateExpense(id: number, expense: Partial<InsertExpense>): Promise<Expense | undefined> {
+  async updateExpense(id: number, expense: Partial<InsertExpense>, organizationId: number): Promise<Expense | undefined> {
     const [updated] = await db
       .update(expenses)
       .set(expense)
-      .where(eq(expenses.id, id))
+      .where(and(eq(expenses.id, id), eq(expenses.organizationId, organizationId)))
       .returning();
     return updated || undefined;
   }
 
-  async deleteExpense(id: number): Promise<boolean> {
-    const result = await db.delete(expenses).where(eq(expenses.id, id));
+  async deleteExpense(id: number, organizationId: number): Promise<boolean> {
+    const result = await db.delete(expenses).where(and(eq(expenses.id, id), eq(expenses.organizationId, organizationId)));
     return (result.rowCount ?? 0) > 0;
   }
 
-  async approveExpense(id: number, approvedBy: number): Promise<Expense | undefined> {
+  async approveExpense(id: number, approvedBy: number, organizationId: number): Promise<Expense | undefined> {
     const [updated] = await db
       .update(expenses)
       .set({
@@ -2602,7 +2676,7 @@ export class DatabaseStorage implements IStorage {
         approvedBy: approvedBy,
         approvedAt: new Date()
       })
-      .where(eq(expenses.id, id))
+      .where(and(eq(expenses.id, id), eq(expenses.organizationId, organizationId)))
       .returning();
     return updated || undefined;
   }
@@ -2649,13 +2723,14 @@ export class DatabaseStorage implements IStorage {
 
   // Injuries are always rendered with the player and squad they belong to, so
   // the join happens once here rather than in every caller.
-  private async selectInjuriesWithPlayer(): Promise<InjuryWithPlayer[]> {
+  private async selectInjuriesWithPlayer(organizationId: number): Promise<InjuryWithPlayer[]> {
     const rows = await db
       .select()
       .from(injuries)
       .leftJoin(players, eq(injuries.playerId, players.id))
       .leftJoin(teamPlayers, eq(teamPlayers.playerId, injuries.playerId))
       .leftJoin(teams, eq(teamPlayers.teamId, teams.id))
+      .where(eq(injuries.organizationId, organizationId))
       .orderBy(desc(injuries.injuryDate));
 
     const logs = await db
@@ -2689,38 +2764,38 @@ export class DatabaseStorage implements IStorage {
     }));
   }
 
-  async getInjuries(): Promise<InjuryWithPlayer[]> {
+  async getInjuries(organizationId: number): Promise<InjuryWithPlayer[]> {
     await this.ensureInjuryTables();
-    return await this.selectInjuriesWithPlayer();
+    return await this.selectInjuriesWithPlayer(organizationId);
   }
 
-  async getInjury(id: number): Promise<InjuryWithPlayer | undefined> {
+  async getInjury(id: number, organizationId: number): Promise<InjuryWithPlayer | undefined> {
     await this.ensureInjuryTables();
-    const all = await this.selectInjuriesWithPlayer();
+    const all = await this.selectInjuriesWithPlayer(organizationId);
     return all.find((injury) => injury.id === id);
   }
 
-  async createInjury(injury: InsertInjury): Promise<Injury> {
+  async createInjury(injury: InsertInjury, organizationId: number): Promise<Injury> {
     await this.ensureInjuryTables();
-    const [created] = await db.insert(injuries).values(injury).returning();
+    const [created] = await db.insert(injuries).values({ ...injury, organizationId }).returning();
     return created;
   }
 
-  async updateInjury(id: number, injury: Partial<InsertInjury>): Promise<Injury | undefined> {
+  async updateInjury(id: number, injury: Partial<InsertInjury>, organizationId: number): Promise<Injury | undefined> {
     await this.ensureInjuryTables();
     const [updated] = await db
       .update(injuries)
       .set({ ...injury, updatedAt: new Date() })
-      .where(eq(injuries.id, id))
+      .where(and(eq(injuries.id, id), eq(injuries.organizationId, organizationId)))
       .returning();
     return updated || undefined;
   }
 
-  async deleteInjury(id: number): Promise<boolean> {
+  async deleteInjury(id: number, organizationId: number): Promise<boolean> {
     await this.ensureInjuryTables();
     // Treatment logs reference the injury, so they go first.
     await db.delete(injuryTreatmentLogs).where(eq(injuryTreatmentLogs.injuryId, id));
-    const result = await db.delete(injuries).where(eq(injuries.id, id));
+    const result = await db.delete(injuries).where(and(eq(injuries.id, id), eq(injuries.organizationId, organizationId)));
     return (result.rowCount ?? 0) > 0;
   }
 
@@ -2739,83 +2814,91 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
 
-  async deleteInjuryTreatmentLog(id: number): Promise<boolean> {
+  async deleteInjuryTreatmentLog(id: number, organizationId: number): Promise<boolean> {
     await this.ensureInjuryTables();
+    const [log] = await db
+      .select({ id: injuryTreatmentLogs.id })
+      .from(injuryTreatmentLogs)
+      .innerJoin(injuries, eq(injuries.id, injuryTreatmentLogs.injuryId))
+      .where(and(eq(injuryTreatmentLogs.id, id), eq(injuries.organizationId, organizationId)));
+    if (!log) return false;
     const result = await db.delete(injuryTreatmentLogs).where(eq(injuryTreatmentLogs.id, id));
     return (result.rowCount ?? 0) > 0;
   }
 
   // Annual Budget Management
-  async getAnnualBudgets(): Promise<AnnualBudget[]> {
+  async getAnnualBudgets(organizationId: number): Promise<AnnualBudget[]> {
     await this.ensureBudgetTeamColumns();
-    return await db.select().from(annualBudgets);
+    return await db.select().from(annualBudgets).where(eq(annualBudgets.organizationId, organizationId));
   }
 
-  async getAnnualBudget(id: number): Promise<AnnualBudget | undefined> {
+  async getAnnualBudget(id: number, organizationId: number): Promise<AnnualBudget | undefined> {
     await this.ensureBudgetTeamColumns();
-    const [budget] = await db.select().from(annualBudgets).where(eq(annualBudgets.id, id));
+    const [budget] = await db.select().from(annualBudgets).where(and(eq(annualBudgets.id, id), eq(annualBudgets.organizationId, organizationId)));
     return budget || undefined;
   }
 
-  async getAnnualBudgetByYear(fiscalYear: string): Promise<AnnualBudget | undefined> {
+  async getAnnualBudgetByYear(fiscalYear: string, organizationId: number): Promise<AnnualBudget | undefined> {
     await this.ensureBudgetTeamColumns();
-    const [budget] = await db.select().from(annualBudgets).where(eq(annualBudgets.fiscalYear, fiscalYear));
+    const [budget] = await db.select().from(annualBudgets).where(and(eq(annualBudgets.fiscalYear, fiscalYear), eq(annualBudgets.organizationId, organizationId)));
     return budget || undefined;
   }
 
-  async createAnnualBudget(budget: InsertAnnualBudget): Promise<AnnualBudget> {
+  async createAnnualBudget(budget: InsertAnnualBudget, organizationId: number): Promise<AnnualBudget> {
     await this.ensureBudgetTeamColumns();
     const [created] = await db
       .insert(annualBudgets)
-      .values(budget)
+      .values({ ...budget, organizationId })
       .returning();
     return created;
   }
 
   // Player Contracts
-  async getPlayerContracts(playerId?: number): Promise<PlayerContract[]> {
+  async getPlayerContracts(organizationId: number, playerId?: number): Promise<PlayerContract[]> {
     if (playerId) {
-      return await db.select().from(playerContracts).where(eq(playerContracts.playerId, playerId));
+      return await db.select().from(playerContracts)
+        .where(and(eq(playerContracts.playerId, playerId), eq(playerContracts.organizationId, organizationId)));
     }
-    return await db.select().from(playerContracts);
+    return await db.select().from(playerContracts).where(eq(playerContracts.organizationId, organizationId));
   }
 
-  async getPlayerContract(id: number): Promise<PlayerContract | undefined> {
-    const [contract] = await db.select().from(playerContracts).where(eq(playerContracts.id, id));
+  async getPlayerContract(id: number, organizationId: number): Promise<PlayerContract | undefined> {
+    const [contract] = await db.select().from(playerContracts)
+      .where(and(eq(playerContracts.id, id), eq(playerContracts.organizationId, organizationId)));
     return contract || undefined;
   }
 
-  async createPlayerContract(contract: InsertPlayerContract): Promise<PlayerContract> {
+  async createPlayerContract(contract: InsertPlayerContract, organizationId: number): Promise<PlayerContract> {
     const [created] = await db
       .insert(playerContracts)
-      .values(contract)
+      .values({ ...contract, organizationId })
       .returning();
     return created;
   }
 
-  async updatePlayerContract(id: number, contract: Partial<InsertPlayerContract>): Promise<PlayerContract | undefined> {
+  async updatePlayerContract(id: number, contract: Partial<InsertPlayerContract>, organizationId: number): Promise<PlayerContract | undefined> {
     const [updated] = await db
       .update(playerContracts)
       .set(contract)
-      .where(eq(playerContracts.id, id))
+      .where(and(eq(playerContracts.id, id), eq(playerContracts.organizationId, organizationId)))
       .returning();
     return updated || undefined;
   }
 
-  async deletePlayerContract(id: number): Promise<boolean> {
-    const result = await db.delete(playerContracts).where(eq(playerContracts.id, id));
+  async deletePlayerContract(id: number, organizationId: number): Promise<boolean> {
+    const result = await db.delete(playerContracts).where(and(eq(playerContracts.id, id), eq(playerContracts.organizationId, organizationId)));
     return (result.rowCount ?? 0) > 0;
   }
 
   // Budget Summary Methods
-  async getTotalMonthlySalaries(month: string): Promise<{ staff: number; players: number; total: number }> {
+  async getTotalMonthlySalaries(month: string, organizationId: number): Promise<{ staff: number; players: number; total: number }> {
     // Get staff salaries
     const staffSalaries = await db
       .select({
         total: sql<number>`sum(${staff.salary})`
       })
       .from(staff)
-      .where(eq(staff.isActive, true));
+      .where(and(eq(staff.isActive, true), eq(staff.organizationId, organizationId)));
 
     // Get player contract salaries
     const playerSalaries = await db
@@ -2823,7 +2906,7 @@ export class DatabaseStorage implements IStorage {
         total: sql<number>`sum(${players.monthlySalary})`
       })
       .from(players)
-      .where(eq(players.isActive, true));
+      .where(and(eq(players.isActive, true), eq(players.organizationId, organizationId)));
 
     const staffTotal = Number(staffSalaries[0]?.total) || 0;
     const playersTotal = Number(playerSalaries[0]?.total) || 0;
@@ -2835,9 +2918,9 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  async getBudgetVsActualExpenses(budgetId: number): Promise<{ budgeted: number; actual: number; remaining: number; categories: any[] }> {
+  async getBudgetVsActualExpenses(budgetId: number, organizationId: number): Promise<{ budgeted: number; actual: number; remaining: number; categories: any[] }> {
     // Get budget details
-    const budget = await this.getMonthlyBudget(budgetId);
+    const budget = await this.getMonthlyBudget(budgetId, organizationId);
     if (!budget) {
       return { budgeted: 0, actual: 0, remaining: 0, categories: [] };
     }
@@ -2849,7 +2932,7 @@ export class DatabaseStorage implements IStorage {
         total: sql<number>`sum(cast(amount as decimal))`
       })
       .from(expenses)
-      .where(eq(expenses.budgetId, budgetId))
+      .where(and(eq(expenses.budgetId, budgetId), eq(expenses.organizationId, organizationId)))
       .groupBy(expenses.category);
 
     const totalBudgeted = parseFloat(budget.totalBudget);
@@ -2889,7 +2972,7 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  async getPayrollDetails(month: string): Promise<{ staff: Array<any>; players: Array<any> }> {
+  async getPayrollDetails(month: string, organizationId: number): Promise<{ staff: Array<any>; players: Array<any> }> {
     // Get active staff with salaries
     const staffDetails = await db
       .select({
@@ -2903,7 +2986,7 @@ export class DatabaseStorage implements IStorage {
         contractEndDate: staff.contractEndDate,
       })
       .from(staff)
-      .where(eq(staff.isActive, true));
+      .where(and(eq(staff.isActive, true), eq(staff.organizationId, organizationId)));
 
     // Get active players with salaries
     const playerDetails = await db
@@ -2917,7 +3000,7 @@ export class DatabaseStorage implements IStorage {
         contractEndDate: players.contractEndDate,
       })
       .from(players)
-      .where(eq(players.isActive, true));
+      .where(and(eq(players.isActive, true), eq(players.organizationId, organizationId)));
 
     return {
       staff: staffDetails.map(s => ({
@@ -2931,9 +3014,9 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  async getMonthlyBudgetBreakdown(budgetId: number): Promise<Array<any>> {
+  async getMonthlyBudgetBreakdown(budgetId: number, organizationId: number): Promise<Array<any>> {
     // Get the budget
-    const budget = await this.getMonthlyBudget(budgetId);
+    const budget = await this.getMonthlyBudget(budgetId, organizationId);
     if (!budget) {
       return [];
     }
@@ -3042,38 +3125,38 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Tactical Boards
-  async getTacticalBoards(): Promise<TacticalBoard[]> {
-    return await db.select().from(tacticalBoards).orderBy(sql`updated_at DESC`);
+  async getTacticalBoards(organizationId: number): Promise<TacticalBoard[]> {
+    return await db.select().from(tacticalBoards).where(eq(tacticalBoards.organizationId, organizationId)).orderBy(sql`updated_at DESC`);
   }
 
-  async getTacticalBoard(id: number): Promise<TacticalBoard | undefined> {
-    const [board] = await db.select().from(tacticalBoards).where(eq(tacticalBoards.id, id));
+  async getTacticalBoard(id: number, organizationId: number): Promise<TacticalBoard | undefined> {
+    const [board] = await db.select().from(tacticalBoards).where(and(eq(tacticalBoards.id, id), eq(tacticalBoards.organizationId, organizationId)));
     return board || undefined;
   }
 
-  async createTacticalBoard(board: InsertTacticalBoard): Promise<TacticalBoard> {
-    const [created] = await db.insert(tacticalBoards).values(board as any).returning();
+  async createTacticalBoard(board: InsertTacticalBoard, organizationId: number): Promise<TacticalBoard> {
+    const [created] = await db.insert(tacticalBoards).values({ ...board, organizationId } as any).returning();
     return created;
   }
 
-  async updateTacticalBoard(id: number, board: Partial<InsertTacticalBoard>): Promise<TacticalBoard | undefined> {
+  async updateTacticalBoard(id: number, board: Partial<InsertTacticalBoard>, organizationId: number): Promise<TacticalBoard | undefined> {
     const [updated] = await db
       .update(tacticalBoards)
       .set({ ...board, updatedAt: new Date() } as any)
-      .where(eq(tacticalBoards.id, id))
+      .where(and(eq(tacticalBoards.id, id), eq(tacticalBoards.organizationId, organizationId)))
       .returning();
     return updated || undefined;
   }
 
-  async deleteTacticalBoard(id: number): Promise<boolean> {
-    const result = await db.delete(tacticalBoards).where(eq(tacticalBoards.id, id));
+  async deleteTacticalBoard(id: number, organizationId: number): Promise<boolean> {
+    const result = await db.delete(tacticalBoards).where(and(eq(tacticalBoards.id, id), eq(tacticalBoards.organizationId, organizationId)));
     return (result.rowCount ?? 0) > 0;
   }
 
   // Achievement System Implementation
-  async getAchievements(): Promise<any[]> {
+  async getAchievements(organizationId: number): Promise<any[]> {
     const result = await db.execute(sql`
-      SELECT at.*, 
+      SELECT at.*,
              ac.criteria_type,
              ac.threshold,
              ac.timeframe,
@@ -3083,13 +3166,13 @@ export class DatabaseStorage implements IStorage {
       FROM achievement_types at
       LEFT JOIN achievement_criteria ac ON at.id = ac.achievement_type_id
       LEFT JOIN achievement_rewards ar ON at.id = ar.achievement_type_id
-      WHERE at.is_active = true
+      WHERE at.is_active = true AND at.organization_id = ${organizationId}
       ORDER BY at.rarity, at.points
     `);
     return result.rows;
   }
 
-  async getPlayerAchievements(playerId: number): Promise<any[]> {
+  async getPlayerAchievements(playerId: number, organizationId: number): Promise<any[]> {
     const result = await db.execute(sql`
       SELECT at.*,
              pa.progress,
@@ -3106,13 +3189,21 @@ export class DatabaseStorage implements IStorage {
       LEFT JOIN player_achievements pa ON at.id = pa.achievement_type_id AND pa.player_id = ${playerId}
       LEFT JOIN achievement_criteria ac ON at.id = ac.achievement_type_id
       LEFT JOIN achievement_rewards ar ON at.id = ar.achievement_type_id
-      WHERE at.is_active = true
+      WHERE at.is_active = true AND at.organization_id = ${organizationId}
       ORDER BY at.rarity, at.points
     `);
     return result.rows;
   }
 
-  async updateAchievementProgress(playerId: number, achievementTypeId: number, value: number, eventType: string, eventId?: number): Promise<any> {
+  async updateAchievementProgress(playerId: number, achievementTypeId: number, value: number, eventType: string, organizationId: number, eventId?: number): Promise<any> {
+    // Confirm the achievement type belongs to the caller's organization before writing anything.
+    const owningType = await db.execute(sql`
+      SELECT id FROM achievement_types WHERE id = ${achievementTypeId} AND organization_id = ${organizationId}
+    `);
+    if (owningType.rows.length === 0) {
+      throw new Error("Achievement type not found");
+    }
+
     // Insert achievement progress record
     await db.execute(sql`
       INSERT INTO achievement_progress (player_id, achievement_type_id, date, value, event_type, event_id)
@@ -3165,7 +3256,7 @@ export class DatabaseStorage implements IStorage {
     return { success: true, playerId, achievementTypeId, value };
   }
 
-  async getAchievementLeaderboard(): Promise<any[]> {
+  async getAchievementLeaderboard(organizationId: number): Promise<any[]> {
     const result = await db.execute(sql`
       SELECT p.first_name, p.last_name, p.first_name_ar, p.last_name_ar, p.profile_picture,
              COUNT(pa.is_completed) FILTER (WHERE pa.is_completed = true) as completed_achievements,
@@ -3174,6 +3265,7 @@ export class DatabaseStorage implements IStorage {
       FROM players p
       LEFT JOIN player_achievements pa ON p.id = pa.player_id
       LEFT JOIN achievement_types at ON pa.achievement_type_id = at.id
+      WHERE p.organization_id = ${organizationId}
       GROUP BY p.id, p.first_name, p.last_name, p.first_name_ar, p.last_name_ar, p.profile_picture
       ORDER BY total_points DESC, completed_achievements DESC
       LIMIT 20
@@ -3181,10 +3273,10 @@ export class DatabaseStorage implements IStorage {
     return result.rows;
   }
 
-  async initializePlayerAchievements(): Promise<any> {
-    // Get all players and achievement types
-    const allPlayers = await db.select().from(players);
-    const achievements = await db.execute(sql`SELECT id FROM achievement_types WHERE is_active = true`);
+  async initializePlayerAchievements(organizationId: number): Promise<any> {
+    // Get all players and achievement types for this organization only
+    const allPlayers = await db.select().from(players).where(eq(players.organizationId, organizationId));
+    const achievements = await db.execute(sql`SELECT id FROM achievement_types WHERE is_active = true AND organization_id = ${organizationId}`);
 
     let initialized = 0;
 
@@ -3210,21 +3302,22 @@ export class DatabaseStorage implements IStorage {
     return { message: `Initialized ${initialized} player achievements`, count: initialized };
   }
 
-  async getPlayerInvitations(): Promise<(PlayerInvitation & { team?: Team })[]> {
+  async getPlayerInvitations(organizationId: number): Promise<(PlayerInvitation & { team?: Team })[]> {
     await this.ensurePlayerInvitationsTable();
     const results = await db
       .select()
       .from(playerInvitations)
-      .leftJoin(teams, eq(playerInvitations.teamId, teams.id));
+      .leftJoin(teams, eq(playerInvitations.teamId, teams.id))
+      .where(eq(playerInvitations.organizationId, organizationId));
     return results.map((row) => ({
       ...row.player_invitations,
       team: row.teams ?? undefined,
     }));
   }
 
-  async getPlayerInvitation(id: number): Promise<PlayerInvitation | undefined> {
+  async getPlayerInvitation(id: number, organizationId: number): Promise<PlayerInvitation | undefined> {
     await this.ensurePlayerInvitationsTable();
-    const [invitation] = await db.select().from(playerInvitations).where(eq(playerInvitations.id, id));
+    const [invitation] = await db.select().from(playerInvitations).where(and(eq(playerInvitations.id, id), eq(playerInvitations.organizationId, organizationId)));
     return invitation || undefined;
   }
 
@@ -3238,25 +3331,25 @@ export class DatabaseStorage implements IStorage {
     return result ? { ...result.player_invitations, team: result.teams ?? undefined } : undefined;
   }
 
-  async createPlayerInvitation(insertInvitation: InsertPlayerInvitation): Promise<PlayerInvitation> {
+  async createPlayerInvitation(insertInvitation: InsertPlayerInvitation, organizationId: number): Promise<PlayerInvitation> {
     await this.ensurePlayerInvitationsTable();
-    const [invitation] = await db.insert(playerInvitations).values(insertInvitation).returning();
+    const [invitation] = await db.insert(playerInvitations).values({ ...insertInvitation, organizationId }).returning();
     return invitation;
   }
 
-  async updatePlayerInvitation(id: number, updateData: Partial<InsertPlayerInvitation> & { usedAt?: Date | null }): Promise<PlayerInvitation | undefined> {
+  async updatePlayerInvitation(id: number, updateData: Partial<InsertPlayerInvitation> & { usedAt?: Date | null }, organizationId: number): Promise<PlayerInvitation | undefined> {
     await this.ensurePlayerInvitationsTable();
     const [invitation] = await db
       .update(playerInvitations)
       .set(updateData)
-      .where(eq(playerInvitations.id, id))
+      .where(and(eq(playerInvitations.id, id), eq(playerInvitations.organizationId, organizationId)))
       .returning();
     return invitation || undefined;
   }
 
-  async deletePlayerInvitation(id: number): Promise<boolean> {
+  async deletePlayerInvitation(id: number, organizationId: number): Promise<boolean> {
     await this.ensurePlayerInvitationsTable();
-    const result = await db.delete(playerInvitations).where(eq(playerInvitations.id, id));
+    const result = await db.delete(playerInvitations).where(and(eq(playerInvitations.id, id), eq(playerInvitations.organizationId, organizationId)));
     return (result.rowCount ?? 0) > 0;
   }
 
@@ -3269,18 +3362,18 @@ export class DatabaseStorage implements IStorage {
     return invitation || undefined;
   }
 
-  async createEmployeeInvitation(insertInvitation: InsertEmployeeInvitation): Promise<EmployeeInvitation> {
+  async createEmployeeInvitation(insertInvitation: InsertEmployeeInvitation, organizationId: number): Promise<EmployeeInvitation> {
     await this.ensureEmployeeInvitationsTable();
-    const [invitation] = await db.insert(employeeInvitations).values(insertInvitation).returning();
+    const [invitation] = await db.insert(employeeInvitations).values({ ...insertInvitation, organizationId }).returning();
     return invitation;
   }
 
-  async updateEmployeeInvitation(id: number, updateData: Partial<InsertEmployeeInvitation> & { usedAt?: Date | null }): Promise<EmployeeInvitation | undefined> {
+  async updateEmployeeInvitation(id: number, updateData: Partial<InsertEmployeeInvitation> & { usedAt?: Date | null }, organizationId: number): Promise<EmployeeInvitation | undefined> {
     await this.ensureEmployeeInvitationsTable();
     const [invitation] = await db
       .update(employeeInvitations)
       .set(updateData)
-      .where(eq(employeeInvitations.id, id))
+      .where(and(eq(employeeInvitations.id, id), eq(employeeInvitations.organizationId, organizationId)))
       .returning();
     return invitation || undefined;
   }

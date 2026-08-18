@@ -13,6 +13,16 @@ declare module "express-session" {
   }
 }
 
+declare global {
+  namespace Express {
+    interface Request {
+      // Tenant scope for the current request. Set exclusively by requireAuth/requirePermission
+      // from the authenticated user's row — never read from the request body or query string.
+      organizationId?: number;
+    }
+  }
+}
+
 const scryptAsync = promisify(crypto.scrypt);
 const HASH_PREFIX = "scrypt";
 
@@ -83,6 +93,7 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
     return res.status(401).json({ message: "Authentication required" });
   }
 
+  req.organizationId = user.organizationId;
   next();
 };
 
@@ -116,6 +127,7 @@ export function requirePermission(permission: string): RequestHandler {
       return res.status(403).json({ message: "Insufficient permissions" });
     }
 
+    req.organizationId = user.organizationId;
     next();
   };
 }
@@ -125,6 +137,15 @@ export function getCurrentUserId(req: { session: { userId?: number } }): number 
     throw new Error("Authenticated user missing from session");
   }
   return req.session.userId;
+}
+
+// Tenant scope for the current request. Only valid after requireAuth/requirePermission
+// has run — organization_id must never be sourced from the request body or query string.
+export function getCurrentOrganizationId(req: { organizationId?: number }): number {
+  if (req.organizationId === undefined) {
+    throw new Error("Request is not organization-scoped (requireAuth/requirePermission must run first)");
+  }
+  return req.organizationId;
 }
 
 export function registerAuthRoutes(app: Express) {
@@ -139,7 +160,7 @@ export function registerAuthRoutes(app: Express) {
 
       if (!user.password.startsWith(`${HASH_PREFIX}:`)) {
         const password = await hashPassword(credentials.password);
-        await storage.updateUser(user.id, { password });
+        await storage.updateUser(user.id, { password }, user.organizationId);
       }
 
       req.session.regenerate((regenErr) => {
@@ -192,6 +213,11 @@ export function registerAuthRoutes(app: Express) {
     }
 
     try {
+      const currentUser = await storage.getUser(req.session.userId);
+      if (!currentUser) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
       const payload = updateOwnProfileSchema.parse(req.body);
       const normalizedEmail = payload.email.trim().toLowerCase();
 
@@ -207,7 +233,7 @@ export function registerAuthRoutes(app: Express) {
         email: normalizedEmail,
         phoneNumber: payload.phoneNumber?.trim() || null,
         avatar: payload.avatar || null,
-      });
+      }, currentUser.organizationId);
 
       if (!updated) {
         return res.status(404).json({ message: "User not found" });
@@ -277,7 +303,7 @@ export function registerAuthRoutes(app: Express) {
         return res.status(400).json({ message: "Email already registered" });
       }
 
-      // Create user account
+      // Create user account, scoped to the inviting organization
       const hashedPassword = await hashPassword(password);
       const user = await storage.createUser({
         username: normalizedUsername,
@@ -286,10 +312,10 @@ export function registerAuthRoutes(app: Express) {
         lastName: lastName.trim(),
         email: normalizedEmail,
         role: "player",
-      });
+      }, invitation.organizationId);
 
       // Mark invitation as used
-      await storage.updatePlayerInvitation(invitation.id, { usedAt: new Date() });
+      await storage.updatePlayerInvitation(invitation.id, { usedAt: new Date() }, invitation.organizationId);
 
       res.status(201).json({
         user: sanitizeUser(user),
@@ -377,7 +403,7 @@ export function registerAuthRoutes(app: Express) {
       }
 
       const hashed = await hashPassword(password);
-      await storage.updateUser(user.id, { password: hashed });
+      await storage.updateUser(user.id, { password: hashed }, user.organizationId);
 
       res.json({ success: true });
     } catch (err) {
@@ -435,8 +461,8 @@ export function registerAuthRoutes(app: Express) {
         lastName: String(lastName).trim(),
         email: normalizedEmail,
         role: invitation.role,
-      });
-      await storage.updateEmployeeInvitation(invitation.id, { usedAt: new Date() });
+      }, invitation.organizationId);
+      await storage.updateEmployeeInvitation(invitation.id, { usedAt: new Date() }, invitation.organizationId);
 
       res.status(201).json({
         user: sanitizeUser(user),

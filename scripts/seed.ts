@@ -2,6 +2,9 @@ import { storage } from "../server/storage";
 import { hashPassword } from "../server/auth";
 import { pool } from "../server/db";
 
+// Seeding always bootstraps organization 1 — the platform's default/first tenant.
+const SEED_ORGANIZATION_ID = 1;
+
 async function ensureAdmin() {
   const username = process.env.SEED_ADMIN_USERNAME || "admin";
   const passwordValue = process.env.SEED_ADMIN_PASSWORD || "admin123";
@@ -17,7 +20,7 @@ async function ensureAdmin() {
       firstName: existing.firstName || "System",
       lastName: existing.lastName || "Admin",
       email: existing.email || email,
-    });
+    }, existing.organizationId);
     console.log(`Updated admin user: ${username}`);
     return existing.id;
   }
@@ -29,7 +32,7 @@ async function ensureAdmin() {
     firstName: "System",
     lastName: "Admin",
     email,
-  });
+  }, SEED_ORGANIZATION_ID);
 
   console.log(`Created admin user: ${username}`);
   return created.id;
@@ -49,14 +52,14 @@ async function ensureDefaultSettings(updatedBy: number) {
       ...setting,
       isActive: true,
       updatedBy,
-    });
+    }, SEED_ORGANIZATION_ID);
   }
 
   console.log(`Seeded ${settings.length} default settings`);
 }
 
 async function ensureDefaultTeam() {
-  const teams = await storage.getTeams();
+  const teams = await storage.getTeams(SEED_ORGANIZATION_ID);
   const existing = teams.find((team) => team.name === "First Team");
 
   if (existing) {
@@ -69,7 +72,7 @@ async function ensureDefaultTeam() {
     category: "first_team",
     description: "Senior squad",
     isActive: true,
-  });
+  }, SEED_ORGANIZATION_ID);
 
   console.log("Created default team");
 }
