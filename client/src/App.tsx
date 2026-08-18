@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Redirect, Switch, Route, useRoute } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -9,47 +10,56 @@ import { SettingsProvider } from "@/contexts/SettingsContext";
 import Sidebar from "@/components/sidebar";
 import MobileNav from "@/components/mobile-nav";
 import TopBar from "@/components/top-bar";
-import Dashboard from "@/pages/dashboard";
-import Players from "@/pages/players";
-import Teams from "@/pages/teams";
-import Staff from "@/pages/staff";
-import Training from "@/pages/training";
-import TrainingAttendance from "@/pages/training-attendance";
-import Matches from "@/pages/matches";
-import Tactics from "@/pages/tactics";
-import Analytics from "@/pages/analytics";
-import Reports from "@/pages/reports";
-import Settings from "@/pages/settings";
-import UserControlPage from "@/pages/user-control";
-import Wearables from "@/pages/wearables";
-import CatapultOpenField from "@/pages/catapult-openfield";
-import MonthlyBudgets from "@/pages/monthly-budgets";
-import YearBudgets from "@/pages/year-budgets";
-import PerformanceReactionsPage from "@/pages/performance-reactions";
-import TacticalBoardPage from "@/pages/tactical-board";
-import TacticalIconsDemo from "@/pages/tactical-icons-demo";
-import BubbleDesignPage from "@/pages/bubble-design";
-import InteractiveTacticalBoardPage from "@/pages/interactive-tactical-board";
-import AchievementsPage from "@/pages/achievements";
-import InjuryList from "@/pages/injury-list";
-import AddInjury from "@/pages/add-injury";
-import InjuryReport from "@/pages/injury-report";
-import InjuryManagement from "@/pages/injury-management";
-import NotFound from "@/pages/not-found";
-import LoginPage from "@/pages/login";
-import ResetPasswordPage from "@/pages/reset-password";
 import { useAuth } from "@/lib/auth";
-import PlayerDashboard from "@/pages/player-dashboard";
-import PlayerTraining from "@/pages/player-training";
-import PlayerMatches from "@/pages/player-matches";
-import PlayerAnalytics from "@/pages/player-analytics";
-import PlayerSignup from "@/pages/player-signup";
-import EmployeeSignup from "@/pages/employee-signup";
-import TechnicalStaffDashboard from "@/pages/technical-staff-dashboard";
 import { isTechnicalStaffRole, isAdminRole } from "@shared/schema";
-import AdminDashboard from "@/pages/admin-dashboard";
-import AdminTraining from "@/pages/admin-training";
 import { StaffRegistrationPopup } from "@/components/staff-registration-popup";
+
+const Dashboard = lazy(() => import("@/pages/dashboard"));
+const Players = lazy(() => import("@/pages/players"));
+const Teams = lazy(() => import("@/pages/teams"));
+const Staff = lazy(() => import("@/pages/staff"));
+const Training = lazy(() => import("@/pages/training"));
+const TrainingAttendance = lazy(() => import("@/pages/training-attendance"));
+const Matches = lazy(() => import("@/pages/matches"));
+const Tactics = lazy(() => import("@/pages/tactics"));
+const Analytics = lazy(() => import("@/pages/analytics"));
+const Reports = lazy(() => import("@/pages/reports"));
+const Settings = lazy(() => import("@/pages/settings"));
+const UserControlPage = lazy(() => import("@/pages/user-control"));
+const Wearables = lazy(() => import("@/pages/wearables"));
+const CatapultOpenField = lazy(() => import("@/pages/catapult-openfield"));
+const MonthlyBudgets = lazy(() => import("@/pages/monthly-budgets"));
+const YearBudgets = lazy(() => import("@/pages/year-budgets"));
+const PerformanceReactionsPage = lazy(() => import("@/pages/performance-reactions"));
+const TacticalBoardPage = lazy(() => import("@/pages/tactical-board"));
+const TacticalIconsDemo = lazy(() => import("@/pages/tactical-icons-demo"));
+const BubbleDesignPage = lazy(() => import("@/pages/bubble-design"));
+const InteractiveTacticalBoardPage = lazy(() => import("@/pages/interactive-tactical-board"));
+const AchievementsPage = lazy(() => import("@/pages/achievements"));
+const InjuryList = lazy(() => import("@/pages/injury-list"));
+const AddInjury = lazy(() => import("@/pages/add-injury"));
+const InjuryReport = lazy(() => import("@/pages/injury-report"));
+const InjuryManagement = lazy(() => import("@/pages/injury-management"));
+const NotFound = lazy(() => import("@/pages/not-found"));
+const LoginPage = lazy(() => import("@/pages/login"));
+const ResetPasswordPage = lazy(() => import("@/pages/reset-password"));
+const PlayerDashboard = lazy(() => import("@/pages/player-dashboard"));
+const PlayerTraining = lazy(() => import("@/pages/player-training"));
+const PlayerMatches = lazy(() => import("@/pages/player-matches"));
+const PlayerAnalytics = lazy(() => import("@/pages/player-analytics"));
+const PlayerSignup = lazy(() => import("@/pages/player-signup"));
+const EmployeeSignup = lazy(() => import("@/pages/employee-signup"));
+const TechnicalStaffDashboard = lazy(() => import("@/pages/technical-staff-dashboard"));
+const AdminDashboard = lazy(() => import("@/pages/admin-dashboard"));
+const AdminTraining = lazy(() => import("@/pages/admin-training"));
+
+function RouteFallback() {
+  return (
+    <div className="flex h-full min-h-[50vh] w-full items-center justify-center">
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-foreground" />
+    </div>
+  );
+}
 
 function Layout({ children }: { children: React.ReactNode }) {
   const { isRtl } = useI18n();
@@ -214,7 +224,9 @@ function PublicOrAuthGate() {
   if (isInviteRoute) {
     return (
       <SettingsProvider>
-        <PlayerSignup />
+        <Suspense fallback={<RouteFallback />}>
+          <PlayerSignup />
+        </Suspense>
       </SettingsProvider>
     );
   }
@@ -222,13 +234,19 @@ function PublicOrAuthGate() {
   if (isEmployeeInviteRoute) {
     return (
       <SettingsProvider>
-        <EmployeeSignup />
+        <Suspense fallback={<RouteFallback />}>
+          <EmployeeSignup />
+        </Suspense>
       </SettingsProvider>
     );
   }
 
   if (isResetPasswordRoute) {
-    return <ResetPasswordPage />;
+    return (
+      <Suspense fallback={<RouteFallback />}>
+        <ResetPasswordPage />
+      </Suspense>
+    );
   }
 
   return <AuthGate />;
@@ -247,20 +265,26 @@ function AuthGate() {
   }
 
   if (!isAuthenticated) {
-    return <LoginPage />;
+    return (
+      <Suspense fallback={<RouteFallback />}>
+        <LoginPage />
+      </Suspense>
+    );
   }
 
   return (
     <SettingsProvider>
       <Layout>
         {user && user.role !== "player" && <StaffRegistrationPopup user={user} />}
-        {user?.role === "player"
-          ? <PlayerRouter />
-          : isAdminRole(user?.role)
-            ? <AdminRouter />
-            : isTechnicalStaffRole(user?.role)
-              ? <TechnicalStaffRouter />
-              : <StaffRouter />}
+        <Suspense fallback={<RouteFallback />}>
+          {user?.role === "player"
+            ? <PlayerRouter />
+            : isAdminRole(user?.role)
+              ? <AdminRouter />
+              : isTechnicalStaffRole(user?.role)
+                ? <TechnicalStaffRouter />
+                : <StaffRouter />}
+        </Suspense>
       </Layout>
     </SettingsProvider>
   );
