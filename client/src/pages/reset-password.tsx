@@ -44,7 +44,11 @@ export default function ResetPasswordPage() {
   const resetMutation = useMutation({
     mutationFn: () => resetPassword(token!, password),
     onSuccess: () => setPageState("success"),
-    onError: () => setPageState("invalid"),
+    onError: (error: Error) => {
+      if (error.message === "Invalid or expired reset link") {
+        setPageState("invalid");
+      }
+    },
   });
 
   function handleSubmit(e: React.FormEvent) {
@@ -171,7 +175,9 @@ export default function ResetPasswordPage() {
 
             {resetMutation.isError && !validationError && (
               <p className="text-sm text-destructive">
-                Something went wrong. Try requesting a new reset link.
+                {resetMutation.error instanceof Error
+                  ? resetMutation.error.message
+                  : "Something went wrong. Try requesting a new reset link."}
               </p>
             )}
 

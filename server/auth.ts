@@ -370,6 +370,12 @@ export function registerAuthRoutes(app: Express) {
         return res.status(400).json({ message: "Invalid or expired reset link" });
       }
 
+      if (await verifyPassword(password, user.password)) {
+        return res.status(400).json({
+          message: "That's your current password. Choose a new one, or just sign in with it.",
+        });
+      }
+
       const hashed = await hashPassword(password);
       await storage.updateUser(user.id, { password: hashed });
 
