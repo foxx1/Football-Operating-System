@@ -966,7 +966,12 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.post("/api/staff-teams", requirePermission("manage_teams"), async (req, res) => {
     try {
       const { teamId, staffId } = req.body;
-      console.log(`Adding staff ${staffId} to team ${teamId}`);
+      const orgId = getCurrentOrganizationId(req);
+      const [team, staffMember] = await Promise.all([
+        storage.getTeam(teamId, orgId),
+        storage.getStaffMember(staffId, orgId),
+      ]);
+      if (!team || !staffMember) return res.status(404).json({ message: "Team or staff member not found" });
       const teamStaff = await storage.addStaffToTeam({ teamId, staffId });
       res.status(201).json(teamStaff);
     } catch (error) {
@@ -980,6 +985,8 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
     try {
       const teamId = parseInt(req.params.teamId);
       const staffId = parseInt(req.params.staffId);
+      const team = await storage.getTeam(teamId, getCurrentOrganizationId(req));
+      if (!team) return res.status(404).json({ message: "Team not found" });
       const success = await storage.removeStaffFromTeam(teamId, staffId);
       if (!success) {
         return res.status(404).json({ message: "Staff not found in team" });
@@ -993,6 +1000,8 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.get("/api/staff-teams/:staffId", requireAuth, async (req, res) => {
     try {
       const staffId = parseInt(req.params.staffId);
+      const staffMember = await storage.getStaffMember(staffId, getCurrentOrganizationId(req));
+      if (!staffMember) return res.status(404).json({ message: "Staff member not found" });
       const staffTeams = await storage.getStaffTeams(staffId);
       res.json(staffTeams);
     } catch (error) {
@@ -1751,7 +1760,14 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
       const deviceId = req.query.deviceId ? parseInt(req.query.deviceId as string) : undefined;
       const playerId = req.query.playerId ? parseInt(req.query.playerId as string) : undefined;
       const dataType = req.query.dataType as string;
-      
+
+      // Wearable data is scoped through the player it belongs to. If a player
+      // is specified it must belong to the caller's organization.
+      if (playerId !== undefined) {
+        const player = await storage.getPlayer(playerId, getCurrentOrganizationId(req));
+        if (!player) return res.status(404).json({ message: "Player not found" });
+      }
+
       const data = await storage.getWearableData(deviceId, playerId, dataType);
       res.json(data);
     } catch (error) {
@@ -1815,7 +1831,9 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
     try {
       const playerId = parseInt(req.params.playerId);
       const days = parseInt(req.query.days as string) || 30;
-      
+
+      const player = await storage.getPlayer(playerId, getCurrentOrganizationId(req));
+      if (!player) return res.status(404).json({ error: "Player not found" });
       const trends = await storage.getPlayerPerformanceTrends(playerId, days);
       res.json(trends);
     } catch (error) {
@@ -2226,6 +2244,9 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
     try {
       const { playerId } = req.params;
       const { dataType, startDate, endDate } = req.query;
+
+      const player = await storage.getPlayer(parseInt(playerId), getCurrentOrganizationId(req));
+      if (!player) return res.status(404).json({ error: "Player not found" });
 
       // In real implementation, fetch from Catapult API
       // For now, return mock data structure similar to Catapult's format
@@ -2768,6 +2789,8 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.get("/api/performance-reactions/player/:playerId", requireAuth, async (req, res) => {
     try {
       const playerId = parseInt(req.params.playerId);
+      const player = await storage.getPlayer(playerId, getCurrentOrganizationId(req));
+      if (!player) return res.status(404).json({ error: "Player not found" });
       const reactions = await storage.getPlayerReactionsSummary(playerId);
       res.json(reactions);
     } catch (error) {

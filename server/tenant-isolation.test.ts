@@ -26,6 +26,14 @@ describe("cross-tenant child-route isolation contract", () => {
     "GET /api/matches/:matchId/squad",
     "POST /api/matches/:matchId/squad",
     "DELETE /api/matches/:matchId/squad/:playerId",
+    // Added in the T1 full sweep:
+    "GET /api/staff-teams/:staffId",
+    "POST /api/staff-teams",
+    "DELETE /api/teams/:teamId/staff/:staffId",
+    "GET /api/performance-reactions/player/:playerId",
+    "GET /api/performance-metrics/trends/:playerId",
+    "GET /api/catapult/players/:playerId/data",
+    "GET /api/wearable-data",
   ];
 
   it("enumerates the child routes that must verify parent ownership", () => {
@@ -33,7 +41,7 @@ describe("cross-tenant child-route isolation contract", () => {
     // added, add it here and add its getX(parentId, orgId) ownership check.
     expect(childRoutesRequiringParentOwnershipCheck.length).toBeGreaterThan(0);
     for (const route of childRoutesRequiringParentOwnershipCheck) {
-      expect(route).toMatch(/:(id|teamId|matchId|playerId)/);
+      expect(route).toMatch(/(:(id|teamId|matchId|playerId|staffId)|staff-teams|wearable-data)/);
     }
   });
 });
