@@ -148,6 +148,28 @@ export function getCurrentOrganizationId(req: { organizationId?: number }): numb
   return req.organizationId;
 }
 
+// The platform owner is the super-admin of organization 1 (the platform's own
+// tenant, seeded at install). Only they may perform platform-level actions such
+// as creating new organizations — this is deliberately NOT a per-org permission,
+// because a club_super_admin of some customer org must never be able to mint
+// other organizations. Onboarding is a hand-operated, owner-only action.
+export const PLATFORM_ORGANIZATION_ID = 1;
+
+export const requirePlatformOwner: RequestHandler = async (req, res, next) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ message: "Authentication required" });
+  }
+  const user = await storage.getUser(req.session.userId);
+  if (!user) {
+    return res.status(401).json({ message: "Authentication required" });
+  }
+  if (user.organizationId !== PLATFORM_ORGANIZATION_ID || user.role !== "club_super_admin") {
+    return res.status(403).json({ message: "Platform owner access required" });
+  }
+  req.organizationId = user.organizationId;
+  next();
+};
+
 export function registerAuthRoutes(app: Express) {
   app.post("/api/auth/login", async (req, res) => {
     try {

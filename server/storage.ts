@@ -1,11 +1,12 @@
 import {
-  users, players, teams, teamPlayers, teamStaff, trainingSessions, sessionAttendance,
+  organizations, users, players, teams, teamPlayers, teamStaff, trainingSessions, sessionAttendance,
   tacticalFormations, playerStats, staff, matches, matchSquads, meetings, analyticsReports, systemSettings,
   notifications,
   wearableDevices, wearableData, performanceMetrics, monthlyBudgets, expenses, playerContracts,
   performanceReactions, annualBudgets,
   tacticalBoards, playerInvitations, employeeInvitations, registrationReminders,
   injuries, injuryTreatmentLogs,
+  type Organization, type InsertOrganization,
   type User, type InsertUser, type Player, type InsertPlayer,
   type Team, type InsertTeam, type TeamPlayer, type InsertTeamPlayer,
   type TeamStaff, type InsertTeamStaff,
@@ -46,6 +47,9 @@ export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser, organizationId: number): Promise<User>;
+  getOrganization(id: number): Promise<Organization | undefined>;
+  getOrganizationBySlug(slug: string): Promise<Organization | undefined>;
+  createOrganization(org: InsertOrganization): Promise<Organization>;
   updateUser(id: number, user: Partial<InsertUser>, organizationId: number): Promise<User | undefined>;
   deleteUser(id: number, organizationId: number): Promise<boolean>;
 
@@ -254,6 +258,7 @@ export interface IStorage {
 }
 
 export class MemStorage implements IStorage {
+  private organizations: Map<number, Organization>;
   private users: Map<number, User>;
   private players: Map<number, Player>;
   private teams: Map<number, Team>;
@@ -279,6 +284,7 @@ export class MemStorage implements IStorage {
   private currentIds: Record<string, number>;
 
   constructor() {
+    this.organizations = new Map();
     this.users = new Map();
     this.players = new Map();
     this.teams = new Map();
@@ -302,6 +308,7 @@ export class MemStorage implements IStorage {
     this.expenses = new Map();
     this.notifications = new Map();
     this.currentIds = {
+      organizations: 1,
       users: 1,
       players: 1,
       teams: 1,
@@ -474,6 +481,31 @@ export class MemStorage implements IStorage {
     };
     this.users.set(id, user);
     return user;
+  }
+
+  async getOrganization(id: number): Promise<Organization | undefined> {
+    return this.organizations.get(id);
+  }
+
+  async getOrganizationBySlug(slug: string): Promise<Organization | undefined> {
+    return Array.from(this.organizations.values()).find(o => o.slug === slug);
+  }
+
+  async createOrganization(insertOrg: InsertOrganization): Promise<Organization> {
+    const id = this.currentIds.organizations++;
+    const org: Organization = {
+      id,
+      name: insertOrg.name,
+      nameAr: insertOrg.nameAr ?? null,
+      slug: insertOrg.slug,
+      type: insertOrg.type ?? "club",
+      logo: insertOrg.logo ?? null,
+      country: insertOrg.country ?? "BH",
+      isActive: insertOrg.isActive ?? true,
+      createdAt: new Date(),
+    };
+    this.organizations.set(id, org);
+    return org;
   }
 
   async updateUser(id: number, updateData: Partial<InsertUser>, organizationId: number): Promise<User | undefined> {
@@ -1942,6 +1974,21 @@ export class DatabaseStorage implements IStorage {
       .values({ ...insertUser, organizationId })
       .returning();
     return user;
+  }
+
+  async getOrganization(id: number): Promise<Organization | undefined> {
+    const [org] = await db.select().from(organizations).where(eq(organizations.id, id));
+    return org || undefined;
+  }
+
+  async getOrganizationBySlug(slug: string): Promise<Organization | undefined> {
+    const [org] = await db.select().from(organizations).where(eq(organizations.slug, slug));
+    return org || undefined;
+  }
+
+  async createOrganization(insertOrg: InsertOrganization): Promise<Organization> {
+    const [org] = await db.insert(organizations).values(insertOrg).returning();
+    return org;
   }
 
   async updateUser(id: number, updateData: Partial<InsertUser>, organizationId: number): Promise<User | undefined> {

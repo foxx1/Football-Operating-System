@@ -3,7 +3,8 @@ import type { Express, RequestHandler } from "express";
 import { createServer, type Server } from "http";
 import { z } from "zod";
 import { storage } from "./storage";
-import { getCurrentUserId, getCurrentOrganizationId, requireAuth, requirePermission, rolePermissions } from "./auth";
+import { getCurrentUserId, getCurrentOrganizationId, requireAuth, requirePermission, requirePlatformOwner, rolePermissions } from "./auth";
+import { provisionOrganization, ProvisionError } from "./services/organization-provisioning";
 import { env } from "./env";
 import { logger } from "./logger";
 import { verifyTerraSignature } from "./services/terra-webhook";
@@ -28,6 +29,21 @@ const employeeInvitationSchema = z.object({
   role: z.enum(employeeRoles),
   teamId: z.number().int().positive().optional().nullable(),
   email: z.string().trim().email().optional().nullable(),
+});
+
+const provisionOrganizationSchema = z.object({
+  name: z.string().min(1),
+  nameAr: z.string().optional(),
+  slug: z.string().min(1).regex(/^[a-z0-9-]+$/, "Slug may contain only lowercase letters, numbers, and hyphens"),
+  type: z.enum(["club", "academy", "association"]).optional(),
+  country: z.string().optional(),
+  admin: z.object({
+    username: z.string().min(1),
+    email: z.string().email(),
+    password: z.string().min(8),
+    firstName: z.string().min(1),
+    lastName: z.string().min(1),
+  }),
 });
 
 // Team IDs an administrator is limited to. Administrators (team_admin_supervisor
@@ -568,6 +584,42 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
     } catch (error) {
       console.error("Error fetching player analytics summary:", error);
       res.status(500).json({ message: "Failed to fetch player analytics summary" });
+    }
+  });
+
+  // ── Platform: organization onboarding (owner-only) ──
+  // Creates a new organization (club/academy/association) plus its first
+  // super-admin, default settings, and default team, in one call. Gated behind
+  // requirePlatformOwner so only the platform owner (org 1 super-admin) can
+  // onboard tenants — this is a hand-operated action, not public signup.
+  app.get("/api/organizations", requirePlatformOwner, async (_req, res) => {
+    try {
+      // Small helper for the owner to see existing tenants. Kept minimal.
+      const allUsers = await storage.getUsers();
+      const orgIds = Array.from(new Set(allUsers.map((u) => u.organizationId)));
+      const orgs = (await Promise.all(orgIds.map((id) => storage.getOrganization(id)))).filter(Boolean);
+      res.json(orgs);
+    } catch (error) {
+      logger.error("list_organizations_failed", { error: error instanceof Error ? error.message : String(error) });
+      res.status(500).json({ message: "Failed to list organizations" });
+    }
+  });
+
+  app.post("/api/organizations", requirePlatformOwner, async (req, res) => {
+    try {
+      const input = provisionOrganizationSchema.parse(req.body);
+      const result = await provisionOrganization(input);
+      logger.info("organization_provisioned", { organizationId: result.organization.id, slug: result.organization.slug });
+      res.status(201).json(result);
+    } catch (error) {
+      if (error instanceof ProvisionError) {
+        return res.status(409).json({ message: error.message, code: error.code });
+      }
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid organization data", details: error.errors });
+      }
+      logger.error("provision_organization_failed", { error: error instanceof Error ? error.message : String(error) });
+      res.status(500).json({ message: "Failed to create organization" });
     }
   });
 
