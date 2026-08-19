@@ -1,18 +1,22 @@
 import type { Express } from "express";
 import { insertMatchSquadSchema } from "@shared/schema";
 import { asyncHandler, parseBody, parseIdParam, validateBody } from "../api-contracts";
-import { requirePermission } from "../auth";
+import { requireAuth, requirePermission, getCurrentOrganizationId } from "../auth";
 import { storage } from "../storage";
 
 export function registerMatchSquadRoutes(app: Express) {
-  app.get("/api/matches/:matchId/squad", asyncHandler(async (req, res) => {
+  app.get("/api/matches/:matchId/squad", requireAuth, asyncHandler(async (req, res) => {
     const matchId = parseIdParam(req.params.matchId, "matchId");
+    const match = await storage.getMatch(matchId, getCurrentOrganizationId(req));
+    if (!match) return res.status(404).json({ error: "Match not found" });
     const squad = await storage.getMatchSquad(matchId);
     res.json(squad);
   }));
 
   app.post("/api/matches/:matchId/squad", requirePermission("manage_teams"), asyncHandler(async (req, res) => {
     const matchId = parseIdParam(req.params.matchId, "matchId");
+    const match = await storage.getMatch(matchId, getCurrentOrganizationId(req));
+    if (!match) return res.status(404).json({ error: "Match not found" });
     const validatedData = parseBody(insertMatchSquadSchema, {
       ...req.body,
       matchId,
@@ -47,6 +51,8 @@ export function registerMatchSquadRoutes(app: Express) {
   app.delete("/api/matches/:matchId/squad/:playerId", requirePermission("manage_teams"), asyncHandler(async (req, res) => {
     const matchId = parseIdParam(req.params.matchId, "matchId");
     const playerId = parseIdParam(req.params.playerId, "playerId");
+    const match = await storage.getMatch(matchId, getCurrentOrganizationId(req));
+    if (!match) return res.status(404).json({ error: "Match not found" });
     const success = await storage.removePlayerFromMatchSquad(matchId, playerId);
     if (!success) {
       return res.status(404).json({ error: "Match squad member not found" });

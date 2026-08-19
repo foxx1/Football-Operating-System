@@ -729,6 +729,8 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.get("/api/teams/:id/players", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
+      const team = await storage.getTeam(id, getCurrentOrganizationId(req));
+      if (!team) return res.status(404).json({ message: "Team not found" });
       const teamPlayers = await storage.getTeamPlayers(id);
       res.json(teamPlayers);
     } catch (error) {
@@ -739,6 +741,8 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.get("/api/teams/:id/staff", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
+      const team = await storage.getTeam(id, getCurrentOrganizationId(req));
+      if (!team) return res.status(404).json({ message: "Team not found" });
       const teamStaff = await storage.getTeamStaff(id);
       res.json(teamStaff);
     } catch (error) {
@@ -927,7 +931,12 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
     try {
       const teamId = parseInt(req.params.teamId);
       const playerId = parseInt(req.params.playerId);
-      console.log(`Adding player ${playerId} to team ${teamId}`);
+      const orgId = getCurrentOrganizationId(req);
+      const [team, player] = await Promise.all([
+        storage.getTeam(teamId, orgId),
+        storage.getPlayer(playerId, orgId),
+      ]);
+      if (!team || !player) return res.status(404).json({ message: "Team or player not found" });
       const teamPlayer = await storage.addPlayerToTeam({ teamId, playerId, isStarter: false });
       res.status(201).json(teamPlayer);
     } catch (error) {
@@ -941,6 +950,8 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
     try {
       const teamId = parseInt(req.params.teamId);
       const playerId = parseInt(req.params.playerId);
+      const team = await storage.getTeam(teamId, getCurrentOrganizationId(req));
+      if (!team) return res.status(404).json({ message: "Team not found" });
       const success = await storage.removePlayerFromTeam(teamId, playerId);
       if (!success) {
         return res.status(404).json({ message: "Player not found in team" });
@@ -1204,6 +1215,8 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.get("/api/training-sessions/:id/attendance", requireAuth, async (req, res) => {
     try {
       const sessionId = parseInt(req.params.id);
+      const session = await storage.getTrainingSession(sessionId, getCurrentOrganizationId(req));
+      if (!session) return res.status(404).json({ message: "Training session not found" });
       const attendance = await storage.getSessionAttendance(sessionId);
       res.json(attendance);
     } catch (error) {
@@ -1310,6 +1323,8 @@ export async function registerRoutes(app: Express, uploadService?: UploadService
   app.get("/api/players/:id/stats", requireAuth, async (req, res) => {
     try {
       const playerId = parseInt(req.params.id);
+      const player = await storage.getPlayer(playerId, getCurrentOrganizationId(req));
+      if (!player) return res.status(404).json({ message: "Player not found" });
       const stats = await storage.getPlayerStats(playerId);
       res.json(stats);
     } catch (error) {
