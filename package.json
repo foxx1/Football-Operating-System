@@ -13,7 +13,13 @@
     "check": "npm run check --workspace=apps/api && npm run check --workspace=apps/app",
     "lint": "npm run lint --workspace=apps/api && npm run lint --workspace=apps/app",
     "test": "npm test --workspace=apps/api && npm test --workspace=apps/app",
-    "validate": "npm run validate --workspace=apps/api && npm run validate --workspace=apps/app"
+    "validate": "npm run validate --workspace=apps/api && npm run validate --workspace=apps/app",
+    "start": "npm run start --workspace=apps/api",
+    "db:generate": "npm run db:generate --workspace=apps/api",
+    "db:migrate": "npm run db:migrate --workspace=apps/api",
+    "db:push": "npm run db:push --workspace=apps/api",
+    "db:seed": "npm run db:seed --workspace=apps/api",
+    "db:audit": "npm run db:audit --workspace=apps/api"
   },
   "overrides": {
     "@radix-ui/react-direction": "^1.1.2"
