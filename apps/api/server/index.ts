@@ -1,4 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
+import cors from "cors";
 import session from "express-session";
 import MemoryStore from "memorystore";
 import connectPgSimple from "connect-pg-simple";
@@ -8,7 +9,6 @@ import path from "path";
 import fs from "fs";
 import { registerRoutes } from "./routes";
 import { registerAuthRoutes } from "./auth";
-import { setupVite, serveStatic, log } from "./vite";
 import { apiErrorHandler } from "./api-contracts";
 import { env } from "./env";
 import { registerBackgroundJobs } from "./jobs/job-queue";
@@ -31,6 +31,23 @@ if (env.NODE_ENV === "production") {
     next();
   });
 }
+
+// app./admin./www.360fos.com are all separate static hosts (apps/app,
+// fos-admin, fos-www) calling this API cross-origin, so they need to be
+// allow-listed explicitly. localhost:5173 is apps/app's local Vite dev
+// server, needed to test the real cross-origin path locally.
+// TODO: once the Cloudflare Pages project for apps/app exists, add its
+// *.pages.dev preview URL here temporarily while validating before DNS cutover.
+const ALLOWED_ORIGINS = [
+  "https://app.360fos.com",
+  "https://admin.360fos.com",
+  "https://www.360fos.com",
+  "http://localhost:5173",
+];
+app.use(cors({
+  origin: (origin, callback) => callback(null, !origin || ALLOWED_ORIGINS.includes(origin)),
+  credentials: true,
+}));
 
 // verify: stash the raw body bytes on req.rawBody. Terra webhook signature
 // verification needs the exact bytes Terra signed, which JSON.parse (and any
@@ -185,21 +202,11 @@ app.use((req, res, next) => {
     apiErrorHandler(err, _req, res, _next);
   });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
-  }
-
   const port = parseInt(process.env.PORT ?? "5000", 10);
   server.listen({
     port,
     host: "0.0.0.0",
   }, () => {
-    log(`serving on port ${port}`);
     logger.info("server_started", { port, env: env.NODE_ENV, uploadProvider: uploadService.provider });
   });
 })();

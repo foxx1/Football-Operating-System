@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { API_BASE_URL } from "@/lib/api-base";
 import type { EmployeeRole } from "@shared/schema";
 
 export interface AuthUser {
@@ -143,7 +144,7 @@ export function useAuth() {
   const query = useQuery<{ user: AuthUser } | null>({
     queryKey: ["/api/auth/me"],
     queryFn: async () => {
-      const res = await fetch("/api/auth/me", { credentials: "include" });
+      const res = await fetch(`${API_BASE_URL}/api/auth/me`, { credentials: "include" });
       if (res.status === 401) {
         currentUserCache = null;
         return null;

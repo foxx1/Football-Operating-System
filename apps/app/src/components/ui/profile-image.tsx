@@ -1,4 +1,5 @@
 import React from 'react';
+import { API_BASE_URL } from '@/lib/api-base';
 
 interface ProfileImageProps {
   imageUrl?: string | null;
@@ -24,8 +25,8 @@ export const ProfileImage: React.FC<ProfileImageProps> = ({
   const initials = `${firstName[0]}${lastName[0]}`.toUpperCase();
   
   // Construct the image URL
-  const imageSource = imageUrl && imageUrl.startsWith('/uploads/') 
-    ? `http://localhost:5000${imageUrl}`
+  const imageSource = imageUrl && imageUrl.startsWith('/uploads/')
+    ? `${API_BASE_URL}${imageUrl}`
     : imageUrl;
 
   return (
