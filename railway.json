@@ -1,11 +1,12 @@
 {
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
-    "builder": "RAILPACK"
+    "builder": "RAILPACK",
+    "buildCommand": "npm install && npm run build --workspace=apps/api"
   },
   "deploy": {
-    "preDeployCommand": "npm run db:migrate",
-    "startCommand": "npm run start",
+    "preDeployCommand": "npm run db:migrate --workspace=apps/api",
+    "startCommand": "npm run start --workspace=apps/api",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 3
   }
